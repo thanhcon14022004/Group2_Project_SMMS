@@ -435,7 +435,7 @@ namespace project_PRN232.Services
             return new AllocationResultDto
             {
                 SemesterId = semester.Id,
-                SemesterCode = semester.Code,
+                SemesterCode = semester.Code ?? string.Empty,
                 TotalStudentsProcessed = allocatedStudentIds.Count,
                 TotalEligibleStudents = allocatedStudentIds.Count,
                 TotalEnrolledSections = totalEnrollmentsCreated,
@@ -490,7 +490,7 @@ namespace project_PRN232.Services
                 return new AllocationResultDto
                 {
                     SemesterId = semester.Id,
-                    SemesterCode = semester.Code
+                    SemesterCode = semester.Code ?? string.Empty
                 };
             }
 
@@ -516,7 +516,7 @@ namespace project_PRN232.Services
                 return new AllocationResultDto
                 {
                     SemesterId = semester.Id,
-                    SemesterCode = semester.Code
+                    SemesterCode = semester.Code ?? string.Empty
                 };
             }
 
@@ -534,7 +534,7 @@ namespace project_PRN232.Services
             var enrollments = await _db.CourseSectionStudents
                 .Include(css => css.CourseSection)
                 .Include(css => css.Student)
-                    .ThenInclude(st => st.User)
+                    .ThenInclude(st => st!.User)
                 .Where(css => sectionIds.Contains(css.CourseSectionId))
                 .ToListAsync();
 
@@ -588,7 +588,7 @@ namespace project_PRN232.Services
             return new AllocationResultDto
             {
                 SemesterId = semester.Id,
-                SemesterCode = semester.Code,
+                SemesterCode = semester.Code ?? string.Empty,
                 TotalStudentsProcessed = totalStudents,
                 TotalEligibleStudents = totalStudents,
                 TotalEnrolledSections = enrollments.Count,
