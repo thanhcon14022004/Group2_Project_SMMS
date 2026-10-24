@@ -92,7 +92,7 @@
     </div>
 </div>
 
-@if (Model.TotalEligibleStudents > 0 || Model.Allocations.Any() || Model.Exceptions.Any() || Model.ClassSummaries.Any())
+@if (Model.TotalEligibleStudents > 0 || (Model.Allocations != null && Model.Allocations.Any()) || (Model.Exceptions != null && Model.Exceptions.Any()) || (Model.ClassSummaries != null && Model.ClassSummaries.Any()))
 {
     <!-- 4 Thẻ Thống Kê Tổng Quan -->
     <div class="row g-3 mb-4">
@@ -114,7 +114,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small class="text-muted fw-semibold">Số lớp hành chính đạt chuẩn</small>
-                        <h3 class="fw-bold text-success mt-1 mb-0">@Model.ClassSummaries.Count lớp</h3>
+                        <h3 class="fw-bold text-success mt-1 mb-0">@(Model.ClassSummaries?.Count ?? 0) lớp</h3>
                     </div>
                     <div class="bg-success-subtle text-success p-3 rounded-circle">
                         <i class="fa-solid fa-chalkboard-user fa-lg"></i>
@@ -150,13 +150,13 @@
         </div>
     </div>
 
-    @if (Model.ClassSummaries.Any())
+    @if (Model.ClassSummaries != null && Model.ClassSummaries.Any())
     {
         <!-- Bảng Tổng kết Sĩ số các Lớp Hành chính Sau Phân bổ -->
         <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                 <h6 class="fw-bold mb-0 text-dark">
-                    <i class="fa-solid fa-list-check me-2 text-primary"></i>Danh sách các Lớp Hành chính Mùa @Model.SemesterCode Đã Phân bổ (@Model.ClassSummaries.Count lớp)
+                    <i class="fa-solid fa-list-check me-2 text-primary"></i>Danh sách các Lớp Hành chính Mùa @Model.SemesterCode Đã Phân bổ (@(Model.ClassSummaries?.Count ?? 0) lớp)
                 </h6>
                 <span class="badge bg-success-subtle text-success border border-success px-3 py-1">
                     <i class="fa-solid fa-check-double me-1"></i>Tất cả các lớp đạt chuẩn 28 - 31 SV
@@ -180,7 +180,7 @@
                         </thead>
                         <tbody>
                             @{ int cIdx = 1; }
-                            @foreach (var cs in Model.ClassSummaries)
+                            @foreach (var cs in Model.ClassSummaries!)
                             {
                                 <tr>
                                     <td class="ps-3 text-muted">@(cIdx++)</td>
@@ -239,13 +239,13 @@
         </div>
     }
 
-    @if (Model.Allocations.Any())
+    @if (Model.Allocations != null && Model.Allocations.Any())
     {
         <!-- Bảng Chi tiết Phân bổ Môn học phần -->
         <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                 <h6 class="fw-bold mb-0 text-dark">
-                    <i class="fa-solid fa-circle-check me-2 text-success"></i>Chi tiết Ghi danh Môn học phần theo CTĐT (@Model.Allocations.Count lượt môn)
+                    <i class="fa-solid fa-circle-check me-2 text-success"></i>Chi tiết Ghi danh Môn học phần theo CTĐT (@(Model.Allocations?.Count ?? 0) lượt môn)
                 </h6>
                 <small class="text-muted">Hiển thị mẫu 100 lượt đầu tiên</small>
             </div>
@@ -265,7 +265,7 @@
                         </thead>
                         <tbody>
                             @{ int idx = 1; }
-                            @foreach (var item in Model.Allocations.Take(100))
+                            @foreach (var item in Model.Allocations!.Take(100))
                             {
                                 <tr>
                                     <td class="ps-3 text-muted">@(idx++)</td>
