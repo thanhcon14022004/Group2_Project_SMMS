@@ -1,0 +1,237 @@
+@model List<project_PRN232.Frontend.Models.UserItemViewModel>
+@{
+    ViewData["Title"] = "Quản lý Người dùng & Tài khoản";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="fw-bold mb-0">Quản lý Tài khoản Người dùng</h5>
+        <small class="text-muted">Quản lý tài khoản Admin, Giảng viên và Sinh viên trong toàn hệ thống</small>
+    </div>
+    <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalAddUser">
+        <i class="fa-solid fa-user-plus me-1"></i> Thêm Tài khoản Mới
+    </button>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-body py-3">
+        <form method="get" asp-action="Users" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Tìm kiếm</label>
+                <input type="text" name="search" class="form-control" placeholder="Tên đăng nhập, họ tên..." value="@Context.Request.Query["search"]" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Vai trò (Role)</label>
+                <select name="role" class="form-select">
+                    <option value="">-- Tất cả vai trò --</option>
+                    <option value="Admin" selected="@(Context.Request.Query["role"] == "Admin" ? "selected" : null)">Admin</option>
+                    <option value="Lecturer" selected="@(Context.Request.Query["role"] == "Lecturer" ? "selected" : null)">Lecturer (Giảng viên)</option>
+                    <option value="Student" selected="@(Context.Request.Query["role"] == "Student" ? "selected" : null)">Student (Sinh viên)</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100 rounded-3">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i> Tìm kiếm
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;">ID</th>
+                        <th>Tài khoản</th>
+                        <th>Họ và tên</th>
+                        <th>Email</th>
+                        <th>Số điện thoại</th>
+                        <th>Vai trò</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 180px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model == null || !Model.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">Không tìm thấy tài khoản nào.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var u in Model)
+                        {
+                            <tr>
+                                <td class="text-muted">@u.Id</td>
+                                <td class="fw-bold">@u.Username</td>
+                                <td>@u.FullName</td>
+                                <td>@u.Email</td>
+                                <td>@(string.IsNullOrWhiteSpace(u.PhoneNumber) ? "-" : u.PhoneNumber)</td>
+                                <td>
+                                    @if (u.Role == "Admin")
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger">Admin</span>
+                                    }
+                                    else if (u.Role == "Lecturer")
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning border border-warning">Lecturer</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary border border-primary">Student</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (u.IsActive)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success">Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary">Đã khóa</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-outline-warning btn-sm rounded-3 me-1" onclick="openEditUserModal(@u.Id, '@u.Username', '@u.FullName', '@u.Email', '@(u.PhoneNumber ?? "")')" title="Sửa thông tin">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <form asp-action="ToggleUserStatus" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@u.Id" />
+                                        <input type="hidden" name="isActive" value="@(u.IsActive ? "false" : "true")" />
+                                        @if (u.IsActive)
+                                        {
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm rounded-3 me-1" title="Khóa tài khoản" onclick="return confirm('Bạn có chắc muốn khóa tài khoản @u.Username?')">
+                                                <i class="fa-solid fa-user-lock"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-outline-success btn-sm rounded-3 me-1" title="Kích hoạt tài khoản">
+                                                <i class="fa-solid fa-user-check"></i>
+                                            </button>
+                                        }
+                                    </form>
+                                    <form asp-action="DeleteUser" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài khoản @u.Username? Nếu tài khoản có dữ liệu liên kết, hệ thống sẽ chuyển sang Inactive.');">
+                                        <input type="hidden" name="id" value="@u.Id" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-3" title="Xóa tài khoản">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm Tài Khoản Mới -->
+<div class="modal fade" id="modalAddUser" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="CreateUser" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-plus text-primary me-2"></i>Thêm Tài Khoản Mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
+                            <input type="text" name="username" class="form-control" placeholder="VD: lecturer03" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Mật khẩu <span class="text-danger">*</span></label>
+                            <input type="password" name="password" class="form-control" placeholder="Tối thiểu 6 ký tự" required />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Họ và tên đầy đủ <span class="text-danger">*</span></label>
+                        <input type="text" name="fullName" class="form-control" placeholder="VD: Nguyễn Văn A" required />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control" placeholder="a@fpt.edu.vn" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Số điện thoại</label>
+                            <input type="text" name="phoneNumber" class="form-control" placeholder="09xxxxxxxx" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Vai trò phân quyền (Role) <span class="text-danger">*</span></label>
+                        <select name="role" class="form-select" required>
+                            <option value="Admin">Admin (Quản trị hệ thống)</option>
+                            <option value="Lecturer" selected>Lecturer (Giảng viên)</option>
+                            <option value="Student">Student (Sinh viên)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Tạo Tài Khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sửa Thông Tin Tài Khoản -->
+<div class="modal fade" id="modalEditUser" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="EditUser" method="post">
+                <input type="hidden" name="id" id="editUserId" />
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Chỉnh Sửa Tài Khoản: <span id="editUserUsernameBadge" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Họ và tên đầy đủ <span class="text-danger">*</span></label>
+                        <input type="text" name="fullName" id="editUserFullName" class="form-control" required />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" id="editUserEmail" class="form-control" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Số điện thoại</label>
+                            <input type="text" name="phoneNumber" id="editUserPhone" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Đặt lại mật khẩu mới (để trống nếu không đổi)</label>
+                        <input type="password" name="password" class="form-control" placeholder="Nhập mật khẩu mới nếu muốn đổi..." />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Cập nhật Tài Khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function openEditUserModal(id, username, fullName, email, phone) {
+        document.getElementById('editUserId').value = id;
+        document.getElementById('editUserUsernameBadge').innerText = username;
+        document.getElementById('editUserFullName').value = fullName;
+        document.getElementById('editUserEmail').value = email;
+        document.getElementById('editUserPhone').value = phone;
+        new bootstrap.Modal(document.getElementById('modalEditUser')).show();
+    }
+</script>
+}

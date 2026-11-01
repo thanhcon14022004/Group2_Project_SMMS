@@ -1,0 +1,427 @@
+@model List<project_PRN232.Frontend.Models.CourseSectionViewModel>
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    ViewData["Title"] = "Quản lý Lớp Học phần";
+    var role = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "";
+    var semesters = (List<project_PRN232.Frontend.Models.SemesterViewModel>)ViewBag.Semesters;
+    var subjects = (List<project_PRN232.Frontend.Models.SubjectViewModel>)ViewBag.Subjects;
+    var lecturers = (List<project_PRN232.Frontend.Models.LecturerViewModel>)ViewBag.Lecturers;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="fw-bold mb-0">Danh sách Lớp Học phần</h5>
+        <small class="text-muted">Quản lý lớp theo học kỳ, phân công giảng viên và phòng học</small>
+    </div>
+    @if (role == "Admin")
+    {
+        <div class="d-flex gap-2">
+            <a asp-action="Allocations" class="btn btn-outline-primary btn-sm rounded-3">
+                <i class="fa-solid fa-users-gear me-1"></i> Phân bổ sinh viên
+            </a>
+            <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalAddSection">
+                <i class="fa-solid fa-plus me-1"></i> Tạo Lớp Học phần
+            </button>
+        </div>
+    }
+</div>
+
+<div class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center mb-3 py-2 px-3 rounded-3 shadow-sm border-0">
+    <div class="mb-1 mb-md-0">
+        <i class="fa-solid fa-calendar-check me-2 text-primary fs-5"></i>
+        <strong>Quản lý Mùa học (Summer 26, Spring 26, Fall 26...):</strong> Tạo mùa học, Sửa, Xóa, Khóa hoặc Mở học kỳ trực tiếp.
+    </div>
+    <a asp-controller="Semesters" asp-action="Index" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+        <i class="fa-solid fa-arrow-right me-1"></i> Quản lý Mùa học & Khóa/Mở kỳ
+    </a>
+</div>
+
+<!-- Thanh Bộ Lọc OData Nâng Cao cho Lớp Học phần -->
+<div class="card shadow-sm border-0 rounded-3 mb-3 bg-white">
+    <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
+                <i class="fa-solid fa-filter me-1"></i>Bộ Lọc OData Lớp Học phần
+            </span>
+            <small class="text-muted">Lọc theo <code>$filter</code> học kỳ, môn học, tình trạng khóa điểm theo chuẩn OData</small>
+        </div>
+        <div>
+            <span class="badge bg-light text-dark border">Tổng cộng @Model.Count lớp học phần</span>
+        </div>
+    </div>
+    <div class="card-body p-3">
+        <form method="get" asp-action="Index" id="sectionODataForm">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" name="search" id="sectionFilterSearch" class="form-control" 
+                               placeholder="Tìm mã hoặc tên lớp..." value="@ViewBag.CurrentSearch" oninput="updateSectionODataPreview()" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="semesterId" id="sectionFilterSemester" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
+                        <option value="">-- Tất cả học kỳ / mùa học --</option>
+                        @foreach (var sem in semesters)
+                        {
+                            if (ViewBag.CurrentSemesterId != null && (int)ViewBag.CurrentSemesterId == sem.Id)
+                            {
+                                <option value="@sem.Id" selected>@sem.Code - @sem.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@sem.Id">@sem.Code - @sem.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="subjectId" id="sectionFilterSubject" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
+                        <option value="">-- Tất cả môn học --</option>
+                        @foreach (var sub in subjects)
+                        {
+                            if (ViewBag.CurrentSubjectId != null && (int)ViewBag.CurrentSubjectId == sub.Id)
+                            {
+                                <option value="@sub.Id" selected>@sub.Code - @sub.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@sub.Id">@sub.Code - @sub.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="isLocked" id="sectionFilterLocked" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
+                        <option value="">-- Tình trạng điểm --</option>
+                        <!option value="false" @(ViewBag.CurrentIsLocked != null && !(bool)ViewBag.CurrentIsLocked ? "selected" : "")>Đang mở nhập điểm</!option>
+                        <!option value="true" @(ViewBag.CurrentIsLocked != null && (bool)ViewBag.CurrentIsLocked ? "selected" : "")>Đã khóa bảng điểm</!option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <select name="orderby" id="sectionFilterOrderBy" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
+                        <option value="">-- Sắp xếp --</option>
+                        <!option value="Code asc" @(ViewBag.CurrentOrderBy == "Code asc" ? "selected" : "")>Mã A-Z</!option>
+                        <!option value="Code desc" @(ViewBag.CurrentOrderBy == "Code desc" ? "selected" : "")>Mã Z-A</!option>
+                        <!option value="EnrolledCount desc" @(ViewBag.CurrentOrderBy == "EnrolledCount desc" ? "selected" : "")>Sĩ số giảm dần</!option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100 shadow-sm" title="Áp dụng bộ lọc OData lên Server">
+                        <i class="fa-solid fa-play"></i> Lọc
+                    </button>
+                    @if (!string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery))
+                    {
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Preview OData Query String -->
+            <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-secondary fw-semibold"><i class="fa-solid fa-code text-primary me-1"></i>OData Query URL:</span>
+                    <code id="sectionODataPreview" class="text-primary bg-light px-2 py-1 rounded border">/api/course-sections@(string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery) ? "" : "?" + ViewBag.CurrentODataQuery)</code>
+                </div>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-success-subtle text-success border border-success">
+                        <i class="fa-solid fa-check me-1"></i>OData v4 Supported
+                    </span>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Mã lớp HP</th>
+                        <th>Tên lớp học phần</th>
+                        <th>Môn học</th>
+                        <th>Học kỳ</th>
+                        <th>Giảng viên phụ trách</th>
+                        <th>Sĩ số</th>
+                        <th>Lịch học & Phòng</th>
+                        <th>Khóa điểm</th>
+                        <th class="text-end pe-3">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-4 text-muted">
+                                <i class="fa-solid fa-folder-open fa-2x mb-2 d-block"></i>
+                                Chưa có lớp học phần nào.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var s in Model)
+                    {
+                        <tr>
+                            <td class="ps-3 fw-bold text-primary">@s.Code</td>
+                            <td>@s.Name</td>
+                            <td><span class="badge bg-secondary">@s.SubjectCode</span></td>
+                            <td>@s.SemesterCode</td>
+                            <td>
+                                @if (string.IsNullOrEmpty(s.LecturerName) || s.LecturerName == "Chưa phân công")
+                                {
+                                    <span class="badge bg-danger-subtle text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Chưa phân công</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-chalkboard-user me-1"></i>@s.LecturerName</span>
+                                }
+                            </td>
+                            <td>@s.EnrolledStudentsCount / @s.MaxCapacity</td>
+                            <td>
+                                @if (s.Schedules.Count == 0)
+                                {
+                                    <span class="text-muted small">Chưa xếp lịch</span>
+                                }
+                                else
+                                {
+                                    @foreach (var sch in s.Schedules)
+                                    {
+                                        <span class="badge bg-light text-dark border me-1">
+                                            @sch.DayOfWeek, Ca @sch.Slot (@sch.Room)
+                                        </span>
+                                    }
+                                }
+                            </td>
+                            <td>
+                                @if (s.IsGradeLocked)
+                                {
+                                    <span class="badge bg-danger"><i class="fa-solid fa-lock me-1"></i>Đã khóa</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success"><i class="fa-solid fa-lock-open me-1"></i>Mở</span>
+                                }
+                            </td>
+                            <td class="text-end pe-3">
+                                @if (role == "Admin")
+                                {
+                                    <button class="btn btn-outline-primary btn-sm rounded-pill me-1" onclick="openAssignModal(@s.Id, '@s.Code', '@s.LecturerId')" title="Phân công giảng viên">
+                                        <i class="fa-solid fa-user-pen me-1"></i> GV
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm rounded-pill me-1" onclick="openEditSectionModal(@s.Id, '@s.Code', '@s.Name', @s.MaxCapacity, '@s.LecturerId')" title="Sửa lớp HP">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa lớp học phần @s.Code?');">
+                                        <input type="hidden" name="id" value="@s.Id" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill me-1" title="Xóa lớp HP">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                                @if (role == "Admin" || role == "Lecturer")
+                                {
+                                    <a asp-controller="Grades" asp-action="Index" asp-route-sectionId="@s.Id" class="btn btn-outline-success btn-sm rounded-pill" title="Nhập bảng điểm">
+                                        <i class="fa-solid fa-pen-to-square me-1"></i> Điểm
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm Lớp Học Phần -->
+<div class="modal fade" id="modalAddSection" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="CourseSections" asp-action="Create" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Tạo Lớp Học phần Mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mã lớp học phần</label>
+                        <input type="text" name="code" class="form-control" placeholder="VD: PRN232_SU25_SE1701" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên lớp</label>
+                        <input type="text" name="name" class="form-control" placeholder="VD: Lập trình Web ASP.NET Core - Lớp SE1701" required />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Môn học</label>
+                            <select name="subjectId" class="form-select" required>
+                                @foreach (var sub in subjects)
+                                {
+                                    <option value="@sub.Id">@sub.Code - @sub.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Học kỳ</label>
+                            <select name="semesterId" class="form-select" required>
+                                @foreach (var sem in semesters)
+                                {
+                                    <option value="@sem.Id">@sem.Code - @sem.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold">Giảng viên phụ trách</label>
+                            <select name="lecturerId" class="form-select">
+                                <option value="">-- Chưa phân công --</option>
+                                @foreach (var l in lecturers)
+                                {
+                                    <option value="@l.Id">@l.LecturerCode - @l.FullName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Sĩ số tối đa</label>
+                            <input type="number" name="maxCapacity" class="form-control" value="30" min="1" max="100" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu Lớp Học phần</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Phân công Giảng viên -->
+<div class="modal fade" id="modalAssignLecturer" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="CourseSections" asp-action="AssignLecturer" method="post">
+                <input type="hidden" name="sectionId" id="assignSectionId" />
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Phân công Giảng viên cho <span id="assignSectionCode" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="fa-solid fa-circle-info me-1"></i> Quy tắc: Giảng viên mới nhận quyền ngay, giảng viên cũ mất quyền, điểm đã nhập được giữ nguyên.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Chọn giảng viên</label>
+                        <select name="lecturerId" id="assignLecturerSelect" class="form-select">
+                            <option value="">-- Bỏ phân công --</option>
+                            @foreach (var l in lecturers)
+                            {
+                                <option value="@l.Id">@l.LecturerCode - @l.FullName (@l.Department)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Xác nhận Phân công</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sửa Lớp Học Phần -->
+<div class="modal fade" id="modalEditSection" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="CourseSections" asp-action="Edit" method="post">
+                <input type="hidden" name="id" id="editSectionId" />
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Chỉnh Sửa Lớp Học Phần: <span id="editSectionCodeBadge" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên lớp học phần <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editSectionName" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Sĩ số tối đa</label>
+                        <input type="number" name="maxCapacity" id="editSectionCapacity" class="form-control" min="5" max="100" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Giảng viên phụ trách</label>
+                        <select name="lecturerId" id="editSectionLecturer" class="form-select">
+                            <option value="">-- Chưa phân công --</option>
+                            @foreach (var l in lecturers)
+                            {
+                                <option value="@l.Id">@l.LecturerCode - @l.FullName (@l.Department)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Cập nhật Lớp HP</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function updateSectionODataPreview() {
+        const search = (document.getElementById('sectionFilterSearch').value || '').trim();
+        const semId = document.getElementById('sectionFilterSemester').value;
+        const subId = document.getElementById('sectionFilterSubject').value;
+        const locked = document.getElementById('sectionFilterLocked').value;
+        const orderby = document.getElementById('sectionFilterOrderBy').value;
+
+        const filters = [];
+        if (search) {
+            filters.push(`(contains(tolower(Code), '${search.toLowerCase()}') or contains(tolower(Name), '${search.toLowerCase()}'))`);
+        }
+        if (semId) {
+            filters.push(`SemesterId eq ${semId}`);
+        }
+        if (subId) {
+            filters.push(`SubjectId eq ${subId}`);
+        }
+        if (locked !== '') {
+            filters.push(`IsGradeLocked eq ${locked}`);
+        }
+
+        const queryParams = [];
+        if (filters.length > 0) {
+            queryParams.push(`$filter=${filters.join(' and ')}`);
+        }
+        if (orderby) {
+            queryParams.push(`$orderby=${orderby}`);
+        }
+
+        const previewElem = document.getElementById('sectionODataPreview');
+        if (previewElem) {
+            previewElem.textContent = '/api/course-sections' + (queryParams.length > 0 ? '?' + queryParams.join('&') : '');
+        }
+    }
+    function openEditSectionModal(id, code, name, capacity, lecturerId) {
+        document.getElementById('editSectionId').value = id;
+        document.getElementById('editSectionCodeBadge').innerText = code;
+        document.getElementById('editSectionName').value = name;
+        document.getElementById('editSectionCapacity').value = capacity;
+        document.getElementById('editSectionLecturer').value = lecturerId || '';
+        new bootstrap.Modal(document.getElementById('modalEditSection')).show();
+    }
+    function openAssignModal(sectionId, code, currentLecturerId) {
+        document.getElementById('assignSectionId').value = sectionId;
+        document.getElementById('assignSectionCode').innerText = code;
+        document.getElementById('assignLecturerSelect').value = currentLecturerId || '';
+        new bootstrap.Modal(document.getElementById('modalAssignLecturer')).show();
+    }
+</script>
+}

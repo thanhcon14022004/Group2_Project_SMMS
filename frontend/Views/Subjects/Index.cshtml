@@ -1,0 +1,911 @@
+@model List<project_PRN232.Frontend.Models.SubjectViewModel>
+@{
+    ViewData["Title"] = "Quản lý Môn học & Đầu điểm";
+    var specializations = (List<project_PRN232.Frontend.Models.SpecializationViewModel>)(ViewBag.Specializations ?? new List<project_PRN232.Frontend.Models.SpecializationViewModel>());
+    var majors = (List<project_PRN232.Frontend.Models.MajorViewModel>)(ViewBag.Majors ?? new List<project_PRN232.Frontend.Models.MajorViewModel>());
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-book-open-reader text-primary me-2"></i>Quản lý Môn học & Đầu điểm
+        </h5>
+        <small class="text-muted">Phân loại môn cơ sở ngành & chuyên ngành hẹp, cấu hình đầu điểm (chuẩn 100%) và môn tiên quyết</small>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddSubject">
+            <i class="fa-solid fa-plus me-1"></i> Thêm Môn Học Mới
+        </button>
+    </div>
+</div>
+
+<!-- Thanh Bộ Lọc OData Nâng Cao -->
+<div class="card shadow-sm border-0 rounded-3 mb-3 bg-white">
+    <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
+                <i class="fa-solid fa-filter me-1"></i>Bộ Lọc OData
+            </span>
+            <small class="text-muted">Truy vấn linh hoạt với <code>$filter</code>, <code>$orderby</code>, <code>$select</code> theo chuẩn OData v4</small>
+        </div>
+        <div>
+            <span id="filterCountBadge" class="badge bg-light text-dark border">Hiển thị @Model.Count môn học</span>
+        </div>
+    </div>
+    <div class="card-body p-3">
+        <form method="get" asp-action="Index" id="odataFilterForm">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" name="search" id="filterSearchInput" class="form-control" 
+                               placeholder="Mã hoặc tên môn học..." value="@ViewBag.CurrentSearch" oninput="updateODataPreview()" />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select name="majorId" id="filterMajorSelect" class="form-select form-select-sm" onchange="onFilterMajorChange()">
+                        <option value="">-- Tất cả ngành --</option>
+                        @foreach (var m in majors)
+                        {
+                            if (ViewBag.CurrentMajorId != null && (int)ViewBag.CurrentMajorId == m.Id)
+                            {
+                                <option value="@m.Id" data-code="@m.Code" selected>@m.Code - @m.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@m.Id" data-code="@m.Code">@m.Code - @m.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="specializationId" id="filterSpecSelect" class="form-select form-select-sm" onchange="updateODataPreview()">
+                        <option value="">-- Tất cả ngành hẹp --</option>
+                        @foreach (var sp in specializations)
+                        {
+                            if (ViewBag.CurrentSpecializationId != null && (int)ViewBag.CurrentSpecializationId == sp.Id)
+                            {
+                                <option value="@sp.Id" selected>@sp.Code - @sp.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@sp.Id">@sp.Code - @sp.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="credits" id="filterCreditsSelect" class="form-select form-select-sm" onchange="updateODataPreview()">
+                        <option value="">-- Tín chỉ (Credits) --</option>
+                        <!option value="2" @(ViewBag.CurrentCredits != null && (int)ViewBag.CurrentCredits == 2 ? "selected" : "")>2 Tín chỉ</!option>
+                        <!option value="3" @(ViewBag.CurrentCredits != null && (int)ViewBag.CurrentCredits == 3 ? "selected" : "")>3 Tín chỉ</!option>
+                        <!option value="4" @(ViewBag.CurrentCredits != null && (int)ViewBag.CurrentCredits == 4 ? "selected" : "")>4 Tín chỉ</!option>
+                        <!option value="5" @(ViewBag.CurrentCredits != null && (int)ViewBag.CurrentCredits == 5 ? "selected" : "")>Đồ án / Khóa luận (>= 5 TC)</!option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="orderby" id="filterOrderBySelect" class="form-select form-select-sm" onchange="updateODataPreview()">
+                        <option value="">-- Sắp xếp ($orderby) --</option>
+                        <!option value="Code asc" @(ViewBag.CurrentOrderBy == "Code asc" ? "selected" : "")>Mã môn A - Z</!option>
+                        <!option value="Code desc" @(ViewBag.CurrentOrderBy == "Code desc" ? "selected" : "")>Mã môn Z - A</!option>
+                        <!option value="Name asc" @(ViewBag.CurrentOrderBy == "Name asc" ? "selected" : "")>Tên môn A - Z</!option>
+                        <!option value="Credits asc" @(ViewBag.CurrentOrderBy == "Credits asc" ? "selected" : "")>Tín chỉ tăng dần</!option>
+                        <!option value="Credits desc" @(ViewBag.CurrentOrderBy == "Credits desc" ? "selected" : "")>Tín chỉ giảm dần</!option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100 shadow-sm" title="Áp dụng bộ lọc OData lên Server">
+                        <i class="fa-solid fa-play"></i> Lọc
+                    </button>
+                    @if (!string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery))
+                    {
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Preview OData Query String -->
+            <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-secondary fw-semibold"><i class="fa-solid fa-code text-primary me-1"></i>OData Query URL:</span>
+                    <code id="odataQueryPreview" class="text-primary bg-light px-2 py-1 rounded border">/api/subjects@(string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery) ? "" : "?" + ViewBag.CurrentODataQuery)</code>
+                </div>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-success-subtle text-success border border-success">
+                        <i class="fa-solid fa-check me-1"></i>OData v4 Supported
+                    </span>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tableSubjects">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3" style="width: 110px;">Mã môn</th>
+                        <th>Tên môn học</th>
+                        <th style="width: 90px;">Tín chỉ</th>
+                        <th style="min-width: 220px;">Ngành học & Ngành hẹp</th>
+                        <th>Cấu hình đầu điểm (Tỷ trọng)</th>
+                        <th>Môn tiên quyết</th>
+                        <th class="text-end pe-3" style="width: 160px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodySubjects">
+                    @foreach (var sub in Model)
+                    {
+                        var totalWeight = sub.GradeComponents.Sum(c => c.Weight);
+                        <tr class="subject-row"
+                            data-code="@sub.Code.ToLower()"
+                            data-name="@sub.Name.ToLower()"
+                            data-major-id="@(sub.MajorId?.ToString() ?? "")"
+                            data-spec-id="@(sub.SpecializationId?.ToString() ?? "")">
+                            <td class="ps-3 fw-bold text-primary">@sub.Code</td>
+                            <td>
+                                <div class="fw-semibold">@sub.Name</div>
+                                @if (!string.IsNullOrEmpty(sub.Description))
+                                {
+                                    <small class="text-muted text-truncate d-block" style="max-width: 280px;" title="@sub.Description">@sub.Description</small>
+                                }
+                            </td>
+                            <td><span class="badge bg-secondary-subtle text-secondary border">@sub.Credits TC</span></td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1 align-items-center">
+                                    @if (!string.IsNullOrEmpty(sub.MajorCode))
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1" title="@sub.MajorName">
+                                            <i class="fa-solid fa-graduation-cap me-1"></i>Ngành: @sub.MajorCode
+                                        </span>
+                                    }
+                                    @if (string.IsNullOrEmpty(sub.SpecializationCode))
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                            <i class="fa-solid fa-book-bookmark me-1"></i>@(string.IsNullOrEmpty(sub.MajorCode) ? "Đại cương / Toàn trường" : "Cơ sở ngành")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info-subtle text-info border border-info px-2 py-1" title="@sub.SpecializationName">
+                                            <i class="fa-solid fa-code-branch me-1"></i>Hẹp: @sub.SpecializationCode
+                                        </span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                @if (sub.GradeComponents.Count == 0)
+                                {
+                                    <span class="text-danger small"><i class="fa-solid fa-triangle-exclamation me-1"></i>Chưa cấu hình</span>
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        @foreach (var comp in sub.GradeComponents)
+                                        {
+                                            <span class="badge bg-light text-dark border">
+                                                @comp.Name: @comp.Weight%
+                                                @if (comp.IsAdminOnly)
+                                                {
+                                                    <i class="fa-solid fa-lock text-danger ms-1" title="Chỉ Admin được nhập"></i>
+                                                }
+                                            </span>
+                                        }
+                                        <span class="badge @(totalWeight == 100m ? "bg-success" : "bg-danger") ms-1">
+                                            Tổng: @totalWeight%
+                                        </span>
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                @if (sub.Prerequisites.Count == 0)
+                                {
+                                    <span class="text-muted small">Không có</span>
+                                }
+                                else
+                                {
+                                    @foreach (var prereq in sub.Prerequisites)
+                                    {
+                                        <span class="badge bg-info-subtle text-info border border-info me-1">
+                                            @prereq.PrerequisiteSubjectCode (>= @prereq.MinScore)
+                                        </span>
+                                    }
+                                }
+                            </td>
+                            <td class="text-end pe-3">
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill me-1 btn-open-components"
+                                        data-id="@sub.Id"
+                                        data-code="@sub.Code"
+                                        data-name="@sub.Name"
+                                        data-components='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(sub.GradeComponents))'
+                                        title="Cấu hình đầu điểm">
+                                    <i class="fa-solid fa-sliders"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm rounded-pill me-1" onclick="openPrereqModal(@sub.Id, '@sub.Code')" title="Môn tiên quyết">
+                                    <i class="fa-solid fa-link"></i>
+                                </button>
+                                <button class="btn btn-outline-warning btn-sm rounded-pill me-1"
+                                        onclick="openEditSubjectModal(@sub.Id, '@sub.Code', '@Html.Raw(Html.Encode(sub.Name))', @sub.Credits, '@Html.Raw(Html.Encode(sub.Description ?? ""))', @(sub.SpecializationId?.ToString() ?? "null"), @(sub.IsActive ? "true" : "false"), @(sub.MajorId?.ToString() ?? "null"))"
+                                        title="Sửa môn học">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa môn @sub.Code? Nếu môn đã có lớp HP/CTĐT, hệ thống sẽ chuyển sang Inactive.');">
+                                    <input type="hidden" name="id" value="@sub.Id" />
+                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill" title="Xóa môn học">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm Môn Học -->
+<div class="modal fade" id="modalAddSubject" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="Subjects" asp-action="Create" method="post">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus-circle me-2"></i>Thêm Môn Học Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Mã môn học <span class="text-danger">*</span></label>
+                            <input type="text" name="code" class="form-control" placeholder="VD: PRN232, SWP391..." required />
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Tên môn học <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" placeholder="VD: Lập trình Web với ASP.NET Core" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Số tín chỉ <span class="text-danger">*</span></label>
+                            <input type="number" name="credits" class="form-control" value="3" min="1" max="10" required />
+                        </div>
+                    </div>
+
+                    <!-- Khu vực phân loại Ngành học & Ngành hẹp -->
+                    <div class="card bg-light border-0 rounded-3 p-3 mb-3">
+                        <div class="fw-semibold text-dark mb-2">
+                            <i class="fa-solid fa-layer-group text-primary me-1"></i> Phân loại Ngành học & Ngành hẹp
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">1. Ngành học (Major)</label>
+                                <select id="addMajorSelect" name="majorId" class="form-select">
+                                    <option value="">-- Môn Cơ sở ngành / Dùng chung (Chưa chọn ngành) --</option>
+                                    @foreach (var m in majors)
+                                    {
+                                        <option value="@m.Id" data-code="@m.Code">@m.Code - @m.Name</option>
+                                    }
+                                </select>
+                                <div class="form-text small text-muted">
+                                    Chọn ngành (VD: <strong>SE</strong>) để hệ thống chỉ hiển thị các ngành hẹp thuộc ngành đó.
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">2. Ngành hẹp (Specialization)</label>
+                                <select name="specializationId" id="addSpecSelect" class="form-select">
+                                    <option value="">-- Môn Cơ sở ngành (Dùng chung cho toàn ngành) --</option>
+                                </select>
+                                <div class="form-text small text-muted">
+                                    Để trống nếu là môn cơ sở ngành chung; chọn ngành hẹp nếu môn thuộc chuyên ngành chuyên sâu.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mô tả tóm tắt</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Nội dung tóm tắt môn học..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Lưu Môn Học
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sửa Môn Học -->
+<div class="modal fade" id="modalEditSubject" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="Subjects" asp-action="Edit" method="post">
+                <input type="hidden" name="id" id="editSubjectId" />
+                <div class="modal-header bg-warning-subtle text-dark">
+                    <h5 class="modal-title fw-bold">
+                        <i class="fa-solid fa-pen-to-square text-warning me-2"></i>Chỉnh Sửa Môn Học: <span id="editSubjectCodeBadge" class="text-primary"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold">Tên môn học <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="editSubjectName" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Số tín chỉ <span class="text-danger">*</span></label>
+                            <input type="number" name="credits" id="editSubjectCredits" class="form-control" min="1" max="10" required />
+                        </div>
+                    </div>
+
+                    <!-- Khu vực phân loại Ngành học & Ngành hẹp -->
+                    <div class="card bg-light border-0 rounded-3 p-3 mb-3">
+                        <div class="fw-semibold text-dark mb-2">
+                            <i class="fa-solid fa-layer-group text-primary me-1"></i> Phân loại Ngành học & Ngành hẹp
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">1. Ngành học (Major)</label>
+                                <select id="editMajorSelect" name="majorId" class="form-select">
+                                    <option value="">-- Môn Cơ sở ngành / Dùng chung (Chưa chọn ngành) --</option>
+                                    @foreach (var m in majors)
+                                    {
+                                        <option value="@m.Id" data-code="@m.Code">@m.Code - @m.Name</option>
+                                    }
+                                </select>
+                                <div class="form-text small text-muted">
+                                    Chọn ngành (VD: <strong>SE</strong>) để hệ thống lọc các ngành hẹp tương ứng.
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">2. Ngành hẹp (Specialization)</label>
+                                <select name="specializationId" id="editSubjectSpecId" class="form-select">
+                                    <option value="">-- Môn Cơ sở ngành (Dùng chung cho toàn ngành) --</option>
+                                </select>
+                                <div class="form-text small text-muted">
+                                    Để trống nếu là môn cơ sở ngành chung.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mô tả tóm tắt</label>
+                        <textarea name="description" id="editSubjectDesc" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="isActive" id="editSubjectActive" value="true" />
+                        <label class="form-check-label fw-semibold" for="editSubjectActive">Trạng thái Hoạt động (Active)</label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Cập nhật Môn học
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cấu hình Đầu điểm -->
+<div class="modal fade" id="modalComponents" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="Subjects" asp-action="SaveComponents" method="post" id="formComponents" onsubmit="return validateAndReindexComponents()">
+                <input type="hidden" name="subjectId" id="compSubjectId" />
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">Cấu hình Đầu Điểm cho môn <span id="compSubjectCode" class="text-primary"></span></h5>
+                        <small class="text-muted">Mỗi môn có thể cấu hình các đầu điểm và tỷ trọng riêng biệt, tổng bắt buộc đúng <strong>100%</strong>.</small>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Mẫu thiết lập nhanh -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 p-2 bg-light rounded-3">
+                        <small class="fw-semibold text-muted"><i class="fa-solid fa-wand-magic-sparkles me-1 text-warning"></i>Áp dụng mẫu nhanh:</small>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0" onclick="applyPreset('code')">
+                            Môn Lập trình / Thực hành (Quiz 10% + Lab 20% + PT 30% + Final 40%)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill py-0" onclick="applyPreset('project')">
+                            Môn Dự án / Đồ án (Sprint 1 20% + Sprint 2 20% + Sprint 3 20% + Bảo vệ 40%)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0" onclick="applyPreset('theory')">
+                            Môn Lý thuyết (Chuyên cần 10% + Assignment 20% + PT 30% + Final 40%)
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle mb-2" id="tblComponents">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tên đầu điểm <span class="text-danger">*</span></th>
+                                    <th style="width: 150px;">Tỷ trọng (%) <span class="text-danger">*</span></th>
+                                    <th style="width: 110px;">Thang điểm</th>
+                                    <th style="width: 110px;" class="text-center">Chỉ Admin</th>
+                                    <th style="width: 50px;" class="text-center">Xóa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compRowsContainer">
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-3" onclick="addComponentRow('', 0, 10, false, 0)">
+                        <i class="fa-solid fa-plus me-1"></i> Thêm đầu điểm mới
+                    </button>
+                </div>
+                <div class="modal-footer d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2 fw-semibold">Tổng tỷ trọng:</span>
+                        <span id="lblTotalWeight" class="fs-5 fw-bold text-success">100</span>%
+                        <span id="badgeTotalStatus" class="badge bg-success ms-2">Đạt chuẩn 100%</span>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4" id="btnSaveComponents">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Lưu Cấu Hình
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Tiên Quyết -->
+<div class="modal fade" id="modalPrereq" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Subjects" asp-action="AddPrerequisite" method="post">
+                <input type="hidden" name="subjectId" id="prereqSubjectId" />
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Thêm Môn Tiên Quyết cho <span id="prereqSubjectCode" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Chọn môn tiên quyết</label>
+                        <select name="prerequisiteSubjectId" class="form-select" required>
+                            <option value="">-- Chọn môn tiên quyết --</option>
+                            @foreach (var s in Model)
+                            {
+                                <option value="@s.Id">@s.Code - @s.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Điểm tối thiểu yêu cầu (Thang 10)</label>
+                        <input type="number" step="0.1" name="minScore" class="form-control" value="5.0" min="0" max="10" required />
+                        <small class="text-muted">Theo quy chế, điểm tổng kết môn tiên quyết phải >= 5.0 để đủ điều kiện xếp lớp.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu Điều Kiện</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Dữ liệu toàn bộ ngành hẹp
+    const specializationsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(specializations.Select(s => new {
+        id = s.Id,
+        majorId = s.MajorId,
+        code = s.Code,
+        name = s.Name
+    })));
+
+    /**
+     * Hàm render các option cho Ngành hẹp dựa trên Ngành học đã chọn
+     * Nếu chọn SE: Chỉ hiện các ngành hẹp của SE (.NET, SAP, Game programming, Java, NodeJS, CauNoiNhat, CauNoiHan...)
+     */
+    function populateSpecDropdown(majorSelectEl, specSelectEl, selectedSpecId = null) {
+        const majorId = majorSelectEl.value ? parseInt(majorSelectEl.value) : null;
+        const selectedOption = majorSelectEl.options[majorSelectEl.selectedIndex];
+        const majorCode = selectedOption && selectedOption.dataset.code ? selectedOption.dataset.code : '';
+
+        specSelectEl.innerHTML = '';
+
+        // Tùy chọn mặc định: Cơ sở ngành
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = majorCode 
+            ? `-- Môn Cơ sở ngành ${majorCode} (Dùng chung toàn ngành) --` 
+            : '-- Môn Cơ sở ngành (Dùng chung cho toàn ngành) --';
+        specSelectEl.appendChild(defaultOpt);
+
+        if (majorId) {
+            // Lọc CHỈ các ngành hẹp thuộc ngành đã chọn
+            const filtered = specializationsData.filter(s => s.majorId === majorId);
+            if (filtered.length > 0) {
+                filtered.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = `Ngành hẹp: ${s.code} - ${s.name}`;
+                    if (selectedSpecId && parseInt(selectedSpecId) === s.id) {
+                        opt.selected = true;
+                    }
+                    specSelectEl.appendChild(opt);
+                });
+            } else {
+                const emptyOpt = document.createElement('option');
+                emptyOpt.value = '';
+                emptyOpt.disabled = true;
+                emptyOpt.textContent = `(Ngành ${majorCode} chưa có chuyên ngành hẹp nào)`;
+                specSelectEl.appendChild(emptyOpt);
+            }
+        } else {
+            const hintOpt = document.createElement('option');
+            hintOpt.value = '';
+            hintOpt.disabled = true;
+            hintOpt.textContent = `(Chọn ngành học ở ô bên trái để chọn ngành hẹp)`;
+            specSelectEl.appendChild(hintOpt);
+        }
+
+        if (selectedSpecId) {
+            specSelectEl.value = selectedSpecId;
+        }
+    }
+
+    // Thiết lập sự kiện cho Modal Thêm Môn Học
+    const addMajorSelect = document.getElementById('addMajorSelect');
+    const addSpecSelect = document.getElementById('addSpecSelect');
+    if (addMajorSelect && addSpecSelect) {
+        addMajorSelect.addEventListener('change', function () {
+            populateSpecDropdown(addMajorSelect, addSpecSelect);
+        });
+        // Khởi tạo ban đầu
+        populateSpecDropdown(addMajorSelect, addSpecSelect);
+    }
+
+    // Thiết lập sự kiện cho Modal Sửa Môn Học
+    const editMajorSelect = document.getElementById('editMajorSelect');
+    const editSubjectSpecId = document.getElementById('editSubjectSpecId');
+    if (editMajorSelect && editSubjectSpecId) {
+        editMajorSelect.addEventListener('change', function () {
+            populateSpecDropdown(editMajorSelect, editSubjectSpecId);
+        });
+    }
+
+    function openEditSubjectModal(id, code, name, credits, desc, specId, isActive, majorId) {
+        document.getElementById('editSubjectId').value = id;
+        document.getElementById('editSubjectCodeBadge').innerText = code;
+        document.getElementById('editSubjectName').value = name;
+        document.getElementById('editSubjectCredits').value = credits;
+        document.getElementById('editSubjectDesc').value = desc || '';
+        document.getElementById('editSubjectActive').checked = isActive;
+
+        // Xác định majorId từ specId nếu majorId chưa có
+        let determinedMajorId = majorId;
+        if (!determinedMajorId && specId) {
+            const found = specializationsData.find(s => s.id == specId);
+            if (found) determinedMajorId = found.majorId;
+        }
+
+        if (editMajorSelect) {
+            editMajorSelect.value = determinedMajorId ? determinedMajorId : '';
+            populateSpecDropdown(editMajorSelect, editSubjectSpecId, specId);
+        }
+
+        new bootstrap.Modal(document.getElementById('modalEditSubject')).show();
+    }
+
+    function openPrereqModal(subjectId, code) {
+        document.getElementById('prereqSubjectId').value = subjectId;
+        document.getElementById('prereqSubjectCode').innerText = code;
+        new bootstrap.Modal(document.getElementById('modalPrereq')).show();
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Lắng nghe sự kiện click nút Cấu hình Đầu điểm
+    document.addEventListener('DOMContentLoaded', function () {
+        document.body.addEventListener('click', function (e) {
+            const btn = e.target.closest('.btn-open-components');
+            if (!btn) return;
+
+            const subjectId = btn.getAttribute('data-id');
+            const code = btn.getAttribute('data-code');
+            const name = btn.getAttribute('data-name');
+            let components = [];
+
+            try {
+                const raw = btn.getAttribute('data-components');
+                if (raw) {
+                    components = JSON.parse(raw);
+                }
+            } catch (err) {
+                console.error('Lỗi phân tích JSON đầu điểm:', err);
+            }
+
+            openComponentsModal(subjectId, code, name, components);
+        });
+    });
+
+    function openComponentsModal(subjectId, code, name, components) {
+        document.getElementById('compSubjectId').value = subjectId;
+        document.getElementById('compSubjectCode').innerText = code + ' - ' + name;
+        const container = document.getElementById('compRowsContainer');
+        container.innerHTML = '';
+
+        if (components && components.length > 0) {
+            components.forEach(c => {
+                const compId = c.id ?? c.Id ?? 0;
+                const compName = c.name ?? c.Name ?? '';
+                const compWeight = c.weight ?? c.Weight ?? 0;
+                const compScale = c.scale ?? c.Scale ?? 10;
+                const compAdmin = c.isAdminOnly ?? c.IsAdminOnly ?? false;
+                addComponentRow(compName, compWeight, compScale, compAdmin, compId);
+            });
+        } else {
+            applyPreset('code');
+        }
+
+        calcTotalWeight();
+        new bootstrap.Modal(document.getElementById('modalComponents')).show();
+    }
+
+    function applyPreset(type) {
+        const container = document.getElementById('compRowsContainer');
+        container.innerHTML = '';
+        if (type === 'code') {
+            addComponentRow('Quiz Online', 10, 10, false, 0);
+            addComponentRow('Lab Practical', 20, 10, false, 0);
+            addComponentRow('Progress Test', 30, 10, false, 0);
+            addComponentRow('Final Practical Exam (PE)', 40, 10, true, 0);
+        } else if (type === 'project') {
+            addComponentRow('Sprint 1 - SRS & Architecture', 20, 10, false, 0);
+            addComponentRow('Sprint 2 - Implementation', 20, 10, false, 0);
+            addComponentRow('Sprint 3 - Final Testing & Deploy', 20, 10, false, 0);
+            addComponentRow('Final Project Defense', 40, 10, true, 0);
+        } else if (type === 'theory') {
+            addComponentRow('Attendance & Classwork', 10, 10, false, 0);
+            addComponentRow('Assignment / Report', 20, 10, false, 0);
+            addComponentRow('Midterm Exam', 30, 10, false, 0);
+            addComponentRow('Final Exam (FE)', 40, 10, true, 0);
+        }
+        calcTotalWeight();
+    }
+
+    function addComponentRow(name = '', weight = 0, scale = 10, isAdminOnly = false, id = 0) {
+        const container = document.getElementById('compRowsContainer');
+        const tr = document.createElement('tr');
+        tr.className = 'comp-row';
+        tr.innerHTML = `
+            <td>
+                <input type="hidden" class="comp-id" value="${id}" />
+                <input type="text" class="form-control form-control-sm comp-name" value="${escapeHtml(name)}" required placeholder="Tên đầu điểm (VD: Quiz, Lab, Final...)" />
+            </td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <input type="number" step="1" min="0" max="100" class="form-control comp-weight text-end fw-semibold" value="${weight}" required oninput="calcTotalWeight()" onchange="calcTotalWeight()" />
+                    <span class="input-group-text">%</span>
+                </div>
+            </td>
+            <td>
+                <input type="number" step="1" min="1" max="100" class="form-control form-control-sm comp-scale text-center" value="${scale}" />
+            </td>
+            <td class="text-center">
+                <input type="checkbox" class="form-check-input comp-admin" ${isAdminOnly ? 'checked' : ''} title="Chỉ Admin được nhập/sửa đầu điểm này" />
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm border-0 py-0 px-2" onclick="removeComponentRow(this)" title="Xóa đầu điểm">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </td>
+        `;
+        container.appendChild(tr);
+        calcTotalWeight();
+    }
+
+    function removeComponentRow(btn) {
+        const tr = btn.closest('tr');
+        if (tr) {
+            tr.remove();
+            calcTotalWeight();
+        }
+    }
+
+    function calcTotalWeight() {
+        let total = 0;
+        document.querySelectorAll('#compRowsContainer .comp-weight').forEach(input => {
+            total += parseFloat(input.value) || 0;
+        });
+        total = Math.round(total * 100) / 100;
+
+        const lbl = document.getElementById('lblTotalWeight');
+        const badge = document.getElementById('badgeTotalStatus');
+        const btnSave = document.getElementById('btnSaveComponents');
+
+        if (lbl) lbl.innerText = total;
+
+        if (Math.abs(total - 100) < 0.01) {
+            if (lbl) lbl.className = 'fs-5 fw-bold text-success';
+            if (badge) {
+                badge.className = 'badge bg-success ms-2';
+                badge.innerText = 'Đạt chuẩn 100%';
+            }
+            if (btnSave) btnSave.disabled = false;
+        } else {
+            if (lbl) lbl.className = 'fs-5 fw-bold text-danger';
+            if (badge) {
+                badge.className = 'badge bg-danger ms-2';
+                badge.innerText = `Chưa đúng 100% (Hiện tại: ${total}%)`;
+            }
+            if (btnSave) btnSave.disabled = true;
+        }
+    }
+
+    function validateAndReindexComponents() {
+        const rows = document.querySelectorAll('#compRowsContainer tr.comp-row');
+        if (rows.length === 0) {
+            alert('Mỗi môn học phải có ít nhất 1 đầu điểm!');
+            return false;
+        }
+
+        let totalWeight = 0;
+        let hasEmptyName = false;
+
+        rows.forEach((row, i) => {
+            const idInput = row.querySelector('.comp-id');
+            const nameInput = row.querySelector('.comp-name');
+            const weightInput = row.querySelector('.comp-weight');
+            const scaleInput = row.querySelector('.comp-scale');
+            const adminInput = row.querySelector('.comp-admin');
+
+            const nameVal = (nameInput.value || '').trim();
+            if (!nameVal) {
+                hasEmptyName = true;
+            }
+
+            const weightVal = parseFloat(weightInput.value) || 0;
+            totalWeight += weightVal;
+
+            // Đặt tên tuần tự index 0, 1, 2... cho DefaultModelBinder của ASP.NET Core
+            idInput.name = `components[${i}].Id`;
+            nameInput.name = `components[${i}].Name`;
+            weightInput.name = `components[${i}].Weight`;
+            scaleInput.name = `components[${i}].Scale`;
+
+            adminInput.name = `components[${i}].IsAdminOnly`;
+            adminInput.value = 'true';
+        });
+
+        if (hasEmptyName) {
+            alert('Vui lòng nhập đầy đủ tên cho tất cả các đầu điểm!');
+            return false;
+        }
+
+        totalWeight = Math.round(totalWeight * 100) / 100;
+        if (Math.abs(totalWeight - 100) > 0.01) {
+            alert(`Tổng tỷ trọng các đầu điểm hiện tại là ${totalWeight}%. Bắt buộc tổng phải bằng đúng 100%!`);
+            return false;
+        }
+
+        return true;
+    }
+
+    // Tự động tính toán chuỗi OData URL xem trước
+    function updateODataPreview() {
+        const search = (document.getElementById('filterSearchInput').value || '').trim();
+        const majorId = document.getElementById('filterMajorSelect').value;
+        const specId = document.getElementById('filterSpecSelect').value;
+        const credits = document.getElementById('filterCreditsSelect').value;
+        const orderby = document.getElementById('filterOrderBySelect').value;
+
+        const filters = [];
+        if (search) {
+            filters.push(`(contains(tolower(Code), '${search.toLowerCase()}') or contains(tolower(Name), '${search.toLowerCase()}'))`);
+        }
+        if (majorId) {
+            filters.push(`MajorId eq ${majorId}`);
+        }
+        if (specId) {
+            filters.push(`SpecializationId eq ${specId}`);
+        }
+        if (credits) {
+            if (parseInt(credits) >= 5) {
+                filters.push('Credits ge 5');
+            } else {
+                filters.push(`Credits eq ${credits}`);
+            }
+        }
+
+        const queryParams = [];
+        if (filters.length > 0) {
+            queryParams.push(`$filter=${filters.join(' and ')}`);
+        }
+        if (orderby) {
+            queryParams.push(`$orderby=${orderby}`);
+        }
+
+        const previewElem = document.getElementById('odataQueryPreview');
+        if (previewElem) {
+            previewElem.textContent = '/api/subjects' + (queryParams.length > 0 ? '?' + queryParams.join('&') : '');
+        }
+
+        filterSubjectTable();
+    }
+
+    // Logic thanh lọc nhanh danh sách môn học
+    function onFilterMajorChange() {
+        const majorSelect = document.getElementById('filterMajorSelect');
+        const specSelect = document.getElementById('filterSpecSelect');
+        const majorId = majorSelect.value ? parseInt(majorSelect.value) : null;
+        const selectedOption = majorSelect.options[majorSelect.selectedIndex];
+        const majorCode = selectedOption && selectedOption.dataset.code ? selectedOption.dataset.code : '';
+
+        specSelect.innerHTML = '';
+        const optAll = document.createElement('option');
+        optAll.value = '';
+        optAll.textContent = majorCode 
+            ? `-- Tất cả ngành hẹp của ${majorCode} --` 
+            : '-- Tất cả cơ sở ngành & ngành hẹp --';
+        specSelect.appendChild(optAll);
+
+        if (majorId) {
+            const filtered = specializationsData.filter(s => s.majorId === majorId);
+            filtered.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `${s.code} - ${s.name}`;
+                specSelect.appendChild(opt);
+            });
+        }
+
+        updateODataPreview();
+    }
+
+    function filterSubjectTable() {
+        const keyword = (document.getElementById('filterSearchInput').value || '').trim().toLowerCase();
+        const majorId = document.getElementById('filterMajorSelect').value;
+        const specId = document.getElementById('filterSpecSelect').value;
+        const credits = document.getElementById('filterCreditsSelect').value;
+
+        const rows = document.querySelectorAll('#tbodySubjects tr.subject-row');
+        let visibleCount = 0;
+
+        rows.forEach(r => {
+            const code = r.getAttribute('data-code') || '';
+            const name = r.getAttribute('data-name') || '';
+            const rMajorId = r.getAttribute('data-major-id') || '';
+            const rSpecId = r.getAttribute('data-spec-id') || '';
+
+            const matchSearch = !keyword || code.includes(keyword) || name.includes(keyword);
+            const matchMajor = !majorId || (rMajorId === majorId);
+            const matchSpec = !specId || (rSpecId === specId);
+
+            if (matchSearch && matchMajor && matchSpec) {
+                r.style.display = '';
+                visibleCount++;
+            } else {
+                r.style.display = 'none';
+            }
+        });
+
+        const badge = document.getElementById('filterCountBadge');
+        if (badge) {
+            badge.innerText = `Hiển thị ${visibleCount} / ${rows.length} môn`;
+        }
+    }
+</script>
+}

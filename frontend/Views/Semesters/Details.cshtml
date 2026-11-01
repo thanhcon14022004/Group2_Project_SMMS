@@ -1,0 +1,359 @@
+@model project_PRN232.Frontend.Models.SemesterClassesViewModel
+@{
+    ViewData["Title"] = $"Chi tiết Học phần & Lớp mùa {Model.SemesterCode}";
+    var isActive = Model.Status == "Active";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm">
+                <i class="fa-solid fa-arrow-left me-1"></i> Quay lại
+            </a>
+            <h4 class="fw-bold mb-0 text-dark">
+                <span class="badge @(isActive ? "bg-primary" : "bg-secondary") fs-5 px-3 py-1 me-2 shadow-sm">@Model.SemesterCode</span>
+                @Model.SemesterName
+            </h4>
+        </div>
+        <small class="text-muted ms-1">
+            Thời gian: @Model.StartDate.ToString("dd/MM/yyyy") &rarr; @Model.EndDate.ToString("dd/MM/yyyy") | 
+            Trạng thái: 
+            @if (isActive)
+            {
+                <span class="badge bg-success-subtle text-success border border-success px-2 py-0">Đang mở (Active)</span>
+            }
+            else
+            {
+                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-0">Đã khóa (Closed)</span>
+            }
+        </small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a asp-controller="Classes" asp-action="Index" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+            <i class="fa-solid fa-plus me-1"></i> Thêm Lớp hành chính mới
+        </a>
+    </div>
+</div>
+
+<!-- Stats cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 border-start border-4 border-primary">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted fw-semibold d-block">LỚP HÀNH CHÍNH</small>
+                    <h3 class="fw-bold text-primary mb-0 mt-1">@Model.AdministrativeClassesCount</h3>
+                </div>
+                <div class="bg-primary-subtle text-primary rounded-circle p-3">
+                    <i class="fa-solid fa-chalkboard fa-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 border-start border-4 border-info">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted fw-semibold d-block">LỚP HỌC PHẦN (MÔN)</small>
+                    <h3 class="fw-bold text-info mb-0 mt-1">@Model.CourseSectionsCount</h3>
+                </div>
+                <div class="bg-info-subtle text-info rounded-circle p-3">
+                    <i class="fa-solid fa-book-open fa-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 border-start border-4 border-success">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted fw-semibold d-block">TỔNG SINH VIÊN</small>
+                    <h3 class="fw-bold text-success mb-0 mt-1">@Model.TotalStudentsCount SV</h3>
+                </div>
+                <div class="bg-success-subtle text-success rounded-circle p-3">
+                    <i class="fa-solid fa-user-graduate fa-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-3 border-start border-4 border-warning">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted fw-semibold d-block">TRẠNG THÁI MÙA</small>
+                    <div class="mt-1">
+                        @if (isActive)
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fa-solid fa-lock-open me-1"></i>Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="fa-solid fa-lock me-1"></i>Closed</span>
+                        }
+                    </div>
+                </div>
+                <div class="bg-warning-subtle text-warning rounded-circle p-3">
+                    <i class="fa-solid fa-clock fa-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs Card -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header bg-white border-bottom p-0">
+        <ul class="nav nav-pills card-header-pills m-2 gap-2" id="detailsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active rounded-pill fw-semibold px-4 py-2" id="tab-admin-pane" data-bs-toggle="pill" data-bs-target="#admin-pane" type="button" role="tab">
+                    <i class="fa-solid fa-chalkboard me-2"></i>Lớp Hành chính <span class="badge bg-primary ms-1">@Model.AdministrativeClasses.Count</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill fw-semibold px-4 py-2" id="tab-section-pane" data-bs-toggle="pill" data-bs-target="#section-pane" type="button" role="tab">
+                    <i class="fa-solid fa-layer-group me-2"></i>Lớp Học phần (Môn học) <span class="badge bg-info text-dark ms-1">@Model.CourseSections.Count</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body p-4 bg-white">
+        <div class="tab-content" id="detailsTabsContent">
+            <!-- TAB 1: LỚP HÀNH CHÍNH -->
+            <div class="tab-pane fade show active" id="admin-pane" role="tabpanel">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="input-group" style="max-width: 350px;">
+                        <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                        <input type="text" id="detailsSearchAdminInput" class="form-control border-start-0 bg-light" placeholder="Tìm kiếm lớp hành chính..." oninput="filterDetailsAdminTable()">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="detailsAdminTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3" style="width: 50px;">STT</th>
+                                <th style="width: 140px;">Mã lớp</th>
+                                <th>Tên lớp</th>
+                                <th>Ngành & Ngành hẹp</th>
+                                <th style="width: 90px;">Kì học</th>
+                                <th style="width: 120px;">Sinh viên</th>
+                                <th style="width: 140px;">Môn học CTĐT</th>
+                                <th class="text-end pe-3" style="width: 130px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.AdministrativeClasses.Any())
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="fa-solid fa-folder-open fa-2x mb-2 d-block text-secondary"></i>
+                                        Chưa có lớp hành chính nào được xếp vào mùa học này.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                int idx = 1;
+                                foreach (var c in Model.AdministrativeClasses)
+                                {
+                                    <tr>
+                                        <td class="ps-3 text-muted">@(idx++)</td>
+                                        <td>
+                                            <span class="badge bg-primary fs-6 px-2 py-1 shadow-sm">@c.Code</span>
+                                        </td>
+                                        <td class="fw-semibold text-dark">@(string.IsNullOrEmpty(c.Name) ? c.Code : c.Name)</td>
+                                        <td>
+                                            <span class="fw-semibold text-primary">@c.MajorCode</span> - @c.MajorName
+                                            @if (!string.IsNullOrEmpty(c.SpecializationCode))
+                                            {
+                                                <span class="badge bg-info-subtle text-info border border-info px-2 py-1 ms-1">
+                                                    <i class="fa-solid fa-code-branch me-1"></i>@c.SpecializationCode
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 ms-1">Cơ sở ngành</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border px-2 py-1">Kỳ @c.CurrentSemester</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                                <i class="fa-solid fa-user-graduate me-1"></i>@c.StudentsCount SV
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 fw-bold" onclick="selectSectionFilter('@c.Code')">
+                                                <i class="fa-solid fa-layer-group me-1"></i>@c.CourseSectionsCount môn HP
+                                            </button>
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <a asp-controller="Classes" asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Quản lý
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 2: LỚP HỌC PHẦN -->
+            <div class="tab-pane fade" id="section-pane" role="tabpanel">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="input-group" style="max-width: 350px;">
+                        <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                        <input type="text" id="detailsSearchSectionInput" class="form-control border-start-0 bg-light" placeholder="Tìm kiếm môn, mã HP, giảng viên..." oninput="filterDetailsSectionTable()">
+                    </div>
+                    <span class="small text-muted" id="detailsSectionCounter">Đang hiển thị toàn bộ @Model.CourseSections.Count lớp HP</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="detailsSectionTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3" style="width: 50px;">STT</th>
+                                <th style="width: 180px;">Mã lớp học phần</th>
+                                <th>Môn học</th>
+                                <th style="width: 120px;">Lớp HC</th>
+                                <th>Giảng viên</th>
+                                <th>Thời khóa biểu (Lịch học)</th>
+                                <th style="width: 90px;">Sĩ số</th>
+                                <th class="text-end pe-3" style="width: 120px;">Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.CourseSections.Any())
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="fa-solid fa-book-bookmark fa-2x mb-2 d-block text-secondary"></i>
+                                        Chưa có lớp học phần nào mở trong mùa học này.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                int idx = 1;
+                                foreach (var cs in Model.CourseSections)
+                                {
+                                    <tr data-class-code="@(cs.AdministrativeClassCode ?? "")">
+                                        <td class="ps-3 text-muted">@(idx++)</td>
+                                        <td>
+                                            <span class="badge bg-dark-subtle text-dark border border-secondary px-2 py-1 fw-bold fs-7">
+                                                @cs.Code
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-dark">@cs.SubjectCode - @cs.SubjectName</div>
+                                            <small class="text-muted"><i class="fa-solid fa-award text-warning me-1"></i>@cs.Credits Tín chỉ</small>
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(cs.AdministrativeClassCode))
+                                            {
+                                                <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1 fw-bold">@cs.AdministrativeClassCode</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="small fw-semibold text-secondary">
+                                                <i class="fa-solid fa-chalkboard-user text-primary me-1"></i>@(cs.LecturerName ?? "Chưa phân công")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (cs.Schedules != null && cs.Schedules.Any())
+                                            {
+                                                foreach (var sc in cs.Schedules)
+                                                {
+                                                    string dayName = sc.DayOfWeek.ToString() switch
+                                                    {
+                                                        "Monday" => "Thứ 2",
+                                                        "Tuesday" => "Thứ 3",
+                                                        "Wednesday" => "Thứ 4",
+                                                        "Thursday" => "Thứ 5",
+                                                        "Friday" => "Thứ 6",
+                                                        "Saturday" => "Thứ 7",
+                                                        "Sunday" => "Chủ Nhật",
+                                                        _ => sc.DayOfWeek.ToString()
+                                                    };
+                                                    <span class="badge bg-light text-dark border px-2 py-1 me-1 mb-1 d-inline-block">
+                                                        <i class="fa-regular fa-clock text-primary me-1"></i>@dayName (Ca @sc.Slot) - Phòng @sc.Room
+                                                    </span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">Chưa xếp lịch</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info-subtle text-info border border-info px-2 py-1">
+                                                @cs.EnrolledCount/@cs.MaxCapacity
+                                            </span>
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            @if (cs.IsGradeLocked)
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
+                                                    <i class="fa-solid fa-lock me-1"></i>Đã khóa
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                                    <i class="fa-solid fa-lock-open me-1"></i>Mở điểm
+                                                </span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function selectSectionFilter(classCode) {
+        const tabEl = document.getElementById('tab-section-pane');
+        const tab = new bootstrap.Tab(tabEl);
+        tab.show();
+
+        document.getElementById('detailsSearchSectionInput').value = classCode;
+        filterDetailsSectionTable();
+    }
+
+    function filterDetailsAdminTable() {
+        const kw = document.getElementById('detailsSearchAdminInput').value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#detailsAdminTable tbody tr');
+        rows.forEach(r => {
+            const text = r.innerText.toLowerCase();
+            r.style.display = text.includes(kw) ? '' : 'none';
+        });
+    }
+
+    function filterDetailsSectionTable() {
+        const kw = document.getElementById('detailsSearchSectionInput').value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#detailsSectionTable tbody tr');
+        let count = 0;
+        rows.forEach(r => {
+            const text = r.innerText.toLowerCase();
+            const match = text.includes(kw);
+            r.style.display = match ? '' : 'none';
+            if (match) count++;
+        });
+        document.getElementById('detailsSectionCounter').innerText = kw ? `Tìm thấy ${count} lớp HP` : `Đang hiển thị toàn bộ ${rows.length} lớp HP`;
+    }
+</script>
+}
+

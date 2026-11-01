@@ -1,0 +1,367 @@
+@model project_PRN232.Frontend.Models.AllocationViewModel
+@{
+    ViewData["Title"] = "Phân bổ Sinh viên vào Lớp Hành chính";
+    var semesters = (List<project_PRN232.Frontend.Models.SemesterViewModel>)(ViewBag.Semesters ?? new List<project_PRN232.Frontend.Models.SemesterViewModel>());
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-users-gear text-primary me-2"></i>Tự động Phân bổ Sinh viên vào Lớp Hành chính
+        </h5>
+        <small class="text-muted">Phân bổ sinh viên vào các lớp hành chính theo Kì, Ngành và Ngành hẹp (đặc biệt kỳ 5, 7, 8) với sĩ số 28 - 31 SV/lớp</small>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i> Quay lại Danh sách Lớp Hành chính
+    </a>
+</div>
+
+<!-- Form Chọn Học Kỳ Active Để Phân Bổ Vào Lớp Hành Chính -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                <i class="fa-solid fa-bolt me-1"></i>Học kỳ Đang Active
+            </span>
+            <span class="fw-bold">Chọn Học kỳ Đang Hoạt động (Active) để Phân bổ vào Lớp Hành chính</span>
+        </div>
+        <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-1">
+            Mục tiêu sĩ số: <strong>28 - 31 SV / lớp hành chính</strong>
+        </span>
+    </div>
+    <div class="card-body p-4">
+        <form asp-action="RunAllocation" method="post" class="row g-3 align-items-end">
+            <div class="col-md-7">
+                <label class="form-label fw-semibold small">Học kỳ đang hoạt động (Active) <span class="text-danger">*</span></label>
+                <select name="semesterId" class="form-select" required>
+                    @if (!semesters.Any())
+                    {
+                        <option value="">-- Không có học kỳ nào đang mở --</option>
+                    }
+                    @foreach (var sem in semesters)
+                    {
+                        <option value="@sem.Id" selected="@(sem.Status == "Active" || Model.SemesterId == sem.Id ? "selected" : null)">
+                            @sem.Code - @sem.Name (@(sem.Status == "Active" ? "🟢 ĐANG ACTIVE" : sem.Status))
+                        </option>
+                    }
+                </select>
+                <div class="form-text small text-muted mt-2">
+                    <i class="fa-solid fa-circle-info me-1 text-primary"></i>Hệ thống sẽ lấy thông tin của các lớp hành chính trong học kỳ này, tự động xếp sinh viên vào lớp theo đúng <strong>Kì</strong>, <strong>Ngành</strong> và <strong>Ngành hẹp</strong> (đặc biệt kỳ 5, 7, 8). Nếu lớp chưa đủ 28 sinh viên, hệ thống sẽ <strong>tự động insert thêm sinh viên mới vào database</strong> để đạt đủ chuẩn 28-31 SV/lớp.
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-semibold shadow-sm" onclick="return confirm('Bắt đầu phân bổ sinh viên vào các lớp hành chính cho học kỳ đã chọn? Hệ thống sẽ tự động bổ sung sinh viên vào database nếu lớp thiếu sĩ số (28-31 SV).');">
+                    <i class="fa-solid fa-play me-1"></i> Bắt đầu Phân bổ Lớp Hành chính
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.TotalEligibleStudents > 0 || Model.Allocations.Any() || Model.Exceptions.Any() || Model.ClassSummaries.Any())
+{
+    <!-- 4 Thẻ Thống Kê Tổng Quan -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Tổng SV trong các lớp hành chính</small>
+                        <h3 class="fw-bold text-primary mt-1 mb-0">@Model.TotalEligibleStudents</h3>
+                    </div>
+                    <div class="bg-primary-subtle text-primary p-3 rounded-circle">
+                        <i class="fa-solid fa-users fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Số lớp hành chính đạt chuẩn</small>
+                        <h3 class="fw-bold text-success mt-1 mb-0">@Model.ClassSummaries.Count lớp</h3>
+                    </div>
+                    <div class="bg-success-subtle text-success p-3 rounded-circle">
+                        <i class="fa-solid fa-chalkboard-user fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">SV tự động thêm mới vào CSDL</small>
+                        <h3 class="fw-bold text-info mt-1 mb-0">+@Model.AutoCreatedStudentsCount</h3>
+                    </div>
+                    <div class="bg-info-subtle text-info p-3 rounded-circle">
+                        <i class="fa-solid fa-user-plus fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Tổng lượt ghi danh môn học phần</small>
+                        <h3 class="fw-bold text-warning mt-1 mb-0">@Model.TotalEnrolledSections</h3>
+                    </div>
+                    <div class="bg-warning-subtle text-warning p-3 rounded-circle">
+                        <i class="fa-solid fa-graduation-cap fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.ClassSummaries.Any())
+    {
+        <!-- Bảng Tổng kết Sĩ số các Lớp Hành chính Sau Phân bổ -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="fa-solid fa-list-check me-2 text-primary"></i>Tổng kết Sĩ số các Lớp Hành chính sau Phân bổ (@Model.ClassSummaries.Count lớp)
+                </h6>
+                <span class="badge bg-success-subtle text-success border border-success px-3 py-1">
+                    <i class="fa-solid fa-check-double me-1"></i>Tất cả các lớp đạt chuẩn 28 - 31 SV
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3" style="width: 50px;">STT</th>
+                                <th>Mã Lớp Hành chính</th>
+                                <th>Ngành</th>
+                                <th>Ngành hẹp (Kỳ 5, 7, 8)</th>
+                                <th>Kỳ học</th>
+                                <th>Sĩ số sau phân bổ</th>
+                                <th>Tự sinh mới vào DB</th>
+                                <th>Số môn theo CTĐT</th>
+                                <th class="text-end pe-3">Danh sách sinh viên</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int cIdx = 1; }
+                            @foreach (var cs in Model.ClassSummaries)
+                            {
+                                <tr>
+                                    <td class="ps-3 text-muted">@(cIdx++)</td>
+                                    <td><strong class="text-primary fs-6">@cs.ClassCode</strong></td>
+                                    <td><span class="badge bg-light text-dark border">@cs.MajorCode</span></td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(cs.SpecializationCode))
+                                        {
+                                            <span class="badge bg-info-subtle text-info border border-info">
+                                                <i class="fa-solid fa-code-branch me-1"></i>@cs.SpecializationCode
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border">
+                                                <i class="fa-solid fa-book-bookmark me-1"></i>Cơ sở ngành
+                                            </span>
+                                        }
+                                    </td>
+                                    <td><span class="badge bg-secondary">Kỳ @cs.SemesterNumber</span></td>
+                                    <td>
+                                        <span class="badge bg-success px-2 py-1 fs-7">
+                                            <i class="fa-solid fa-user-check me-1"></i>@cs.StudentCount / 31 SV (Đạt chuẩn)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (cs.AutoCreatedCount > 0)
+                                        {
+                                            <span class="badge bg-info-subtle text-info border border-info">
+                                                <i class="fa-solid fa-plus me-1"></i>@cs.AutoCreatedCount SV mới
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-light text-muted border">0 SV</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                            @cs.SectionsCount môn
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                                onclick="openClassStudentsModal(@cs.ClassId, '@cs.ClassCode', @cs.SemesterNumber, '@cs.MajorCode', '@(cs.SpecializationCode ?? "")', @cs.StudentCount)"
+                                                title="Xem chi tiết danh sách sinh viên của lớp hành chính này">
+                                            <i class="fa-solid fa-users me-1"></i>Xem @cs.StudentCount SV
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Model.Allocations.Any())
+    {
+        <!-- Bảng Chi tiết Phân bổ Môn học phần -->
+        <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="fa-solid fa-circle-check me-2 text-success"></i>Chi tiết Ghi danh Môn học phần theo CTĐT (@Model.Allocations.Count lượt môn)
+                </h6>
+                <small class="text-muted">Hiển thị mẫu 100 lượt đầu tiên</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="ps-3">STT</th>
+                                <th>MSSV</th>
+                                <th>Họ và tên</th>
+                                <th>Lớp Hành chính</th>
+                                <th>Mã môn</th>
+                                <th>Mã lớp Học phần</th>
+                                <th>Nguồn sinh viên</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int idx = 1; }
+                            @foreach (var item in Model.Allocations.Take(100))
+                            {
+                                <tr>
+                                    <td class="ps-3 text-muted">@(idx++)</td>
+                                    <td class="fw-bold text-primary">@item.StudentCode</td>
+                                    <td>@item.StudentName</td>
+                                    <td><span class="badge bg-light text-dark border">@item.AdministrativeClassCode</span></td>
+                                    <td><span class="badge bg-secondary">@item.SubjectCode</span></td>
+                                    <td><span class="badge bg-primary">@item.SectionCode</span></td>
+                                    <td>
+                                        @if (item.IsAutoCreated)
+                                        {
+                                            <span class="badge bg-info-subtle text-info border border-info">
+                                                <i class="fa-solid fa-user-plus me-1"></i>Tự động thêm mới
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-light text-muted border">Sinh viên hiện có</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+<!-- Modal Xem Danh sách Sinh viên Thuộc Lớp Hành Chính -->
+<div class="modal fade" id="modalClassStudents" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0">
+                        <i class="fa-solid fa-users me-2"></i>Danh sách Sinh viên Lớp Hành chính: <span id="studentsClassCodeBadge" class="badge bg-white text-primary"></span>
+                    </h5>
+                    <small id="studentsClassSubTitle" class="text-white-50"></small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div id="studentsLoading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted small mt-2">Đang tải danh sách sinh viên của lớp hành chính...</p>
+                </div>
+                <div id="studentsContent" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-light text-dark border">
+                            Sĩ số: <strong id="studentsCountBadge" class="text-success">0</strong> sinh viên (Đạt chuẩn 28 - 31 SV)
+                        </span>
+                        <span class="text-muted small">
+                            <i class="fa-solid fa-circle-check text-success me-1"></i>Đã cập nhật đúng Kì, Ngành & Ngành hẹp
+                        </span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th style="width: 45px;" class="text-center">#</th>
+                                    <th style="width: 120px;">Mã Sinh viên</th>
+                                    <th>Họ và Tên</th>
+                                    <th>Email FPT</th>
+                                    <th style="width: 70px;" class="text-center">Kì</th>
+                                    <th style="width: 110px;" class="text-center">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="studentsEmpty" class="alert alert-warning py-3 text-center mb-0" style="display: none;">
+                    <i class="fa-solid fa-circle-exclamation me-1"></i>Lớp hành chính này hiện chưa có sinh viên nào. Bạn có thể nhấn <strong>"Bắt đầu Phân bổ Lớp Hành chính"</strong> để hệ thống tự động xếp lớp.
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function openClassStudentsModal(classId, classCode, semester, majorCode, specCode, studentCount) {
+        document.getElementById('studentsClassCodeBadge').innerText = classCode;
+        const specInfo = specCode ? ` (Ngành hẹp: ${specCode})` : ' (Cơ sở ngành)';
+        document.getElementById('studentsClassSubTitle').innerText = `Ngành: ${majorCode}${specInfo} | Kỳ học: ${semester}`;
+
+        document.getElementById('studentsLoading').style.display = 'block';
+        document.getElementById('studentsContent').style.display = 'none';
+        document.getElementById('studentsEmpty').style.display = 'none';
+
+        new bootstrap.Modal(document.getElementById('modalClassStudents')).show();
+
+        fetch(`/Classes/GetStudents?id=${classId}`)
+            .then(res => res.json())
+            .then(res => {
+                document.getElementById('studentsLoading').style.display = 'none';
+                if (res.success && res.data && res.data.students && res.data.students.length > 0) {
+                    const students = res.data.students;
+                    document.getElementById('studentsCountBadge').innerText = students.length;
+                    const tbody = document.getElementById('studentsTableBody');
+                    tbody.innerHTML = '';
+                    students.forEach((s, idx) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="text-center text-muted">${idx + 1}</td>
+                            <td class="fw-bold text-primary">${s.studentCode}</td>
+                            <td class="fw-semibold text-dark">${s.fullName}</td>
+                            <td><span class="text-muted small">${s.email}</span></td>
+                            <td class="text-center"><span class="badge bg-light text-dark border">Kỳ ${s.currentSemester}</span></td>
+                            <td class="text-center"><span class="badge bg-success-subtle text-success border border-success">Đang học</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    document.getElementById('studentsContent').style.display = 'block';
+                } else {
+                    document.getElementById('studentsEmpty').style.display = 'block';
+                }
+            })
+            .catch(err => {
+                document.getElementById('studentsLoading').style.display = 'none';
+                document.getElementById('studentsEmpty').style.display = 'block';
+                document.getElementById('studentsEmpty').innerText = 'Không thể tải danh sách sinh viên: ' + err;
+            });
+    }
+</script>
+}
+

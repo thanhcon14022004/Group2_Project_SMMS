@@ -1,0 +1,163 @@
+@model project_PRN232.Frontend.Models.CurriculumLookupViewModel
+@{
+    ViewData["Title"] = "Tra cứu Môn học theo Chương trình Đào tạo";
+    var majors = (List<project_PRN232.Frontend.Models.MajorViewModel>)ViewBag.Majors;
+    var specializations = (List<project_PRN232.Frontend.Models.SpecializationViewModel>)ViewBag.Specializations;
+}
+
+<div class="row g-3">
+    <!-- Bộ chọn điều kiện tra cứu -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3">
+                <h6 class="card-title mb-0 fw-bold"><i class="fa-solid fa-filter text-primary me-2"></i>Chọn Thông Tin Tra Cứu</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Lookup" method="get">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Ngành Đào tạo</label>
+                        <select name="majorId" class="form-select" id="selectMajor" onchange="filterSpecs()">
+                            @foreach (var m in majors)
+                            {
+                                <option value="@m.Id" selected="@(m.Id == Model.MajorId ? "selected" : null)">@m.Code - @m.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Học kỳ</label>
+                        <select name="semesterNumber" class="form-select">
+                            @for (int i = 1; i <= 9; i++)
+                            {
+                                <option value="@i" selected="@(i == Model.SemesterNumber ? "selected" : null)">Học kỳ @i</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Cơ sở ngành / Chuyên ngành hẹp (Bắt buộc cho Kỳ 5, 7, 8 - Kỳ 6 thực tập OJT)</label>
+                        <select name="specializationId" class="form-select" id="selectSpec">
+                            <option value="">-- Cơ sở ngành (Không phân nhánh) --</option>
+                            @foreach (var s in specializations)
+                            {
+                                <option value="@s.Id" data-major="@s.MajorId" selected="@(s.Id == Model.SpecializationId ? "selected" : null)">Ngành hẹp: @s.Code - @s.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i> Tra cứu danh sách môn
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kết quả tra cứu tự động -->
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0 fw-bold"><i class="fa-solid fa-list-check text-success me-2"></i>Kết Quả Tra Cứu Môn Học</h6>
+                @if (Model.IsFound)
+                {
+                    <span class="badge bg-success">Đã tìm thấy cấu hình</span>
+                }
+                else
+                {
+                    <span class="badge bg-warning text-dark">Chưa có cấu hình khớp</span>
+                }
+            </div>
+            <div class="card-body">
+                @if (Model.IsFound)
+                {
+                    <div class="alert alert-success d-flex justify-content-between align-items-center py-2 mb-3">
+                        <div>
+                            <strong>Cấu hình áp dụng:</strong> @Model.ConfigName (@Model.Version)
+                            @if (!string.IsNullOrEmpty(Model.SpecializationCode))
+                            {
+                                <span class="badge bg-info ms-2"><i class="fa-solid fa-code-branch me-1"></i>Ngành hẹp: @Model.SpecializationCode</span>
+                            }
+                            else if (Model.SemesterNumber == 6)
+                            {
+                                <span class="badge bg-success ms-2"><i class="fa-solid fa-briefcase me-1"></i>OJT dùng chung</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary ms-2"><i class="fa-solid fa-book-bookmark me-1"></i>Cơ sở ngành</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Mã môn</th>
+                                    <th>Tên môn học</th>
+                                    <th>Số tín chỉ</th>
+                                    <th>Môn tiên quyết</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ int stt = 1; }
+                                @foreach (var sub in Model.Subjects)
+                                {
+                                    <tr>
+                                        <td>@(stt++)</td>
+                                        <td class="fw-bold text-primary">@sub.Code</td>
+                                        <td>@sub.Name</td>
+                                        <td><span class="badge bg-secondary">@sub.Credits TC</span></td>
+                                        <td>
+                                            @if (sub.Prerequisites.Count == 0)
+                                            {
+                                                <span class="text-muted small">Không có</span>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var prereq in sub.Prerequisites)
+                                                {
+                                                    <span class="badge bg-info-subtle text-info border border-info me-1">
+                                                        @prereq.PrerequisiteSubjectCode (>= @prereq.MinScore)
+                                                    </span>
+                                                }
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-circle-question fa-3x mb-3 text-secondary"></i>
+                        <p class="mb-0">@(!string.IsNullOrEmpty(Model.Message) ? Model.Message : "Chọn thông tin bên trái và nhấn 'Tra cứu' để xem danh sách môn học tự động.")</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function filterSpecs() {
+        const majorId = document.getElementById('selectMajor').value;
+        const specSelect = document.getElementById('selectSpec');
+        for (let i = 0; i < specSelect.options.length; i++) {
+            const opt = specSelect.options[i];
+            const optMajor = opt.getAttribute('data-major');
+            if (!optMajor || optMajor === majorId) {
+                opt.style.display = '';
+            } else {
+                opt.style.display = 'none';
+                if (opt.selected) specSelect.value = '';
+            }
+        }
+    }
+    filterSpecs();
+</script>
+}
+

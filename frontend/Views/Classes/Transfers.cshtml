@@ -1,0 +1,140 @@
+@model List<project_PRN232.Frontend.Models.ClassTransferViewModel>
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    ViewData["Title"] = "Chuyển Lớp Hành chính";
+    var role = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "";
+    var classes = (List<project_PRN232.Frontend.Models.ClassViewModel>)ViewBag.Classes;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="fw-bold mb-0">Quản lý Yêu cầu Chuyển Lớp Hành chính</h5>
+        <small class="text-muted">Kiểm tra thời hạn chuyển lớp của kỳ và ghi nhật ký thao tác</small>
+    </div>
+    @if (role == "Student")
+    {
+        <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalRequestTransfer">
+            <i class="fa-solid fa-paper-plane me-1"></i> Gửi Yêu Cầu Chuyển Lớp
+        </button>
+    }
+</div>
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Mã SV</th>
+                        <th>Họ và Tên</th>
+                        <th>Lớp hiện tại</th>
+                        <th>Lớp xin chuyển tới</th>
+                        <th>Lý do chuyển</th>
+                        <th>Thời gian gửi</th>
+                        <th class="text-center">Trạng thái</th>
+                        @if (role == "Admin")
+                        {
+                            <th class="text-end pe-3">Phê duyệt</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                Chưa có yêu cầu chuyển lớp nào trong hệ thống.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td class="ps-3 fw-bold text-primary">@r.StudentCode</td>
+                            <td>@r.StudentName</td>
+                            <td><span class="badge bg-secondary-subtle text-secondary">@r.CurrentClassName</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary">@r.TargetClassName</span></td>
+                            <td><small class="text-muted">@r.Reason</small></td>
+                            <td>@r.RequestedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-center">
+                                @if (r.Status == "Pending")
+                                {
+                                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-clock me-1"></i>Chờ duyệt</span>
+                                }
+                                else if (r.Status == "Approved")
+                                {
+                                    <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>Đã duyệt</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger"><i class="fa-solid fa-xmark me-1"></i>Từ chối</span>
+                                }
+                            </td>
+                            @if (role == "Admin")
+                            {
+                                <td class="text-end pe-3">
+                                    @if (r.Status == "Pending")
+                                    {
+                                        <form asp-controller="Classes" asp-action="ProcessTransfer" method="post" class="d-inline">
+                                            <input type="hidden" name="requestId" value="@r.Id" />
+                                            <input type="hidden" name="approve" value="true" />
+                                            <button type="submit" class="btn btn-success btn-sm rounded-pill px-2 py-0 me-1" title="Phê duyệt">
+                                                <i class="fa-solid fa-check"></i> Duyệt
+                                            </button>
+                                        </form>
+                                        <form asp-controller="Classes" asp-action="ProcessTransfer" method="post" class="d-inline">
+                                            <input type="hidden" name="requestId" value="@r.Id" />
+                                            <input type="hidden" name="approve" value="false" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-2 py-0" title="Từ chối">
+                                                <i class="fa-solid fa-xmark"></i> Từ chối
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gửi Yêu Cầu Chuyển Lớp (Sinh viên) -->
+<div class="modal fade" id="modalRequestTransfer" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Classes" asp-action="RequestTransfer" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Đăng ký Chuyển Lớp Hành chính</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="fa-solid fa-circle-info me-1"></i> Yêu cầu chuyển lớp chỉ được chấp nhận khi <strong>còn trong thời hạn cho phép (Transfer Deadline)</strong> của học kỳ.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Lớp hành chính muốn chuyển đến</label>
+                        <select name="targetClassId" class="form-select" required>
+                            <option value="">-- Chọn lớp đích --</option>
+                            @foreach (var c in classes)
+                            {
+                                <option value="@c.Id">@c.Code - @c.Name (Sĩ số: @c.StudentCount)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Lý do xin chuyển lớp</label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="Nhập lý do chi tiết..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Gửi Đơn Xin Chuyển</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,179 @@
+@model project_PRN232.Frontend.Models.TranscriptViewModel
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    ViewData["Title"] = "Bảng điểm Cá nhân & GPA Thang 10";
+    var role = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold mb-0">Bảng điểm & Quá trình Học tập</h5>
+        <small class="text-muted">Theo dõi kết quả học tập, tín chỉ tích lũy và xếp loại học lực theo thang điểm 10</small>
+    </div>
+    @if (role == "Admin")
+    {
+        <form method="get" asp-action="Transcript" class="d-flex gap-2 align-items-center">
+            <input type="number" name="studentId" class="form-control form-control-sm" placeholder="Nhập Student ID..." style="width: 180px;" value="@(Model.StudentId > 0 ? Model.StudentId.ToString() : "")" />
+            <button type="submit" class="btn btn-outline-primary btn-sm rounded-3">
+                <i class="fa-solid fa-magnifying-glass me-1"></i> Tra cứu
+            </button>
+        </form>
+    }
+</div>
+
+@if (Model != null && Model.StudentId > 0)
+{
+    <!-- Student Header Card -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4 bg-primary text-white p-4">
+        <div class="row align-items-center">
+            <div class="col-md-7">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                        @(string.IsNullOrWhiteSpace(Model.FullName) ? "SV" : Model.FullName.Substring(0, 1))
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-1">@Model.FullName</h4>
+                        <div class="opacity-75">
+                            MSSV: <strong class="text-white">@Model.StudentCode</strong> &bull;
+                            Ngành: <strong class="text-white">@Model.MajorName</strong>
+                            @if (!string.IsNullOrWhiteSpace(Model.SpecializationName))
+                            {
+                                <span> &bull; Chuyên ngành: <strong class="text-white">@Model.SpecializationName</strong></span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                <span class="badge bg-white text-primary fs-6 px-3 py-2 rounded-pill shadow-sm">
+                    Xếp loại: <strong>@Model.AcademicStanding</strong>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">GPA Tích lũy (Thang 10)</small>
+                        <h3 class="fw-bold text-primary mt-1 mb-0">@Model.CumulativeGpa.ToString("0.00")</h3>
+                    </div>
+                    <div class="bg-primary-subtle text-primary p-3 rounded-circle">
+                        <i class="fa-solid fa-star fa-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Tín chỉ Đã Đăng ký</small>
+                        <h3 class="fw-bold text-dark mt-1 mb-0">@Model.TotalEnrolledCredits</h3>
+                    </div>
+                    <div class="bg-secondary-subtle text-secondary p-3 rounded-circle">
+                        <i class="fa-solid fa-book-open fa-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Tín chỉ Tích lũy (Đạt)</small>
+                        <h3 class="fw-bold text-success mt-1 mb-0">@Model.TotalPassedCredits</h3>
+                    </div>
+                    <div class="bg-success-subtle text-success p-3 rounded-circle">
+                        <i class="fa-solid fa-graduation-cap fa-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-semibold">Học kỳ Hiện tại</small>
+                        <h3 class="fw-bold text-info mt-1 mb-0">Kỳ @Model.CurrentSemester</h3>
+                    </div>
+                    <div class="bg-info-subtle text-info p-3 rounded-circle">
+                        <i class="fa-solid fa-calendar-check fa-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transcript Table -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white py-3">
+            <h6 class="fw-bold mb-0"><i class="fa-solid fa-list-check me-2 text-primary"></i>Chi tiết Kết quả Môn học</h6>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.SubjectRecords == null || !Model.SubjectRecords.Any())
+            {
+                <div class="p-5 text-center text-muted">
+                    <i class="fa-solid fa-clipboard-list fa-3x mb-3 text-secondary"></i>
+                    <p class="mb-0">Chưa có kết quả môn học nào được ghi nhận.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;">STT</th>
+                                <th>Học kỳ</th>
+                                <th>Mã môn</th>
+                                <th>Tên môn học</th>
+                                <th class="text-center">Số TC</th>
+                                <th class="text-center">Điểm Tổng kết</th>
+                                <th class="text-center">Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int idx = 1; }
+                            @foreach (var rec in Model.SubjectRecords)
+                            {
+                                <tr>
+                                    <td>@(idx++)</td>
+                                    <td><span class="badge bg-light text-dark border">@rec.SemesterCode</span></td>
+                                    <td class="fw-bold">@rec.SubjectCode</td>
+                                    <td>@rec.SubjectName</td>
+                                    <td class="text-center fw-semibold">@rec.Credits</td>
+                                    <td class="text-center fw-bold fs-6 @(rec.IsPassed ? "text-success" : "text-danger")">
+                                        @rec.FinalScore.ToString("0.0")
+                                    </td>
+                                    <td class="text-center">
+                                        @if (rec.IsPassed)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success px-3 py-1">ĐẠT</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger border border-danger px-3 py-1">HỎNG</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="card border-0 shadow-sm rounded-3 p-5 text-center text-muted">
+        <i class="fa-solid fa-user-graduate fa-3x mb-3 text-secondary"></i>
+        <h5>Không tìm thấy thông tin sinh viên</h5>
+        <p class="mb-0">Vui lòng kiểm tra lại mã hoặc quyền truy cập của tài khoản.</p>
+    </div>
+}
+

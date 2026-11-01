@@ -1,0 +1,244 @@
+@model List<project_PRN232.Frontend.Models.MajorViewModel>
+@{
+    ViewData["Title"] = "Quản lý Ngành & Chuyên ngành hẹp";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="fw-bold mb-0">Danh sách Ngành Đào Tạo</h5>
+        <small class="text-muted">Quản lý các ngành chính và chuyên ngành hẹp theo quy định</small>
+    </div>
+    <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalAddMajor">
+        <i class="fa-solid fa-plus me-1"></i> Thêm Ngành Mới
+    </button>
+</div>
+
+<div class="row g-3">
+    @foreach (var major in Model)
+    {
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 rounded-3 h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge @(major.IsActive ? "bg-primary" : "bg-secondary") me-2">@major.Code</span>
+                        <strong class="fs-6">@major.Name</strong>
+                        @if (!major.IsActive)
+                        {
+                            <span class="badge bg-danger ms-1">Inactive</span>
+                        }
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="openAddSpecModal(@major.Id, '@major.Code')" title="Thêm ngành hẹp">
+                            <i class="fa-solid fa-plus me-1"></i> Ngành hẹp
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm rounded-pill" onclick="openEditMajorModal(@major.Id, '@major.Code', '@major.Name', '@(major.Description ?? "")', @(major.IsActive ? "true" : "false"))" title="Sửa ngành">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa ngành @major.Code? Nếu ngành có liên kết lớp học, hệ thống sẽ chuyển sang trạng thái Inactive.');">
+                            <input type="hidden" name="id" value="@major.Id" />
+                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill" title="Xóa ngành">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">@major.Description</p>
+                    <h6 class="fw-bold small text-uppercase text-secondary mb-2">Các Chuyên ngành hẹp:</h6>
+                    @if (major.Specializations.Count == 0)
+                    {
+                        <div class="text-muted small fst-italic">Chưa có chuyên ngành hẹp nào được cấu hình.</div>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush small">
+                            @foreach (var spec in major.Specializations)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <div class="me-2">
+                                        <span class="badge bg-secondary-subtle text-secondary me-2">@spec.Code</span>
+                                        <strong>@spec.Name</strong>
+                                        <div class="text-muted" style="font-size: 0.8rem;">@spec.Description</div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge @(spec.IsActive ? "bg-success" : "bg-danger")">
+                                            @(spec.IsActive ? "Active" : "Inactive")
+                                        </span>
+                                        <button class="btn btn-link text-warning p-0 ms-1" onclick="openEditSpecModal(@spec.Id, '@spec.Code', '@spec.Name', '@(spec.Description ?? "")', @(spec.IsActive ? "true" : "false"))" title="Sửa ngành hẹp">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <form asp-action="DeleteSpecialization" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa chuyên ngành @spec.Code?');">
+                                            <input type="hidden" name="id" value="@spec.Id" />
+                                            <button type="submit" class="btn btn-link text-danger p-0 ms-1" title="Xóa ngành hẹp">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal Thêm Ngành -->
+<div class="modal fade" id="modalAddMajor" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Majors" asp-action="Create" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Thêm Ngành Đào Tạo Mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mã ngành (Code) <span class="text-danger">*</span></label>
+                        <input type="text" name="code" class="form-control" placeholder="VD: SE, IA, AI..." required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên ngành <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="VD: Kỹ thuật phần mềm" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mô tả</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu Ngành</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sửa Ngành -->
+<div class="modal fade" id="modalEditMajor" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Majors" asp-action="Edit" method="post">
+                <input type="hidden" name="id" id="editMajorId" />
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Chỉnh Sửa Ngành: <span id="editMajorCodeBadge" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên ngành <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editMajorName" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mô tả</label>
+                        <textarea name="description" id="editMajorDesc" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="isActive" id="editMajorActive" value="true" />
+                        <label class="form-check-label fw-semibold" for="editMajorActive">Trạng thái Hoạt động (Active)</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Cập nhật Ngành</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm Ngành Hẹp -->
+<div class="modal fade" id="modalAddSpec" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Majors" asp-action="CreateSpecialization" method="post">
+                <input type="hidden" name="majorId" id="specMajorId" />
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Thêm Chuyên Ngành Hẹp (<span id="specMajorCode"></span>)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mã chuyên ngành hẹp <span class="text-danger">*</span></label>
+                        <input type="text" name="code" class="form-control" placeholder="VD: SE-IS, IA-NW..." required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên chuyên ngành hẹp <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="VD: Hệ thống thông tin" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mô tả</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu Chuyên Ngành</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sửa Ngành Hẹp -->
+<div class="modal fade" id="modalEditSpec" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Majors" asp-action="EditSpecialization" method="post">
+                <input type="hidden" name="id" id="editSpecId" />
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Chỉnh Sửa Chuyên Ngành: <span id="editSpecCodeBadge" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên chuyên ngành <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editSpecName" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mô tả</label>
+                        <textarea name="description" id="editSpecDesc" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="isActive" id="editSpecActive" value="true" />
+                        <label class="form-check-label fw-semibold" for="editSpecActive">Trạng thái Hoạt động (Active)</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Cập nhật Chuyên Ngành</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function openAddSpecModal(majorId, majorCode) {
+        document.getElementById('specMajorId').value = majorId;
+        document.getElementById('specMajorCode').innerText = majorCode;
+        new bootstrap.Modal(document.getElementById('modalAddSpec')).show();
+    }
+
+    function openEditMajorModal(id, code, name, desc, isActive) {
+        document.getElementById('editMajorId').value = id;
+        document.getElementById('editMajorCodeBadge').innerText = code;
+        document.getElementById('editMajorName').value = name;
+        document.getElementById('editMajorDesc').value = desc;
+        document.getElementById('editMajorActive').checked = isActive;
+        new bootstrap.Modal(document.getElementById('modalEditMajor')).show();
+    }
+
+    function openEditSpecModal(id, code, name, desc, isActive) {
+        document.getElementById('editSpecId').value = id;
+        document.getElementById('editSpecCodeBadge').innerText = code;
+        document.getElementById('editSpecName').value = name;
+        document.getElementById('editSpecDesc').value = desc;
+        document.getElementById('editSpecActive').checked = isActive;
+        new bootstrap.Modal(document.getElementById('modalEditSpec')).show();
+    }
+</script>
+}

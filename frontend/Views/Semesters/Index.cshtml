@@ -1,0 +1,463 @@
+@model List<project_PRN232.Frontend.Models.SemesterViewModel>
+@{
+    ViewData["Title"] = "Quản lý Lớp Học phần & Mùa học";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-calendar-check text-primary me-2"></i>Quản lý Lớp Học phần & Mùa học
+        </h5>
+        <small class="text-muted">Tạo các mùa học (Spring 26, Summer 26, Fall 26...), Sửa, Xóa, Khóa học kỳ và Mở lại học kỳ</small>
+    </div>
+    <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#createSemesterModal">
+        <i class="fa-solid fa-plus me-1"></i> Thêm Mùa học mới
+    </button>
+</div>
+
+<!-- Thanh Bộ Lọc OData Nâng Cao -->
+<div class="card shadow-sm border-0 rounded-3 mb-3 bg-white">
+    <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
+                <i class="fa-solid fa-filter me-1"></i>Bộ Lọc OData Mùa Học
+            </span>
+            <small class="text-muted">Lọc mùa học với <code>$filter</code>, <code>$orderby</code> theo chuẩn OData v4</small>
+        </div>
+        <div>
+            <span class="badge bg-light text-dark border">Tổng cộng @Model.Count mùa học</span>
+        </div>
+    </div>
+    <div class="card-body p-3">
+        <form method="get" asp-action="Index" id="semesterODataForm">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" name="search" id="semFilterSearch" class="form-control" 
+                               placeholder="Tìm mã hoặc tên mùa học (VD: 26, Summer...)" value="@ViewBag.CurrentSearch" oninput="updateSemesterODataPreview()" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" id="semFilterStatus" class="form-select form-select-sm" onchange="updateSemesterODataPreview()">
+                        <option value="">-- Tất cả trạng thái --</option>
+                        <!option value="Active" @(ViewBag.CurrentStatus == "Active" ? "selected" : "")>Active (Đang diễn ra)</!option>
+                        <!option value="Closed" @(ViewBag.CurrentStatus == "Closed" ? "selected" : "")>Closed / Ended (Đã khóa / kết thúc)</!option>
+                        <!option value="Upcoming" @(ViewBag.CurrentStatus == "Upcoming" ? "selected" : "")>Upcoming (Chuẩn bị mở)</!option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="year" id="semFilterYear" class="form-select form-select-sm" onchange="updateSemesterODataPreview()">
+                        <option value="">-- Năm học --</option>
+                        @foreach (var y in new[] { 2024, 2025, 2026, 2027 })
+                        {
+                            if (ViewBag.CurrentYear != null && (int)ViewBag.CurrentYear == y)
+                            {
+                                <option value="@y" selected>Năm @y</option>
+                            }
+                            else
+                            {
+                                <option value="@y">Năm @y</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="orderby" id="semFilterOrderBy" class="form-select form-select-sm" onchange="updateSemesterODataPreview()">
+                        <option value="">-- Sắp xếp ($orderby) --</option>
+                        <!option value="StartDate desc" @(ViewBag.CurrentOrderBy == "StartDate desc" ? "selected" : "")>Mới nhất trước</!option>
+                        <!option value="StartDate asc" @(ViewBag.CurrentOrderBy == "StartDate asc" ? "selected" : "")>Cũ nhất trước</!option>
+                        <!option value="Code asc" @(ViewBag.CurrentOrderBy == "Code asc" ? "selected" : "")>Mã mùa học A - Z</!option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100 shadow-sm" title="Áp dụng bộ lọc OData lên Server">
+                        <i class="fa-solid fa-play"></i> Lọc
+                    </button>
+                    @if (!string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery))
+                    {
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Preview OData Query String -->
+            <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-secondary fw-semibold"><i class="fa-solid fa-code text-primary me-1"></i>OData Query URL:</span>
+                    <code id="semesterODataPreview" class="text-primary bg-light px-2 py-1 rounded border">/api/semesters@(string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery) ? "" : "?" + ViewBag.CurrentODataQuery)</code>
+                </div>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-success-subtle text-success border border-success">
+                        <i class="fa-solid fa-check me-1"></i>OData v4 Supported
+                    </span>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Thanh gợi ý tạo nhanh các mùa học -->
+<div class="card border-0 shadow-sm rounded-3 mb-3 bg-light">
+    <div class="card-body p-3">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="small fw-bold text-secondary me-1">
+                <i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i>Tạo nhanh theo mùa:
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-success rounded-pill py-1 px-3 bg-white" onclick="quickFillSeason('SP26', 'Học kỳ Spring 2026 (Spring 26)', '2026-01-05', '2026-04-25')">
+                <i class="fa-solid fa-seedling text-success me-1"></i>+ Spring 26 (01 - 04/2026)
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill py-1 px-3 bg-white text-dark" onclick="quickFillSeason('SU26', 'Học kỳ Summer 2026 (Summer 26)', '2026-05-04', '2026-08-22')">
+                <i class="fa-solid fa-sun text-warning me-1"></i>+ Summer 26 (05 - 08/2026)
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill py-1 px-3 bg-white" onclick="quickFillSeason('FA26', 'Học kỳ Fall 2026 (Fall 26)', '2026-09-07', '2026-12-26')">
+                <i class="fa-solid fa-leaf text-danger me-1"></i>+ Fall 26 (09 - 12/2026)
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-1 px-3 bg-white" onclick="quickFillSeason('SP27', 'Học kỳ Spring 2027 (Spring 27)', '2027-01-04', '2027-04-24')">
+                <i class="fa-solid fa-seedling text-primary me-1"></i>+ Spring 27
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info rounded-pill py-1 px-3 bg-white text-dark" onclick="quickFillSeason('SU27', 'Học kỳ Summer 2027 (Summer 27)', '2027-05-03', '2027-08-21')">
+                <i class="fa-solid fa-sun text-info me-1"></i>+ Summer 27
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-3 bg-white" onclick="quickFillSeason('FA27', 'Học kỳ Fall 2027 (Fall 27)', '2027-09-06', '2027-12-25')">
+                <i class="fa-solid fa-leaf text-secondary me-1"></i>+ Fall 27
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3" style="width: 60px;">STT</th>
+                        <th style="width: 140px;">Mã mùa học</th>
+                        <th>Tên mùa học / Học kỳ</th>
+                        <th>Thời gian diễn ra</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end pe-3" style="min-width: 280px;">Thao tác (Khóa / Mở / Sửa / Xóa)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model == null || !Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="fa-solid fa-calendar-xmark fa-2x mb-2 d-block text-secondary"></i>
+                                Chưa có mùa học nào trong hệ thống.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        int idx = 1;
+                        foreach (var s in Model)
+                        {
+                            var isActive = s.Status == "Active";
+                            <tr>
+                                <td class="ps-3 text-muted">@(idx++)</td>
+                                <td>
+                                    <span class="badge @(isActive ? "bg-primary" : "bg-secondary") fs-6 px-2 py-1">
+                                        @s.Code
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">@s.Name</div>
+                                    <small class="text-muted">
+                                        Hạn chuyển lớp: @s.TransferClassDeadline.ToString("dd/MM/yyyy") | Hạn nhập điểm: @s.GradeEntryDeadline.ToString("dd/MM/yyyy")
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="small text-muted">
+                                        <i class="fa-regular fa-calendar me-1"></i>@s.StartDate.ToString("dd/MM/yyyy") &rarr; @s.EndDate.ToString("dd/MM/yyyy")
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (isActive)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                            <i class="fa-solid fa-lock-open me-1"></i>Đang mở (Active)
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
+                                            <i class="fa-solid fa-lock me-1"></i>Đã khóa (Closed)
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    <!-- Nút Khóa / Mở kỳ trực tiếp -->
+                                    @if (isActive)
+                                    {
+                                        <form asp-action="Lock" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn KHÓA mùa học @s.Code? Khi khóa, giảng viên sẽ không thể sửa điểm và sinh viên không thể đổi lớp.');">
+                                            <input type="hidden" name="id" value="@s.Id" />
+                                            <button type="submit" class="btn btn-warning btn-sm rounded-pill px-3 me-1 shadow-sm fw-semibold" title="Khóa học kỳ này">
+                                                <i class="fa-solid fa-lock me-1"></i> Khóa kỳ
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="Unlock" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn MỞ LẠI mùa học @s.Code?');">
+                                            <input type="hidden" name="id" value="@s.Id" />
+                                            <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 me-1 shadow-sm fw-semibold" title="Mở lại học kỳ này">
+                                                <i class="fa-solid fa-lock-open me-1"></i> Mở kỳ
+                                            </button>
+                                        </form>
+                                    }
+
+                                    <!-- Nút Sửa -->
+                                    <button class="btn btn-outline-secondary btn-sm rounded-pill px-2 me-1" onclick="openEditSemesterModal(@s.Id, '@s.Code', '@s.Name', '@s.StartDate.ToString("yyyy-MM-dd")', '@s.EndDate.ToString("yyyy-MM-dd")', '@s.TransferClassDeadline.ToString("yyyy-MM-dd")', '@s.GradeEntryDeadline.ToString("yyyy-MM-dd")', '@s.Status')" title="Sửa thông tin mùa học">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+
+                                    <!-- Nút Xóa -->
+                                    <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn XÓA mùa học @s.Code?');">
+                                        <input type="hidden" name="id" value="@s.Id" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-2 me-1" title="Xóa mùa học">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- Nút kiểm tra đóng kỳ theo quy trình GPA (nếu muốn) -->
+                                    @if (isActive)
+                                    {
+                                        <button class="btn btn-outline-dark btn-sm rounded-pill px-2" onclick="openCloseModal(@s.Id, '@s.Code')" title="Đóng kỳ & Chốt GPA chính thức">
+                                            <i class="fa-solid fa-flag-checkered"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm Mùa học mới -->
+<div class="modal fade" id="createSemesterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-calendar-plus me-2"></i>Thêm Mùa học Mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Create" method="post">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mã mùa học <span class="text-danger">*</span></label>
+                        <input type="text" name="code" id="addSemesterCode" class="form-control" placeholder="VD: Summer 26, SU26, Spring 26, SP26, Fall 26..." required />
+                        <div class="form-text small text-muted">Ví dụ: <strong>SU26</strong>, <strong>SP26</strong>, <strong>FA26</strong>...</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên mùa học <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="addSemesterName" class="form-control" placeholder="VD: Học kỳ Summer 2026 (Summer 26)" required />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Ngày bắt đầu <span class="text-danger">*</span></label>
+                            <input type="date" name="startDate" id="addSemesterStartDate" class="form-control" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Ngày kết thúc <span class="text-danger">*</span></label>
+                            <input type="date" name="endDate" id="addSemesterEndDate" class="form-control" required />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-muted">Hạn chuyển lớp (Tùy chọn)</label>
+                            <input type="date" name="transferClassDeadline" id="addSemesterTransferDeadline" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-muted">Hạn nhập điểm (Tùy chọn)</label>
+                            <input type="date" name="gradeEntryDeadline" id="addSemesterGradeDeadline" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Lưu Mùa học
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sửa Mùa Học -->
+<div class="modal fade" id="modalEditSemester" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning-subtle text-dark">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa-solid fa-pen-to-square text-warning me-2"></i>Chỉnh Sửa Mùa Học: <span id="editSemesterCodeBadge" class="text-primary"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Edit" method="post">
+                <input type="hidden" name="id" id="editSemesterId" />
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên mùa học <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editSemesterName" class="form-control" required />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Ngày bắt đầu <span class="text-danger">*</span></label>
+                            <input type="date" name="startDate" id="editSemesterStartDate" class="form-control" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Ngày kết thúc <span class="text-danger">*</span></label>
+                            <input type="date" name="endDate" id="editSemesterEndDate" class="form-control" required />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-muted">Hạn chuyển lớp</label>
+                            <input type="date" name="transferClassDeadline" id="editSemesterTransferDeadline" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-muted">Hạn nhập điểm</label>
+                            <input type="date" name="gradeEntryDeadline" id="editSemesterGradeDeadline" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Trạng thái Mùa học</label>
+                        <select name="status" id="editSemesterStatus" class="form-select">
+                            <option value="Active">Active (Đang mở / Đang diễn ra)</option>
+                            <option value="Closed">Closed (Đã khóa / Đã kết thúc)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Cập nhật Mùa học
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Đóng Học Kỳ Chính thức -->
+<div class="modal fade" id="closeSemesterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Đóng Kỳ & Chốt GPA Toàn Trường</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Close" method="post">
+                <input type="hidden" name="semesterId" id="closeSemesterId" />
+                <div class="modal-body p-4">
+                    <p class="mb-2">Hệ thống sẽ thực hiện các thao tác sau khi đóng chính thức:</p>
+                    <ul class="text-muted small">
+                        <li>Khóa bảng điểm của tất cả lớp học phần trong kỳ.</li>
+                        <li>Tính toán và cập nhật GPA tích lũy cho toàn bộ sinh viên.</li>
+                        <li>Chuyển trạng thái học kỳ sang <strong>Closed</strong>.</li>
+                    </ul>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="allowExceptions" id="allowExceptionsSwitch" value="true" onchange="toggleReason(this.checked)" />
+                        <label class="form-check-label fw-bold text-danger" for="allowExceptionsSwitch">
+                            Đóng ngoại lệ (bỏ qua kiểm tra lớp còn thiếu điểm)
+                        </label>
+                    </div>
+
+                    <div id="reasonBlock" style="display: none;" class="mb-3">
+                        <label class="form-label fw-semibold text-danger">Lý do đóng ngoại lệ <span class="text-danger">*</span></label>
+                        <textarea name="exceptionReason" id="exceptionReasonInput" class="form-control" rows="2" placeholder="Nhập lý do ngoại lệ..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger rounded-3">Xác nhận Đóng kỳ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function updateSemesterODataPreview() {
+        const search = (document.getElementById('semFilterSearch').value || '').trim();
+        const status = document.getElementById('semFilterStatus').value;
+        const year = document.getElementById('semFilterYear').value;
+        const orderby = document.getElementById('semFilterOrderBy').value;
+
+        const filters = [];
+        if (search) {
+            filters.push(`(contains(tolower(Code), '${search.toLowerCase()}') or contains(tolower(Name), '${search.toLowerCase()}'))`);
+        }
+        if (status) {
+            filters.push(`Status eq '${status}'`);
+        }
+        if (year) {
+            const shortY = year.substring(year.length - 2);
+            filters.push(`(contains(Code, '${shortY}') or contains(Name, '${year}'))`);
+        }
+
+        const queryParams = [];
+        if (filters.length > 0) {
+            queryParams.push(`$filter=${filters.join(' and ')}`);
+        }
+        if (orderby) {
+            queryParams.push(`$orderby=${orderby}`);
+        }
+
+        const previewElem = document.getElementById('semesterODataPreview');
+        if (previewElem) {
+            previewElem.textContent = '/api/semesters' + (queryParams.length > 0 ? '?' + queryParams.join('&') : '');
+        }
+    }
+    function quickFillSeason(code, name, start, end) {
+        document.getElementById('addSemesterCode').value = code;
+        document.getElementById('addSemesterName').value = name;
+        document.getElementById('addSemesterStartDate').value = start;
+        document.getElementById('addSemesterEndDate').value = end;
+
+        // Tự động tính hạn chuyển lớp (14 ngày sau ngày bắt đầu)
+        var sDate = new Date(start);
+        sDate.setDate(sDate.getDate() + 15);
+        document.getElementById('addSemesterTransferDeadline').value = sDate.toISOString().split('T')[0];
+        document.getElementById('addSemesterGradeDeadline').value = end;
+
+        new bootstrap.Modal(document.getElementById('createSemesterModal')).show();
+    }
+
+    function openEditSemesterModal(id, code, name, start, end, transfer, grade, status) {
+        document.getElementById('editSemesterId').value = id;
+        document.getElementById('editSemesterCodeBadge').innerText = code;
+        document.getElementById('editSemesterName').value = name;
+        document.getElementById('editSemesterStartDate').value = start;
+        document.getElementById('editSemesterEndDate').value = end;
+        document.getElementById('editSemesterTransferDeadline').value = transfer;
+        document.getElementById('editSemesterGradeDeadline').value = grade;
+        document.getElementById('editSemesterStatus').value = status === 'Active' ? 'Active' : 'Closed';
+        new bootstrap.Modal(document.getElementById('modalEditSemester')).show();
+    }
+
+    function openCloseModal(id, code) {
+        document.getElementById('closeSemesterId').value = id;
+        document.getElementById('allowExceptionsSwitch').checked = false;
+        document.getElementById('reasonBlock').style.display = 'none';
+        document.getElementById('exceptionReasonInput').required = false;
+        new bootstrap.Modal(document.getElementById('closeSemesterModal')).show();
+    }
+
+    function toggleReason(checked) {
+        document.getElementById('reasonBlock').style.display = checked ? 'block' : 'none';
+        document.getElementById('exceptionReasonInput').required = checked;
+    }
+</script>
+}

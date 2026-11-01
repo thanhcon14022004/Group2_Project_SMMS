@@ -1,0 +1,34 @@
+## Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.docstates
+
+## Build Results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+publish/
+
+## JetBrains / Rider
+.idea/
+*.DotSettings.user
+
+## VS Code
+.vscode/
+
+## OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+## Temporary files
+*.tmp
+*.temp
+*.swp
+*~

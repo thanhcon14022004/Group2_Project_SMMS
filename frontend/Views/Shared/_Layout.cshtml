@@ -1,0 +1,199 @@
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    var role = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "";
+    var fullName = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_NAME") ?? "Người dùng";
+    var currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAct = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    bool isLoggedIn = !string.IsNullOrEmpty(role);
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@(ViewData["Title"] != null ? ViewData["Title"] + " - SMMS" : "SMMS - Hệ thống Quản lý Điểm Sinh viên")</title>
+    <!-- Google Fonts: Be Vietnam Pro & Inter (Chuẩn Tiếng Việt không lỗi chân chữ/dấu tiếng Việt) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Custom App CSS -->
+    <link rel="stylesheet" href="~/css/app.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+@if (!isLoggedIn)
+{
+    @RenderBody()
+}
+else
+{
+    <!-- Toast / Alert Notification Container -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success shadow-lg position-fixed top-0 end-0 m-3 z-3 alert-dismissible fade show" role="alert" style="max-width: 420px;">
+            <div class="d-flex align-items-center">
+                <i class="fa-solid fa-circle-check fa-lg text-success me-2"></i>
+                <div class="flex-grow-1">@TempData["Success"]</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger shadow-lg position-fixed top-0 end-0 m-3 z-3 alert-dismissible fade show" role="alert" style="max-width: 420px;">
+            <div class="d-flex align-items-center">
+                <i class="fa-solid fa-circle-exclamation fa-lg text-danger me-2"></i>
+                <div class="flex-grow-1">@TempData["Error"]</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <div class="alert alert-warning shadow-lg position-fixed top-0 end-0 m-3 z-3 alert-dismissible fade show" role="alert" style="max-width: 420px;">
+            <div class="d-flex align-items-center">
+                <i class="fa-solid fa-triangle-exclamation fa-lg text-warning me-2"></i>
+                <div class="flex-grow-1">@TempData["Warning"]</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    }
+
+    <div class="app-wrapper">
+        <!-- LEFT SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand text-white">
+                    <i class="fa-solid fa-graduation-cap text-warning"></i>
+                    <span>SMMS Portal</span>
+                </div>
+                <small class="text-white-50 d-block mt-1" style="font-size: 0.75rem;">Hệ thống Quản lý Điểm .NET</small>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a asp-controller="Dashboard" asp-action="Index" class="nav-item-btn @(currentCtrl == "Dashboard" ? "active" : "")">
+                    <i class="fa-solid fa-chart-pie"></i> <span>Tổng quan</span>
+                </a>
+
+                @if (role == "Admin")
+                {
+                    <div class="nav-section-title">QUẢN LÝ ĐÀO TẠO</div>
+                    <a asp-controller="Majors" asp-action="Index" class="nav-item-btn @(currentCtrl == "Majors" ? "active" : "")">
+                        <i class="fa-solid fa-network-wired"></i> <span>Ngành & Ngành hẹp</span>
+                    </a>
+                    <a asp-controller="Subjects" asp-action="Index" class="nav-item-btn @(currentCtrl == "Subjects" ? "active" : "")">
+                        <i class="fa-solid fa-book-open"></i> <span>Môn học & Đầu điểm</span>
+                    </a>
+                    <a asp-controller="Curriculums" asp-action="Index" class="nav-item-btn @(currentCtrl == "Curriculums" && currentAct == "Index" ? "active" : "")">
+                        <i class="fa-solid fa-scroll"></i> <span>Chương trình Đào tạo</span>
+                    </a>
+                    <a asp-controller="Curriculums" asp-action="Lookup" class="nav-item-btn @(currentCtrl == "Curriculums" && currentAct == "Lookup" ? "active" : "")">
+                        <i class="fa-solid fa-magnifying-glass-arrow-right"></i> <span>Tra cứu môn tự động</span>
+                    </a>
+                    <a asp-controller="Classes" asp-action="Index" class="nav-item-btn @(currentCtrl == "Classes" && currentAct == "Index" ? "active" : "")">
+                        <i class="fa-solid fa-chalkboard"></i> <span>Lớp hành chính</span>
+                    </a>
+                    <a asp-controller="Classes" asp-action="Allocations" class="nav-item-btn @(currentCtrl == "Classes" && currentAct == "Allocations" ? "active" : "")">
+                        <i class="fa-solid fa-users-gear"></i> <span>Phân bổ vào lớp hành chính</span>
+                    </a>
+                    <a asp-controller="Semesters" asp-action="Index" class="nav-item-btn @(currentCtrl == "Semesters" ? "active" : "")">
+                        <i class="fa-solid fa-layer-group"></i> <span>Quản lý Lớp học phần</span>
+                    </a>
+
+                    <div class="nav-section-title">ĐIỂM & ĐIỀU HÀNH</div>
+                    <a asp-controller="Grades" asp-action="Index" class="nav-item-btn @(currentCtrl == "Grades" && currentAct == "Index" ? "active" : "")">
+                        <i class="fa-solid fa-pen-to-square"></i> <span>Nhập & Khóa điểm</span>
+                    </a>
+                    <a asp-controller="Classes" asp-action="Transfers" class="nav-item-btn @(currentCtrl == "Classes" && currentAct == "Transfers" ? "active" : "")">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i> <span>Chuyển lớp hành chính</span>
+                    </a>
+
+                    <div class="nav-section-title">BÁO CÁO & HỆ THỐNG</div>
+                    <a asp-controller="Reports" asp-action="Index" class="nav-item-btn @(currentCtrl == "Reports" ? "active" : "")">
+                        <i class="fa-solid fa-file-invoice"></i> <span>Báo cáo & Thống kê</span>
+                    </a>
+                    <a asp-controller="Operations" asp-action="Users" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "Users" ? "active" : "")">
+                        <i class="fa-solid fa-users"></i> <span>Tài khoản người dùng</span>
+                    </a>
+                    <a asp-controller="Operations" asp-action="AuditLogs" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "AuditLogs" ? "active" : "")">
+                        <i class="fa-solid fa-clock-rotate-left"></i> <span>Nhật ký thao tác</span>
+                    </a>
+                    <a asp-controller="Operations" asp-action="Backups" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "Backups" ? "active" : "")">
+                        <i class="fa-solid fa-database"></i> <span>Sao lưu & Khôi phục</span>
+                    </a>
+                }
+                else if (role == "Lecturer")
+                {
+                    <div class="nav-section-title">GIẢNG VIÊN</div>
+                    <a asp-controller="CourseSections" asp-action="Index" class="nav-item-btn @(currentCtrl == "CourseSections" ? "active" : "")">
+                        <i class="fa-solid fa-chalkboard-user"></i> <span>Lớp được phân công</span>
+                    </a>
+                    <a asp-controller="Grades" asp-action="Index" class="nav-item-btn @(currentCtrl == "Grades" ? "active" : "")">
+                        <i class="fa-solid fa-pen-to-square"></i> <span>Nhập điểm lớp học</span>
+                    </a>
+                    <a asp-controller="Reports" asp-action="Index" class="nav-item-btn @(currentCtrl == "Reports" ? "active" : "")">
+                        <i class="fa-solid fa-chart-column"></i> <span>Báo cáo điểm lớp</span>
+                    </a>
+                }
+                else if (role == "Student")
+                {
+                    <div class="nav-section-title">SINH VIÊN</div>
+                    <a asp-controller="Grades" asp-action="Transcript" class="nav-item-btn @(currentCtrl == "Grades" && currentAct == "Transcript" ? "active" : "")">
+                        <i class="fa-solid fa-award"></i> <span>Bảng điểm & GPA</span>
+                    </a>
+                    <a asp-controller="CourseSections" asp-action="Index" class="nav-item-btn @(currentCtrl == "CourseSections" ? "active" : "")">
+                        <i class="fa-solid fa-calendar-days"></i> <span>Lớp học phần của tôi</span>
+                    </a>
+                    <a asp-controller="Classes" asp-action="Transfers" class="nav-item-btn @(currentCtrl == "Classes" && currentAct == "Transfers" ? "active" : "")">
+                        <i class="fa-solid fa-paper-plane"></i> <span>Xin chuyển lớp</span>
+                    </a>
+                }
+            </nav>
+
+            <div class="sidebar-footer p-3 border-top border-secondary">
+                <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger btn-sm w-100">
+                    <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
+                </a>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <div class="main-content">
+            <!-- TOP NAVBAR -->
+            <header class="topbar">
+                <div class="d-flex align-items-center">
+                    <span class="fs-5 fw-bold text-primary">@ViewData["Title"]</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-end">
+                        <div class="fw-semibold text-dark">@fullName</div>
+                        <span class="badge @(role == "Admin" ? "bg-danger" : role == "Lecturer" ? "bg-primary" : "bg-success")">
+                            @role
+                        </span>
+                    </div>
+                    <div class="user-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; font-weight: bold;">
+                        @(fullName.Length > 0 ? fullName[0].ToString().ToUpper() : "U")
+                    </div>
+                </div>
+            </header>
+
+            <!-- VIEW BODY -->
+            <main class="page-body">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+}
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+

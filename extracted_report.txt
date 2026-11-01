@@ -1,0 +1,258 @@
+﻿BÁO CÁO ĐẶC TẢ NGHIỆP VỤSMMS – STUDENT MARK MANAGEMENT SYSTEM
+Hệ thống quản lý điểm sinh viên
+Hình 1. Tổng quan các khu vực chức năng và luồng nghiệp vụ minh họa.
+Phiên bản: 1.0 – Bản dự thảo có thể chỉnh sửa
+MỤC LỤC NỘI DUNG
+1. Tổng quan dự án và mục tiêu
+2. Vai trò người dùng và quyền hạn
+3. Luồng nghiệp vụ tổng thể
+4. Quản lý môn học và đầu điểm
+5. Cấu hình chương trình đào tạo
+6. Tạo lớp hành chính / lớp học phần
+7. Quản lý học kỳ và ngành hẹp
+8. Phân bổ sinh viên vào lớp học phần
+9. Quản lý giảng viên và phân công
+10. Nhập điểm, tính điểm tổng kết và GPA
+11. Chuyển lớp hành chính
+12. Kết thúc học kỳ
+13. Báo cáo và thống kê
+14. Tài khoản, nhật ký thao tác, sao lưu và khôi phục
+15. Đề xuất cấu trúc dữ liệu
+16. Quy tắc nghiệp vụ tổng hợp
+17. Kế hoạch kiểm thử và triển khai
+18. Các nội dung cần xác nhận
+1. Tổng quan dự án và mục tiêu
+SMMS (Student Mark Management System) là hệ thống hỗ trợ quản lý thông tin sinh viên, ngành học, chương trình đào tạo, lớp học phần, giảng viên, đầu điểm, điểm thành phần, điểm tổng kết và kết quả học tập. Hệ thống hướng đến việc giảm thao tác thủ công, bảo đảm dữ liệu điểm nhất quán và giúp Admin theo dõi tình trạng phân bổ lớp cũng như tiến độ kết thúc học kỳ.
+1.1. Mục tiêu
+Quản lý tập trung sinh viên, giảng viên, ngành, ngành hẹp, môn học và học kỳ.
+Cho phép Admin cấu hình chương trình đào tạo bằng dữ liệu trên giao diện, không hard-code danh sách môn và đầu điểm.
+Tự động xác định danh sách môn phù hợp theo ngành, học kỳ và ngành hẹp.
+Hỗ trợ giảng viên nhập điểm trong phạm vi lớp học phần được phân công.
+Tính điểm tổng kết và GPA theo quy tắc đã thống nhất.
+Theo dõi các trường hợp chưa được phân bổ, thiếu giảng viên, thiếu điểm hoặc chưa đủ điều kiện kết thúc học kỳ.
+Ghi nhật ký thao tác quan trọng và hỗ trợ sao lưu/khôi phục dữ liệu.
+2. Vai trò người dùng và quyền hạn
+2.1. Admin
+Quản lý tài khoản, sinh viên, giảng viên, ngành và ngành hẹp.
+Tạo và cập nhật môn học, cấu hình đầu điểm, tỷ trọng và quyền chỉnh sửa từng đầu điểm.
+Cấu hình chương trình đào tạo theo ngành, học kỳ, ngành hẹp và phiên bản chương trình.
+Tạo lớp hành chính/lớp học phần, quản lý sĩ số, lịch học và phân công giảng viên.
+Quản lý học kỳ, thời gian chuyển lớp, thời hạn nhập điểm và khóa/mở khóa điểm.
+Theo dõi phân bổ sinh viên, xử lý lớp đầy hoặc trường hợp không có lớp phù hợp.
+Xem báo cáo, nhật ký thao tác, sao lưu và khôi phục dữ liệu.
+2.2. Giảng viên
+Chỉ xem các lớp học phần được phân công và sinh viên thuộc các lớp đó.
+Xem cấu hình đầu điểm được áp dụng cho lớp học phần.
+Nhập và cập nhật điểm trong thời hạn cho phép.
+Không tự ý thay đổi cấu hình chương trình đào tạo hoặc phân công giảng viên.
+2.3. Sinh viên
+Xem hồ sơ, ngành, lớp hành chính, chương trình học, lớp học phần và thời khóa biểu.
+Xem điểm đã được giảng viên lưu, kể cả trước khi Admin khóa điểm.
+Chọn ngành hẹp khi đủ điều kiện và trong đợt lựa chọn được mở.
+Gửi yêu cầu chuyển lớp hành chính trong khoảng thời gian Admin cấu hình.
+Không có chức năng tự hủy lớp học phần hoặc tự đăng ký/hủy môn tùy ý.
+3. Luồng nghiệp vụ tổng thể
+Hình 2. Sơ đồ luồng nghiệp vụ tổng thể – hình minh họa.
+Admin thiết lập dữ liệu nền: ngành, ngành hẹp, môn học, đầu điểm và điều kiện tiên quyết.
+Admin cấu hình chương trình đào tạo: chọn ngành, học kỳ, ngành hẹp nếu áp dụng, sau đó chọn các môn đã có trong hệ thống.
+Admin tạo lớp; hệ thống tra cứu cấu hình phù hợp và hiển thị môn học, tín chỉ, đầu điểm đã thiết lập.
+Admin mở các lớp học phần thực tế, thiết lập sức chứa, lịch học và phân công giảng viên.
+Hệ thống phân bổ sinh viên theo chương trình học, môn đã hoàn thành, điều kiện tiên quyết, sức chứa và xung đột lịch.
+Giảng viên nhập điểm; hệ thống tính điểm tổng kết và GPA theo quy tắc.
+Admin kiểm tra các điều kiện trước khi kết thúc học kỳ; các ngoại lệ phải được ghi nhận và có lý do.
+Hệ thống cung cấp báo cáo, nhật ký thao tác và bản sao lưu dữ liệu.
+4. Quản lý môn học và đầu điểm
+Đây là chức năng dữ liệu nền. Admin tạo môn học và cấu hình các đầu điểm của môn trước khi đưa môn đó vào chương trình đào tạo. Màn hình cấu hình chương trình không được tạo mới đầu điểm; màn hình đó chỉ chọn các môn đã được cấu hình sẵn.
+4.1. Thông tin môn học
+Mã môn, tên môn, số tín chỉ, mô tả và trạng thái sử dụng.
+Một môn có thể có nhiều đầu điểm.
+Không xóa cứng môn đã được dùng trong dữ liệu học tập; nên chuyển sang trạng thái ngừng sử dụng.
+4.2. Cấu hình đầu điểm
+Tên đầu điểm, tỷ trọng phần trăm, thang điểm và cờ cho phép chỉnh sửa.
+Tổng tỷ trọng của các đầu điểm phải bằng 100% trước khi lưu cấu hình.
+Một số đầu điểm có thể chỉ cho Admin chỉnh sửa nếu được đánh dấu theo quy định.
+Thay đổi cấu hình mới không được tự động làm thay đổi dữ liệu điểm lịch sử của lớp đã áp dụng cấu hình cũ.
+Hình 3. Minh họa khu vực cấu hình chương trình/môn học. Màn hình quản lý môn và đầu điểm cần là chức năng riêng.
+4.3. Kết quả
+Khi một môn được chọn trong chương trình đào tạo, hệ thống lấy đúng bộ đầu điểm đã cấu hình cho môn đó, không yêu cầu Admin nhập lại đầu điểm.
+5. Cấu hình chương trình đào tạo
+Admin xây dựng chương trình đào tạo từ các môn đã tồn tại. Cấu hình được xác định theo ngành, học kỳ, ngành hẹp (nếu có) và phiên bản chương trình.
+Chọn ngành đào tạo.
+Chọn học kỳ cần cấu hình.
+Chọn các môn từ danh mục môn học đã có.
+Xem tín chỉ và đầu điểm được kế thừa từ cấu hình môn học.
+Thiết lập điều kiện tiên quyết nếu môn yêu cầu.
+Từ học kỳ 5 trở lên, yêu cầu chọn ngành hẹp khi ngành đó có phân nhánh.
+Lưu cấu hình và kiểm tra tính đầy đủ trước khi cho phép tạo lớp.
+Hình 4. Minh họa màn hình cấu hình chương trình đào tạo.
+5.1. Quy tắc phiên bản
+Nên quản lý phiên bản chương trình đào tạo. Khi Admin thay đổi danh sách môn hoặc đầu điểm cho khóa mới, lớp đã tạo trước đó vẫn giữ cấu hình đã áp dụng, trừ khi Admin thực hiện một quy trình cập nhật có kiểm soát.
+6. Tạo lớp hành chính và lớp học phần
+6.1. Phân biệt hai khái niệm
+Lớp hành chính, ví dụ SE1701: nhóm quản lý sinh viên theo khóa/ngành.
+Lớp học phần: lớp được mở cho một môn cụ thể trong một học kỳ, có sức chứa, lịch học và giảng viên.
+6.2. Tạo lớp hành chính
+Admin nhập mã/tên lớp, ngành và thông tin khóa học cần thiết.
+Hệ thống kiểm tra mã lớp không trùng.
+Lớp hành chính không nên bị hiểu nhầm là một lớp học phần của một môn.
+6.3. Tạo lớp học phần theo cấu hình
+Admin chọn tên lớp hoặc nhóm sinh viên, ngành, học kỳ và ngành hẹp nếu áp dụng.
+Bấm “Tra cứu cấu hình”.
+Hệ thống tự lấy danh sách môn theo cấu hình chương trình đào tạo.
+Mỗi môn hiển thị tín chỉ và đầu điểm đã thiết lập sẵn.
+Admin kiểm tra danh sách, sau đó xác nhận tạo/mở các lớp học phần cần thiết.
+Nếu không tìm thấy cấu hình hoặc cấu hình chưa hợp lệ, hệ thống không tạo và hiển thị lý do.
+Hình 5. Minh họa giao diện tạo lớp và xem danh sách môn được tra tự động.
+6.4. Tạo nhiều lớp
+Nếu cho phép tạo nhiều lớp cùng một lần, cần có quy tắc sinh mã lớp duy nhất hoặc yêu cầu Admin nhập danh sách mã lớp. Hệ thống phải kiểm tra trùng tên trước khi lưu.
+7. Quản lý học kỳ và ngành hẹp
+Admin cấu hình ngày bắt đầu, ngày kết thúc, thời gian chuyển lớp, thời hạn nhập điểm và trạng thái học kỳ.
+Khi Admin kết thúc học kỳ thuộc kỳ 4, hệ thống xác định sinh viên đủ điều kiện lựa chọn ngành hẹp theo quy tắc đào tạo.
+Sinh viên chọn ngành hẹp trong đợt được mở; hệ thống tự xác nhận và lưu lựa chọn.
+Từ học kỳ 5, chương trình học của sinh viên được tra theo ngành và ngành hẹp đã lưu.
+Nếu ngành không có cấu hình ngành hẹp cho học kỳ đó, hệ thống không yêu cầu lựa chọn ngành hẹp.
+Hình 6. Minh họa khu vực chọn học kỳ và ngành hẹp trong cấu hình.
+8. Phân bổ sinh viên vào lớp học phần
+Hệ thống xác định môn cần học từ ngành, học kỳ, ngành hẹp và phiên bản chương trình.
+Loại bỏ môn sinh viên đã hoàn thành theo quy tắc hiện hành.
+Kiểm tra điều kiện tiên quyết. Điểm đạt tối thiểu là 5.0/10; điểm được làm tròn đến một chữ số thập phân trước khi kiểm tra.
+Kiểm tra sức chứa của lớp học phần và xung đột thời khóa biểu.
+Nếu lớp đã đầy, tìm lớp học phần khác của cùng môn còn chỗ và phù hợp lịch.
+Nếu không có lớp phù hợp, ghi nhận sinh viên/môn chưa được phân bổ và thông báo Admin tạo hoặc điều chỉnh lớp.
+Không tự ý phân bổ sai môn hoặc bỏ qua điều kiện tiên quyết.
+Hình 7. Minh họa thông tin cấu hình lớp; màn hình phân bổ cần hiển thị số đã phân bổ, chưa phân bổ và trạng thái sức chứa.
+9. Quản lý giảng viên và phân công
+Admin quản lý hồ sơ và trạng thái tài khoản giảng viên.
+Admin phân công giảng viên cho từng lớp học phần.
+Giảng viên chỉ được xem lớp học phần đã được phân công.
+Khi đổi giảng viên, người mới được cấp quyền ngay và người cũ mất quyền ngay.
+Điểm đã nhập và lịch sử điểm được giữ nguyên khi thay đổi giảng viên.
+Nếu tài khoản giảng viên bị vô hiệu hóa, Admin phải phân công người thay thế cho các lớp đang phụ trách.
+Hình 8. Minh họa quản lý lớp học phần; thông tin giảng viên cần được hiển thị trong chi tiết lớp.
+10. Nhập điểm, tính điểm tổng kết và GPA
+10.1. Nhập điểm
+Giảng viên chọn lớp học phần được phân công và nhập điểm theo từng đầu điểm.
+Điểm hợp lệ nằm trong khoảng 0–10; cần phân biệt điểm 0 với điểm chưa nhập.
+Tỷ trọng đầu điểm được lấy từ cấu hình môn học đã áp dụng cho lớp.
+Sinh viên xem được điểm sau khi giảng viên lưu; hệ thống không cần gửi thông báo điểm tự động.
+Admin là người duy nhất có quyền mở khóa điểm. Sau khi chỉnh sửa xong, Admin khóa lại.
+Các thao tác sửa điểm, khóa và mở khóa phải ghi nhật ký.
+10.2. Tính điểm tổng kết
+Điểm tổng kết = tổng của (điểm thành phần × tỷ trọng thành phần). Kết quả được làm tròn đến một chữ số thập phân; ví dụ 7.26 thành 7.3. Điểm đã làm tròn được dùng để kiểm tra điều kiện tiên quyết.
+10.3. Tính GPA
+GPA sử dụng thang điểm 10 và tính theo tín chỉ: tổng (điểm môn × số tín chỉ) chia tổng số tín chỉ được tính. Môn trượt vẫn được tính vào GPA tích lũy theo điểm thực tế và số tín chỉ. Hiện chưa có chức năng học lại môn.
+Hình 9. Minh họa màn hình nhập điểm và xem kết quả điểm thành phần.
+11. Chuyển lớp hành chính
+Admin cấu hình thời gian cho phép chuyển lớp trong quản lý học kỳ.
+Sinh viên chọn lớp hành chính đích trong thời gian cho phép.
+Hệ thống kiểm tra thời gian, lớp đích và các điều kiện lịch học liên quan.
+Nếu hợp lệ, hệ thống tự chuyển lớp; nếu không hợp lệ, hiển thị lý do từ chối.
+Giữ nguyên các lớp học phần hiện tại nếu vẫn phù hợp với chương trình và không xung đột lịch; chỉ phân bổ lại những lớp không còn phù hợp.
+Ghi nhật ký chuyển lớp. Sinh viên không có chức năng tự hủy lớp học phần.
+Giao diện minh họa: màn hình chi tiết sinh viên/lớp hành chính nên có nút “Yêu cầu chuyển lớp”, lớp hiện tại, lớp đích và trạng thái kiểm tra.
+12. Kết thúc học kỳ
+Admin yêu cầu kiểm tra điều kiện kết thúc học kỳ.
+Hệ thống kiểm tra sinh viên chưa được phân bổ đủ môn bắt buộc.
+Kiểm tra lớp học phần chưa có giảng viên, thiếu điểm, điểm chưa khóa và các ngoại lệ chưa xử lý.
+Nếu còn vấn đề, hệ thống hiển thị danh sách để Admin xử lý.
+Trong trường hợp ngoại lệ, Admin có thể xác nhận kết thúc với lý do và nhật ký, nhưng không được bỏ qua điều kiện tiên quyết hoặc tạo kết quả học tập không hợp lệ.
+Sau khi kết thúc, trạng thái học kỳ được cập nhật theo quy tắc hệ thống.
+Hình 10. Luồng tổng thể có bước kiểm tra trước khi kết thúc học kỳ.
+13. Báo cáo và thống kê
+Danh sách sinh viên và thông tin học tập.
+Điểm theo lớp học phần, môn học và học kỳ.
+GPA theo sinh viên, lớp hành chính hoặc ngành.
+Danh sách sinh viên/môn chưa được phân bổ.
+Lớp học phần đầy, thiếu giảng viên hoặc thiếu điểm.
+Tình trạng hoàn tất học kỳ và các ngoại lệ.
+Danh sách báo cáo xuất file cần được chốt theo yêu cầu triển khai.
+Hình 11. Minh họa giao diện báo cáo kết quả và thống kê.
+14. Tài khoản, nhật ký thao tác, sao lưu và khôi phục
+14.1. Tài khoản
+Tài khoản bị vô hiệu hóa không thể đăng nhập nhưng dữ liệu nghiệp vụ, điểm và lịch sử vẫn được giữ. Không xóa cứng các bản ghi đã tham gia vào lịch sử học tập.
+14.2. Nhật ký thao tác
+Ghi nhận thay đổi điểm, khóa/mở khóa điểm, thay đổi giảng viên, chuyển lớp, sửa cấu hình chương trình, kết thúc học kỳ ngoại lệ, vô hiệu hóa tài khoản và khôi phục dữ liệu. Admin được xem toàn bộ nhật ký.
+14.3. Sao lưu và khôi phục
+Tự động sao lưu hằng ngày.
+Admin chọn bản sao lưu cần khôi phục.
+Hệ thống cảnh báo dữ liệu phát sinh sau thời điểm sao lưu có thể bị mất.
+Yêu cầu xác nhận trước khi thực hiện khôi phục toàn bộ cơ sở dữ liệu.
+Ghi nhật ký độc lập cho thao tác khôi phục để phục vụ kiểm tra.
+Hình 12. Minh họa quan hệ dữ liệu và cấu hình hệ thống; giao diện sao lưu/khôi phục cần được xây dựng riêng.
+15. Đề xuất cấu trúc dữ liệu
+Bảng dữ liệu
+Mục đích
+Users / Roles
+Tài khoản, vai trò và trạng thái hoạt động.
+Students / Lecturers
+Hồ sơ sinh viên và giảng viên.
+Majors / Specializations
+Ngành đào tạo và ngành hẹp.
+Subjects
+Danh mục môn học và tín chỉ.
+SubjectGradeComponents
+Đầu điểm, tỷ trọng, thang điểm, quyền chỉnh sửa.
+CurriculumConfigs
+Phiên bản cấu hình chương trình đào tạo.
+CurriculumSubjects
+Môn thuộc ngành/học kỳ/ngành hẹp trong một phiên bản.
+PrerequisiteSubjects
+Quan hệ môn tiên quyết và điều kiện đạt.
+AdministrativeClasses
+Lớp hành chính như SE1701.
+Semesters
+Thời gian và trạng thái học kỳ.
+CourseSections
+Lớp học phần, môn, sức chứa, lịch và giảng viên.
+CourseSectionStudents
+Phân bổ sinh viên vào lớp học phần.
+StudentGrades
+Điểm thành phần và kết quả tính toán.
+AuditLogs
+Nhật ký thao tác quan trọng.
+BackupRecords
+Thông tin bản sao lưu và các lần khôi phục.
+Lưu ý: đây là đề xuất logic ở mức nghiệp vụ, không phải schema SQL cuối cùng. Cần rà soát khóa chính, khóa ngoại, ràng buộc duy nhất và quy tắc lưu phiên bản trước khi triển khai.
+16. Quy tắc nghiệp vụ tổng hợp
+Điểm đạt môn: từ 5.0/10 trở lên; điểm được làm tròn một chữ số thập phân trước khi kiểm tra tiên quyết.
+Tỷ trọng đầu điểm của một môn phải bằng 100%.
+Môn và đầu điểm được tạo/cấu hình ở chức năng quản lý môn học; cấu hình chương trình chỉ chọn môn có sẵn.
+Từ học kỳ 5, ngành hẹp là bắt buộc nếu ngành/chương trình có phân nhánh.
+Không phân bổ sinh viên vào môn nếu chưa đạt điều kiện tiên quyết.
+Nếu lớp đầy, tìm lớp khác cùng môn phù hợp; nếu không có, ghi nhận ngoại lệ và báo Admin.
+Giảng viên chỉ xem lớp học phần được phân công.
+Chỉ Admin được mở khóa điểm.
+Sinh viên thấy điểm sau khi giảng viên lưu, không cần thông báo tự động.
+Không có chức năng học lại môn trong phạm vi nghiệp vụ hiện tại.
+Vô hiệu hóa tài khoản thay vì xóa cứng dữ liệu lịch sử.
+Các thao tác quan trọng phải ghi nhật ký.
+17. Kế hoạch kiểm thử và triển khai
+17.1. Kiểm thử chức năng
+Tạo môn học và lưu đầu điểm có tổng tỷ trọng 100%; từ chối khi tổng tỷ trọng sai.
+Cấu hình chương trình với môn đã có; không cho chọn môn không tồn tại hoặc chưa sẵn sàng.
+Tạo lớp kỳ 1–4 không yêu cầu ngành hẹp; tạo lớp kỳ 5+ yêu cầu ngành hẹp khi cấu hình cần.
+Tra cứu cấu hình không có kết quả phải báo lỗi rõ ràng và không tạo dữ liệu.
+Phân bổ tự động xử lý lớp đầy, lịch trùng và môn tiên quyết.
+Giảng viên không thể truy cập lớp không được phân công.
+Kiểm tra tính điểm tổng kết, làm tròn và GPA theo tín chỉ.
+Kiểm tra khóa/mở khóa điểm, chuyển lớp, kết thúc học kỳ và nhật ký.
+Khôi phục bản sao lưu trong môi trường kiểm thử và xác minh tính nhất quán dữ liệu.
+17.2. Trình tự triển khai đề xuất
+Giai đoạn 1: hoàn thiện mô hình dữ liệu, tài khoản và dữ liệu nền.
+Giai đoạn 2: quản lý môn học, đầu điểm và chương trình đào tạo.
+Giai đoạn 3: quản lý học kỳ, lớp hành chính, lớp học phần và phân công giảng viên.
+Giai đoạn 4: phân bổ sinh viên, nhập điểm, tính điểm và GPA.
+Giai đoạn 5: chuyển lớp, kết thúc học kỳ, báo cáo, nhật ký và sao lưu/khôi phục.
+Giai đoạn 6: kiểm thử tích hợp, kiểm thử quyền, kiểm thử dữ liệu và triển khai.
+Hình 13. Minh họa kế hoạch triển khai theo giai đoạn.
+18. Các nội dung cần xác nhận trước khi chốt đặc tả
+Ngưỡng xếp loại học lực (nếu hệ thống cần báo cáo xếp loại).
+Quy tắc khi một môn có nhiều môn tiên quyết: phải đạt tất cả hay theo điều kiện khác.
+Trạng thái và quyền sửa dữ liệu sau khi học kỳ đã kết thúc.
+Ý nghĩa nghiệp vụ của đầu điểm bị bỏ trống so với điểm 0.
+Danh sách báo cáo chính thức và định dạng xuất file.
+Quy trình kích hoạt lại tài khoản đã vô hiệu hóa.
+Quy tắc đặt mã khi tạo nhiều lớp trong một thao tác.
+Các loại lớp hành chính và lớp học phần có cần lịch/sức chứa bắt buộc ở thời điểm tạo hay không.
+Kết luận
+SMMS được thiết kế theo hướng cấu hình linh hoạt, trong đó Admin quản lý môn học và đầu điểm trước, sau đó ghép các môn đã có vào chương trình đào tạo theo ngành, học kỳ và ngành hẹp. Khi tạo lớp, hệ thống tự tra cấu hình và hiển thị danh sách môn cùng đầu điểm tương ứng. Các chức năng phân bổ, nhập điểm, tính GPA, kết thúc học kỳ, báo cáo, nhật ký và sao lưu hỗ trợ quản lý toàn bộ vòng đời học tập của sinh viên.
