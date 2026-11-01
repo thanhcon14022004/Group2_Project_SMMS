@@ -16,45 +16,79 @@
     </a>
 </div>
 
-<!-- Form Chọn Học Kỳ Active Để Phân Bổ Vào Lớp Hành Chính -->
+<!-- Form Chọn Học Kỳ / Mùa học -->
 <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
         <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
-                <i class="fa-solid fa-bolt me-1"></i>Học kỳ Đang Active
+            <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
+                <i class="fa-solid fa-calendar-check me-1"></i>Học kỳ / Mùa học
             </span>
-            <span class="fw-bold">Chọn Học kỳ Đang Hoạt động (Active) để Phân bổ vào Lớp Hành chính</span>
+            <span class="fw-bold">Chọn Mùa học để Quản lý Phân bổ Lớp Hành chính</span>
         </div>
-        <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-1">
+        <span class="badge bg-success-subtle text-success border border-success px-3 py-1">
             Mục tiêu sĩ số: <strong>28 - 31 SV / lớp hành chính</strong>
         </span>
     </div>
     <div class="card-body p-4">
-        <form asp-action="RunAllocation" method="post" class="row g-3 align-items-end">
+        <form asp-action="Allocations" method="get" class="row g-3 align-items-end mb-3">
             <div class="col-md-7">
-                <label class="form-label fw-semibold small">Học kỳ đang hoạt động (Active) <span class="text-danger">*</span></label>
-                <select name="semesterId" class="form-select" required>
+                <label class="form-label fw-semibold small">Mùa học / Học kỳ</label>
+                <select name="semesterId" class="form-select" onchange="this.form.submit()">
                     @if (!semesters.Any())
                     {
-                        <option value="">-- Không có học kỳ nào đang mở --</option>
+                        <option value="">-- Không có học kỳ nào trong hệ thống --</option>
                     }
                     @foreach (var sem in semesters)
                     {
-                        <option value="@sem.Id" selected="@(sem.Status == "Active" || Model.SemesterId == sem.Id ? "selected" : null)">
+                        <option value="@sem.Id" selected="@(Model.SemesterId == sem.Id ? "selected" : null)">
                             @sem.Code - @sem.Name (@(sem.Status == "Active" ? "🟢 ĐANG ACTIVE" : sem.Status))
                         </option>
                     }
                 </select>
-                <div class="form-text small text-muted mt-2">
-                    <i class="fa-solid fa-circle-info me-1 text-primary"></i>Hệ thống sẽ lấy thông tin của các lớp hành chính trong học kỳ này, tự động xếp sinh viên vào lớp theo đúng <strong>Kì</strong>, <strong>Ngành</strong> và <strong>Ngành hẹp</strong> (đặc biệt kỳ 5, 7, 8). Nếu lớp chưa đủ 28 sinh viên, hệ thống sẽ <strong>tự động insert thêm sinh viên mới vào database</strong> để đạt đủ chuẩn 28-31 SV/lớp.
-                </div>
             </div>
             <div class="col-md-3">
-                <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-semibold shadow-sm" onclick="return confirm('Bắt đầu phân bổ sinh viên vào các lớp hành chính cho học kỳ đã chọn? Hệ thống sẽ tự động bổ sung sinh viên vào database nếu lớp thiếu sĩ số (28-31 SV).');">
-                    <i class="fa-solid fa-play me-1"></i> Bắt đầu Phân bổ Lớp Hành chính
+                <button type="submit" class="btn btn-outline-primary w-100 rounded-pill py-2 fw-semibold">
+                    <i class="fa-solid fa-eye me-1"></i> Xem các lớp mùa này
                 </button>
             </div>
         </form>
+
+        @if (Model.ClassSummaries != null && Model.ClassSummaries.Any())
+        {
+            <div class="alert alert-success d-flex align-items-center justify-content-between p-3 mb-0 border-0 shadow-sm rounded-3">
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-circle-check fa-xl text-success me-3"></i>
+                    <div>
+                        <div class="fw-bold text-success">Mùa học @Model.SemesterCode đã được phân bổ hành chính trước đó!</div>
+                        <div class="small text-muted">Hệ thống đang hiển thị <strong>@Model.ClassSummaries.Count lớp hành chính</strong> trong mùa @Model.SemesterCode đã được phân bổ (@Model.TotalEligibleStudents sinh viên).</div>
+                    </div>
+                </div>
+                <form asp-action="RunAllocation" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn chạy lại phân bổ cho các lớp hành chính của mùa @Model.SemesterCode?');">
+                    <input type="hidden" name="semesterId" value="@Model.SemesterId" />
+                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-semibold shadow-sm">
+                        <i class="fa-solid fa-rotate me-1"></i>Phân bổ lại mùa này
+                    </button>
+                </form>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning d-flex align-items-center justify-content-between p-3 mb-0 border-0 shadow-sm rounded-3">
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-circle-exclamation fa-xl text-warning me-3"></i>
+                    <div>
+                        <div class="fw-bold text-warning-emphasis">Mùa học @(Model.SemesterCode ?? "") chưa có lớp hành chính nào được phân bổ sinh viên</div>
+                        <div class="small text-muted">Nhấn nút bên cạnh để hệ thống tự động phân bổ sinh viên theo Kì, Ngành, Ngành hẹp (28-31 SV/lớp).</div>
+                    </div>
+                </div>
+                <form asp-action="RunAllocation" method="post" class="d-inline" onsubmit="return confirm('Bắt đầu phân bổ sinh viên vào các lớp hành chính của mùa này?');">
+                    <input type="hidden" name="semesterId" value="@Model.SemesterId" />
+                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold shadow-sm">
+                        <i class="fa-solid fa-play me-1"></i>Bắt đầu Phân bổ
+                    </button>
+                </form>
+            </div>
+        }
     </div>
 </div>
 
@@ -122,7 +156,7 @@
         <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                 <h6 class="fw-bold mb-0 text-dark">
-                    <i class="fa-solid fa-list-check me-2 text-primary"></i>Tổng kết Sĩ số các Lớp Hành chính sau Phân bổ (@Model.ClassSummaries.Count lớp)
+                    <i class="fa-solid fa-list-check me-2 text-primary"></i>Danh sách các Lớp Hành chính Mùa @Model.SemesterCode Đã Phân bổ (@Model.ClassSummaries.Count lớp)
                 </h6>
                 <span class="badge bg-success-subtle text-success border border-success px-3 py-1">
                     <i class="fa-solid fa-check-double me-1"></i>Tất cả các lớp đạt chuẩn 28 - 31 SV

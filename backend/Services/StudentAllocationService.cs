@@ -8,6 +8,7 @@ namespace project_PRN232.Services
     public interface IStudentAllocationService
     {
         Task<AllocationResultDto> RunAllocationAsync(RunAllocationRequest request, string performedBy);
+        Task<AllocationResultDto> GetAllocationStatusAsync(int semesterId);
         Task<List<UnallocatedExceptionDto>> GetUnallocatedExceptionsAsync(int semesterId);
         Task<bool> EnrollSingleStudentAsync(int courseSectionId, int studentId, string performedBy);
         Task<bool> RemoveStudentFromSectionAsync(int courseSectionId, int studentId, string performedBy);
@@ -49,11 +50,21 @@ namespace project_PRN232.Services
                 throw new InvalidOperationException("Không tìm thấy học kỳ hợp lệ hoặc học kỳ đang ở trạng thái 'Active' để phân bổ sinh viên.");
             }
 
-            // 2. Lấy danh sách các lớp hành chính cần phân bổ
+            // 2. Lấy danh sách các lớp hành chính cần phân bổ thuộc mùa học này
+            var semCode = (semester.Code ?? "").Trim().ToUpper();
+            var semName = (semester.Name ?? "").Trim().ToUpper();
+            string seasonKeyword = semCode.StartsWith("FA") ? "FALL" : 
+                                   semCode.StartsWith("SP") ? "SPRING" : 
+                                   semCode.StartsWith("SU") ? "SUMMER" : semCode;
+
             var classesQuery = _db.AdministrativeClasses
                 .Include(ac => ac.Major)
                 .Include(ac => ac.Specialization)
-                .Where(ac => ac.IsActive);
+                .Where(ac => ac.IsActive)
+                .Where(ac => ac.AcademicYear.ToUpper() == semCode || 
+                             ac.AcademicYear.ToUpper().Contains(semCode) ||
+                             ac.AcademicYear.ToUpper().Contains(seasonKeyword) ||
+                             semName.Contains(ac.AcademicYear.ToUpper()));
 
             if (request.MajorId.HasValue && request.MajorId.Value > 0)
                 classesQuery = classesQuery.Where(ac => ac.MajorId == request.MajorId.Value);
@@ -64,7 +75,7 @@ namespace project_PRN232.Services
             var adminClasses = await classesQuery.OrderBy(ac => ac.Code).ToListAsync();
             if (!adminClasses.Any())
             {
-                throw new InvalidOperationException("Không tìm thấy lớp hành chính nào phù hợp để thực thi phân bổ sinh viên.");
+                throw new InvalidOperationException($"Không tìm thấy lớp hành chính nào thuộc mùa học '{semester.Code}' để thực thi phân bổ sinh viên.");
             }
 
             var adminClassIds = adminClasses.Select(c => c.Id).ToHashSet();
@@ -435,6 +446,155 @@ namespace project_PRN232.Services
                 Allocations = allocationsList,
                 UnallocatedExceptions = new List<UnallocatedExceptionDto>(),
                 ClassSummaries = classSummaries.OrderBy(c => c.ClassCode).ToList()
+            };
+        }
+
+        public async Task<AllocationResultDto> GetAllocationStatusAsync(int semesterId)
+        {
+            // 1. Xác định học kỳ
+            Semester? semester = null;
+            if (semesterId > 0)
+            {
+                semester = await _db.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
+            }
+            if (semester == null)
+            {
+                semester = await _db.Semesters.FirstOrDefaultAsync(s => s.Status == "Active");
+            }
+            if (semester == null)
+            {
+                return new AllocationResultDto();
+            }
+
+            // 2. Nhận diện mùa học từ semester (VD: FA26 / Fall 26, SU26 / Summer 26, SP26 / Spring 26)
+            var semCode = (semester.Code ?? "").Trim().ToUpper();
+            var semName = (semester.Name ?? "").Trim().ToUpper();
+            string seasonKeyword = semCode.StartsWith("FA") ? "FALL" : 
+                                   semCode.StartsWith("SP") ? "SPRING" : 
+                                   semCode.StartsWith("SU") ? "SUMMER" : semCode;
+
+            // 3. Lấy các lớp hành chính thuộc mùa học này
+            var seasonClasses = await _db.AdministrativeClasses
+                .Include(ac => ac.Major)
+                .Include(ac => ac.Specialization)
+                .Where(ac => ac.IsActive)
+                .Where(ac => ac.AcademicYear.ToUpper() == semCode || 
+                             ac.AcademicYear.ToUpper().Contains(semCode) ||
+                             ac.AcademicYear.ToUpper().Contains(seasonKeyword) ||
+                             semName.Contains(ac.AcademicYear.ToUpper()))
+                .OrderBy(ac => ac.Code)
+                .ToListAsync();
+
+            if (!seasonClasses.Any())
+            {
+                return new AllocationResultDto
+                {
+                    SemesterId = semester.Id,
+                    SemesterCode = semester.Code
+                };
+            }
+
+            var seasonClassIds = seasonClasses.Select(c => c.Id).ToHashSet();
+
+            // 4. Lấy sinh viên đã được phân bổ vào các lớp hành chính của mùa này
+            var studentsInSeason = await _db.Students
+                .Include(s => s.User)
+                .Where(s => s.AdministrativeClassId.HasValue && seasonClassIds.Contains(s.AdministrativeClassId.Value))
+                .ToListAsync();
+
+            var studentsByClass = studentsInSeason
+                .GroupBy(s => s.AdministrativeClassId!.Value)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Chỉ lấy các lớp ĐÃ ĐƯỢC PHÂN BỔ TRƯỚC ĐÓ trong mùa đó (StudentCount > 0)
+            var allocatedClasses = seasonClasses
+                .Where(ac => studentsByClass.ContainsKey(ac.Id) && studentsByClass[ac.Id].Count > 0)
+                .ToList();
+
+            if (!allocatedClasses.Any())
+            {
+                return new AllocationResultDto
+                {
+                    SemesterId = semester.Id,
+                    SemesterCode = semester.Code
+                };
+            }
+
+            // 5. Lấy các môn học phần tương ứng trong học kỳ này
+            var sectionsInSemester = await _db.CourseSections
+                .Where(cs => cs.SemesterId == semester.Id && cs.AdministrativeClassId.HasValue && seasonClassIds.Contains(cs.AdministrativeClassId.Value))
+                .ToListAsync();
+
+            var sectionsByClass = sectionsInSemester
+                .GroupBy(cs => cs.AdministrativeClassId!.Value)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // 6. Lấy thông tin enrollments
+            var sectionIds = sectionsInSemester.Select(s => s.Id).ToHashSet();
+            var enrollments = await _db.CourseSectionStudents
+                .Include(css => css.CourseSection)
+                .Include(css => css.Student)
+                    .ThenInclude(st => st.User)
+                .Where(css => sectionIds.Contains(css.CourseSectionId))
+                .ToListAsync();
+
+            var classSummaries = new List<ClassAllocationSummaryDto>();
+            int totalStudents = 0;
+            int totalAutoCreated = 0;
+
+            foreach (var ac in allocatedClasses)
+            {
+                var classStudents = studentsByClass.TryGetValue(ac.Id, out var studs) ? studs : new List<Student>();
+                var classSecs = sectionsByClass.TryGetValue(ac.Id, out var secs) ? secs : new List<CourseSection>();
+
+                totalStudents += classStudents.Count;
+
+                int autoCreatedInClass = classStudents.Count(s => s.User != null && s.User.CreatedAt >= DateTime.UtcNow.AddDays(-7));
+                totalAutoCreated += autoCreatedInClass;
+
+                classSummaries.Add(new ClassAllocationSummaryDto
+                {
+                    ClassId = ac.Id,
+                    ClassCode = ac.Code,
+                    MajorCode = ac.Major?.Code ?? "",
+                    SpecializationCode = ac.Specialization?.Code,
+                    SemesterNumber = ac.CurrentSemester,
+                    StudentCount = classStudents.Count,
+                    SectionsCount = classSecs.Count,
+                    AutoCreatedCount = autoCreatedInClass
+                });
+            }
+
+            var allocationsList = new List<AllocationItemDto>();
+            foreach (var en in enrollments)
+            {
+                var sec = en.CourseSection;
+                var st = en.Student;
+                if (sec == null || st == null) continue;
+
+                var adminClass = seasonClasses.FirstOrDefault(ac => ac.Id == sec.AdministrativeClassId);
+                allocationsList.Add(new AllocationItemDto
+                {
+                    StudentId = st.Id,
+                    StudentCode = st.StudentCode,
+                    StudentName = st.User?.FullName ?? st.StudentCode,
+                    SectionCode = sec.Code,
+                    SubjectCode = sec.Code.Split('_').FirstOrDefault() ?? "",
+                    AdministrativeClassCode = adminClass?.Code ?? "",
+                    IsAutoCreated = st.User != null && st.User.CreatedAt >= DateTime.UtcNow.AddDays(-7)
+                });
+            }
+
+            return new AllocationResultDto
+            {
+                SemesterId = semester.Id,
+                SemesterCode = semester.Code,
+                TotalStudentsProcessed = totalStudents,
+                TotalEligibleStudents = totalStudents,
+                TotalEnrolledSections = enrollments.Count,
+                AutoCreatedStudentsCount = totalAutoCreated,
+                ClassSummaries = classSummaries.OrderBy(c => c.ClassCode).ToList(),
+                Allocations = allocationsList
             };
         }
 

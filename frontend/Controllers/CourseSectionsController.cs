@@ -149,24 +149,9 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> RunAllocation(int semesterId, int? majorId, int? semesterNumber)
+        public IActionResult RunAllocation(int semesterId, int? majorId, int? semesterNumber)
         {
-            var authCheck = CheckAuth("Admin");
-            if (authCheck != null) return authCheck;
-
-            var (success, msg, data) = await ApiClient.PostAsync<AllocationViewModel>("allocations/run", new
-            {
-                semesterId,
-                majorId,
-                semesterNumber
-            });
-
-            SetAlert(msg, success ? "success" : "danger");
-            var allSemesters = await ApiClient.GetAsync<List<SemesterViewModel>>("semesters") ?? new List<SemesterViewModel>();
-            var activeSemesters = allSemesters.Where(s => string.Equals(s.Status, "Active", StringComparison.OrdinalIgnoreCase)).ToList();
-            ViewBag.Semesters = activeSemesters.Any() ? activeSemesters : allSemesters;
-
-            return View("Allocations", data ?? new AllocationViewModel());
+            return RedirectToAction("Allocations", "Classes", new { semesterId });
         }
     }
 }

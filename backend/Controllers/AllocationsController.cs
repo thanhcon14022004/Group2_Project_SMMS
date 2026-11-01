@@ -33,6 +33,21 @@ namespace project_PRN232.Controllers
             }
         }
 
+        [HttpGet("status/{semesterId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllocationStatus(int semesterId)
+        {
+            try
+            {
+                var result = await _allocationService.GetAllocationStatusAsync(semesterId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("exceptions/{semesterId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetExceptions(int semesterId)
