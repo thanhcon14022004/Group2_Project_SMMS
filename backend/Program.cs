@@ -178,16 +178,12 @@ if (app.Environment.IsDevelopment() || true)
     });
 }
 
-// Support serving web front-end
-app.UseDefaultFiles();
-app.UseStaticFiles();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-// Fallback to index.html for SPA routing if requested non-api path
-app.MapFallbackToFile("index.html");
+// Redirect root to Swagger API documentation
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();

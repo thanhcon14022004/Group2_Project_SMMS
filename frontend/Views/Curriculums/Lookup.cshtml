@@ -16,7 +16,7 @@
                 <form asp-action="Lookup" method="get">
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Ngành Đào tạo</label>
-                        <select name="majorId" class="form-select" id="selectMajor" onchange="filterSpecs()">
+                        <select name="majorId" class="form-select" id="selectMajor">
                             @foreach (var m in majors)
                             {
                                 <option value="@m.Id" selected="@(m.Id == Model.MajorId ? "selected" : null)">@m.Code - @m.Name</option>
@@ -38,9 +38,18 @@
                         <label class="form-label small fw-semibold">Cơ sở ngành / Chuyên ngành hẹp (Bắt buộc cho Kỳ 5, 7, 8 - Kỳ 6 thực tập OJT)</label>
                         <select name="specializationId" class="form-select" id="selectSpec">
                             <option value="">-- Cơ sở ngành (Không phân nhánh) --</option>
-                            @foreach (var s in specializations)
+                            @foreach (var m in majors)
                             {
-                                <option value="@s.Id" data-major="@s.MajorId" selected="@(s.Id == Model.SpecializationId ? "selected" : null)">Ngành hẹp: @s.Code - @s.Name</option>
+                                var specsForMajor = specializations.Where(s => s.MajorId == m.Id).ToList();
+                                if (specsForMajor.Any())
+                                {
+                                    <optgroup label="Ngành @m.Code">
+                                        @foreach (var s in specsForMajor)
+                                        {
+                                            <option value="@s.Id" selected="@(s.Id == Model.SpecializationId ? "selected" : null)">@s.Code - @s.Name</option>
+                                        }
+                                    </optgroup>
+                                }
                             }
                         </select>
                     </div>
@@ -140,24 +149,4 @@
         </div>
     </div>
 </div>
-
-@section Scripts {
-<script>
-    function filterSpecs() {
-        const majorId = document.getElementById('selectMajor').value;
-        const specSelect = document.getElementById('selectSpec');
-        for (let i = 0; i < specSelect.options.length; i++) {
-            const opt = specSelect.options[i];
-            const optMajor = opt.getAttribute('data-major');
-            if (!optMajor || optMajor === majorId) {
-                opt.style.display = '';
-            } else {
-                opt.style.display = 'none';
-                if (opt.selected) specSelect.value = '';
-            }
-        }
-    }
-    filterSpecs();
-</script>
-}
 
