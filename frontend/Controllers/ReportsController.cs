@@ -64,6 +64,31 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> ExportGpaWord(int? majorId, int? classId)
+        {
+            var authCheck = CheckAuth("Admin", "Lecturer");
+            if (authCheck != null) return authCheck;
+
+            string endpoint = "reports/export/gpa-word";
+            if (majorId.HasValue || classId.HasValue)
+            {
+                var q = new List<string>();
+                if (majorId.HasValue) q.Add($"majorId={majorId}");
+                if (classId.HasValue) q.Add($"administrativeClassId={classId}");
+                endpoint += "?" + string.Join("&", q);
+            }
+
+            var bytes = await ApiClient.GetByteArrayAsync(endpoint);
+            if (bytes == null)
+            {
+                SetAlert("Không thể xuất file báo cáo Word.", "danger");
+                return RedirectToAction(nameof(Index));
+            }
+
+            return File(bytes, "application/msword", $"SMMS_BaoCao_GPA_{DateTime.UtcNow:yyyyMMdd_HHmm}.doc");
+        }
+
+        [HttpGet]
         public async Task<IActionResult> ExportSectionGradesCsv(int sectionId)
         {
             var authCheck = CheckAuth("Admin", "Lecturer");
