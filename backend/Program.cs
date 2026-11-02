@@ -65,10 +65,40 @@ builder.Services.AddAuthentication(options =>
             Console.WriteLine("JWT Auth Failed: " + context.Exception.Message);
             return Task.CompletedTask;
         },
-        OnChallenge = context =>
+        OnChallenge = async context =>
         {
-            Console.WriteLine($"JWT Challenge: Error={context.Error}, Desc={context.ErrorDescription}");
-            return Task.CompletedTask;
+            // Ngăn chặn trả về response rỗng hoặc redirect
+            context.HandleResponse();
+
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+
+            var responseObj = new
+            {
+                success = false,
+                statusCode = 401,
+                message = "Yêu cầu xác thực. Vui lòng cung cấp JWT Bearer Token hợp lệ.",
+                error = "Unauthorized"
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(responseObj);
+            await context.Response.WriteAsync(json);
+        },
+        OnForbidden = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+
+            var responseObj = new
+            {
+                success = false,
+                statusCode = 403,
+                message = "Bạn không có quyền truy cập vào tài nguyên này.",
+                error = "Forbidden"
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(responseObj);
+            await context.Response.WriteAsync(json);
         }
     };
 });
