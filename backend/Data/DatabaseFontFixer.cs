@@ -155,7 +155,187 @@ namespace project_PRN232.Data
                     await db.SaveChangesAsync();
                 }
 
-                // 4. Chuẩn hóa font chữ và bảng mã tiếng Việt trong file SMMS_Database.sql
+                // 4. Chuẩn hóa Ngành (Majors)
+                var majors = await db.Majors.ToListAsync();
+                var majorMap = new Dictionary<string, (string Name, string Desc)>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["SE"] = ("Kỹ thuật phần mềm (Software Engineering)", "Đào tạo kỹ sư phần mềm chất lượng cao"),
+                    ["IA"] = ("An toàn thông tin (Information Assurance)", "Đào tạo chuyên gia bảo mật và phòng thủ không gian mạng"),
+                    ["AI"] = ("Trí tuệ nhân tạo (Artificial Intelligence)", "Đào tạo chuyên gia AI, Machine Learning và Khoa học dữ liệu"),
+                    ["DS"] = ("Khoa học dữ liệu (Data Science)", "Đào tạo kỹ sư phân tích dữ liệu lớn và trực quan hóa kinh doanh"),
+                    ["IT"] = ("Công nghệ thông tin (Information Technology)", "Đào tạo kỹ sư CNTT tổng hợp, Cloud và Quản trị hệ thống"),
+                    ["GD"] = ("Thiết kế Mỹ thuật số (Digital Art & Graphic Design)", "Đào tạo thiết kế đồ họa 2D/3D, UI/UX và truyền thông hình ảnh"),
+                    ["BA"] = ("Quản trị kinh doanh (Business Administration)", "Đào tạo cử nhân QTKD, Digital Marketing và Kinh doanh quốc tế"),
+                    ["MC"] = ("Truyền thông đa phương tiện (Multimedia Communication)", "Đào tạo chuyên viên truyền thông số, báo chí và tổ chức sự kiện"),
+                    ["EN"] = ("Ngôn ngữ Anh (English Language)", "Đào tạo chuyên gia ngôn ngữ Anh thương mại và biên phiên dịch"),
+                    ["JP"] = ("Ngôn ngữ Nhật (Japanese Language)", "Đào tạo cử nhân tiếng Nhật CNTT và tiếng Nhật thương mại"),
+                    ["KR"] = ("Ngôn ngữ Hàn (Korean Language)", "Đào tạo cử nhân tiếng Hàn thương mại và truyền thông")
+                };
+                bool majorsChanged = false;
+                foreach (var m in majors)
+                {
+                    if (majorMap.TryGetValue(m.Code, out var mInfo))
+                    {
+                        if (m.Name != mInfo.Name || m.Description != mInfo.Desc)
+                        {
+                            m.Name = mInfo.Name;
+                            m.Description = mInfo.Desc;
+                            majorsChanged = true;
+                        }
+                    }
+                }
+                if (majorsChanged) await db.SaveChangesAsync();
+
+                // 5. Chuẩn hóa Chuyên ngành hẹp (Specializations)
+                var specs = await db.Specializations.ToListAsync();
+                var specMap = new Dictionary<string, (string Name, string Desc)>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["SE-IS"] = ("Hệ thống thông tin doanh nghiệp (Information Systems)", "Chuyên sâu về kiến trúc hệ thống và ERP"),
+                    ["SE-JS"] = ("Kỹ thuật phần mềm Nhật Bản (Japanese Software)", "Chuyên sâu về cầu nối phát triển phần mềm cho thị trường Nhật"),
+                    ["SE-ES"] = ("Hệ thống nhúng & IoT (Embedded Systems & IoT)", "Lập trình vi điều khiển, hệ thống nhúng và thiết bị thông minh"),
+                    ["SE-AS"] = ("Kỹ thuật phần mềm ô tô (Automotive Software)", "Phát triển phần mềm điều khiển và xe tự hành"),
+                    ["IA-NW"] = ("An ninh mạng & Điện toán đám mây (Cyber & Cloud Security)", "Bảo mật hạ tầng mạng, phòng chống tấn công DDoS"),
+                    ["IA-DF"] = ("Điều tra số & Ứng phó sự cố an ninh (Digital Forensics)", "Khôi phục chứng cứ số và giám định bảo mật"),
+                    ["AI-ML"] = ("Học máy & Học sâu ứng dụng (Machine Learning & Deep Learning)", "Xây dựng các mô hình AI dự báo và huấn luyện mạng nơ-ron"),
+                    ["AI-CV"] = ("Thị giác máy tính & Xử lý ngôn ngữ tự nhiên (Computer Vision & NLP)", "Nhận diện khuôn mặt, chatbot và xử lý văn bản"),
+                    ["DS-BA"] = ("Phân tích dữ liệu kinh doanh (Business Analytics & BI)", "Phân tích insight khách hàng và tối ưu chiến lược kinh doanh"),
+                    ["DS-DE"] = ("Kỹ thuật dữ liệu lớn (Big Data Engineering)", "Xây dựng Data Pipeline, Spark, Hadoop và hồ dữ liệu"),
+                    ["IT-WD"] = ("Phát triển ứng dụng Web Full-stack (Full-stack Web Development)", "Thiết kế và phát triển web hiện đại với Frontend & Backend"),
+                    ["IT-SA"] = ("Quản trị hệ thống & Điện toán đám mây (Cloud & Systems)", "Triển khai AWS/Azure, CI/CD và DevOps"),
+                    ["GD-3D"] = ("Thiết kế đồ họa 3D & Kỹ xảo hình ảnh (3D Animation & VFX)", "Dựng hình nhân vật 3D, làm hoạt hình và kỹ xảo điện ảnh"),
+                    ["GD-UX"] = ("Thiết kế giao diện & Trải nghiệm người dùng (UI/UX Design)", "Nghiên cứu hành vi người dùng, thiết kế wireframe và prototype"),
+                    ["BA-DM"] = ("Digital Marketing (Marketing số)", "SEO, Google/Facebook Ads, Content Strategy và Social Media"),
+                    ["BA-IB"] = ("Kinh doanh quốc tế (International Business)", "Thương mại toàn cầu, xuất nhập khẩu và chuỗi cung ứng logistics"),
+                    ["BA-HM"] = ("Quản trị Khách sạn & Du lịch (Hospitality Management)", "Vận hành khách sạn, resort và dịch vụ du lịch quốc tế"),
+                    ["BA-FT"] = ("Công nghệ tài chính (FinTech)", "Ngân hàng số, thanh toán điện tử và phân tích đầu tư"),
+                    ["MC-PR"] = ("Quan hệ công chúng & Quản trị sự kiện (PR & Event)", "Truyền thông thương hiệu, xử lý khủng hoảng và tổ chức sự kiện"),
+                    ["MC-NM"] = ("Báo chí số & Sáng tạo nội dung (Digital Journalism)", "Sản xuất video, podcast và báo chí truyền thông số"),
+                    ["EN-BC"] = ("Tiếng Anh thương mại (Business Communication)", "Giao tiếp đàm phán quốc tế và hợp đồng thương mại"),
+                    ["EN-TI"] = ("Tiếng Anh Biên phiên dịch (Translation & Interpretation)", "Biên dịch tài liệu chuyên ngành và phiên dịch hội thảo"),
+                    ["JP-IT"] = ("Tiếng Nhật Công nghệ thông tin (IT Japanese)", "Cầu nối phát triển phần mềm Bridge SE cho doanh nghiệp Nhật"),
+                    ["JP-BC"] = ("Tiếng Nhật Thương mại (Business Japanese)", "Giao tiếp văn phòng và thương mại với đối tác Nhật Bản"),
+                    ["KR-BC"] = ("Tiếng Hàn Thương mại (Business Korean)", "Làm việc tại các tập đoàn đa quốc gia Hàn Quốc (Samsung, LG...)"),
+                    ["KR-TI"] = ("Tiếng Hàn Biên phiên dịch (Korean Translation)", "Dịch thuật cabin, hội nghị và tài liệu kinh tế")
+                };
+                bool specsChanged = false;
+                foreach (var sp in specs)
+                {
+                    if (specMap.TryGetValue(sp.Code, out var spInfo))
+                    {
+                        if (sp.Name != spInfo.Name || sp.Description != spInfo.Desc)
+                        {
+                            sp.Name = spInfo.Name;
+                            sp.Description = spInfo.Desc;
+                            specsChanged = true;
+                        }
+                    }
+                }
+                if (specsChanged) await db.SaveChangesAsync();
+
+                // 6. Chuẩn hóa Lớp hành chính (AdministrativeClasses)
+                var classes = await db.AdministrativeClasses.ToListAsync();
+                var classNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["SE1701"] = "Kỹ thuật phần mềm K17 Lớp 1",
+                    ["SE1702"] = "Kỹ thuật phần mềm K17 Lớp 2",
+                    ["SE1703"] = "Kỹ thuật phần mềm K17 Lớp 3",
+                    ["SE1801"] = "Kỹ thuật phần mềm K18 Lớp 1",
+                    ["SE1802"] = "Kỹ thuật phần mềm K18 Lớp 2",
+                    ["IA1701"] = "An toàn thông tin K17 Lớp 1",
+                    ["IA1801"] = "An toàn thông tin K18 Lớp 1",
+                    ["AI1701"] = "Trí tuệ nhân tạo K17 Lớp 1",
+                    ["AI1801"] = "Trí tuệ nhân tạo K18 Lớp 1",
+                    ["DS1701"] = "Khoa học dữ liệu K17 Lớp 1",
+                    ["DS1801"] = "Khoa học dữ liệu K18 Lớp 1",
+                    ["IT1701"] = "Công nghệ thông tin K17 Lớp 1",
+                    ["IT1801"] = "Công nghệ thông tin K18 Lớp 1",
+                    ["GD1701"] = "Thiết kế đồ họa K17 Lớp 1",
+                    ["GD1801"] = "Thiết kế đồ họa K18 Lớp 1",
+                    ["BA1701"] = "Quản trị kinh doanh K17 Lớp 1",
+                    ["BA1702"] = "Quản trị kinh doanh K17 Lớp 2",
+                    ["BA1801"] = "Quản trị kinh doanh K18 Lớp 1",
+                    ["MC1701"] = "Truyền thông đa phương tiện K17 Lớp 1",
+                    ["MC1801"] = "Truyền thông đa phương tiện K18 Lớp 1",
+                    ["EN1701"] = "Ngôn ngữ Anh K17 Lớp 1",
+                    ["EN1801"] = "Ngôn ngữ Anh K18 Lớp 1",
+                    ["JP1701"] = "Ngôn ngữ Nhật K17 Lớp 1",
+                    ["JP1801"] = "Ngôn ngữ Nhật K18 Lớp 1",
+                    ["KR1701"] = "Ngôn ngữ Hàn K17 Lớp 1",
+                    ["KR1801"] = "Ngôn ngữ Hàn K18 Lớp 1"
+                };
+                bool classesChanged = false;
+                foreach (var c in classes)
+                {
+                    if (classNames.TryGetValue(c.Code, out var cName) && c.Name != cName)
+                    {
+                        c.Name = cName;
+                        classesChanged = true;
+                    }
+                }
+                if (classesChanged) await db.SaveChangesAsync();
+
+                // 7. Chuẩn hóa Users & Giảng viên (Users)
+                var users = await db.Users.ToListAsync();
+                var userMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["admin"] = "Quản trị viên Hệ thống SMMS",
+                    ["gv_hungnv"] = "ThS. Nguyễn Văn Hùng",
+                    ["gv_huonglt"] = "TS. Lê Thị Hương",
+                    ["gv_cuongnk"] = "TS. Nguyễn Kim Cương",
+                    ["gv_sondh"] = "ThS. Đỗ Hoàng Sơn",
+                    ["gv_lanpt"] = "TS. Phạm Thị Lan",
+                    ["gv_namth"] = "ThS. Trần Hải Nam",
+                    ["gv_trivm"] = "ThS. Vũ Minh Trí",
+                    ["gv_huonghm"] = "TS. Hoàng Mai Hương",
+                    ["gv_kietdt"] = "ThS. Đặng Tuấn Kiệt",
+                    ["gv_thaobp"] = "ThS. Bùi Phương Thảo",
+                    ["gv_john"] = "ThS. John Smith",
+                    ["gv_tanaka"] = "ThS. Tanaka Hiroshi",
+                    ["gv_park"] = "ThS. Park Min Woo"
+                };
+                bool usersChanged = false;
+                foreach (var u in users)
+                {
+                    if (userMap.TryGetValue(u.Username, out var fName) && u.FullName != fName)
+                    {
+                        u.FullName = fName;
+                        usersChanged = true;
+                    }
+                    else if (u.FullName.Contains("Ã") || u.FullName.Contains("á»") || u.FullName.Contains("Ä") || u.FullName.Contains("Æ"))
+                    {
+                        var cleaned = CleanMojibake(u.FullName);
+                        if (!string.IsNullOrEmpty(cleaned) && cleaned != u.FullName)
+                        {
+                            u.FullName = cleaned;
+                            usersChanged = true;
+                        }
+                    }
+                }
+                if (usersChanged) await db.SaveChangesAsync();
+
+                // 8. Chuẩn hóa Học kỳ (Semesters)
+                var sems = await db.Semesters.ToListAsync();
+                var semMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["FA24"] = "Học kỳ Fall 2024",
+                    ["SP25"] = "Học kỳ Spring 2025",
+                    ["SU25"] = "Học kỳ Summer 2025",
+                    ["FA25"] = "Học kỳ Fall 2025",
+                    ["SP26"] = "Học kỳ Spring 2026",
+                    ["SU26"] = "Học kỳ Summer 2026"
+                };
+                bool semsChanged = false;
+                foreach (var sm in sems)
+                {
+                    if (semMap.TryGetValue(sm.Code, out var sName) && sm.Name != sName)
+                    {
+                        sm.Name = sName;
+                        semsChanged = true;
+                    }
+                }
+                if (semsChanged) await db.SaveChangesAsync();
+
+                // 9. Chuẩn hóa font chữ và bảng mã tiếng Việt trong file SMMS_Database.sql
                 CleanSqlScriptFile();
             }
             catch (Exception ex)
@@ -515,19 +695,130 @@ namespace project_PRN232.Data
             }
         }
 
+        public static string FixMojibake(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+
+            s = s.Replace("chá»  n", "chọn")
+                 .Replace("chá» n", "chọn")
+                 .Replace("Ä ang", "Đang")
+                 .Replace("Ä‘", "đ")
+                 .Replace("Ä ", "Đ");
+
+            var sb = new System.Text.StringBuilder(s.Length);
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+
+                // 3-byte sequence starting with á (0xE1) + (º or ») + 3rd char
+                if (c == '\u00E1' && i + 2 < s.Length && (s[i + 1] == '\u00BA' || s[i + 1] == '\u00BB'))
+                {
+                    byte? b3 = GetCp1252Byte(s[i + 2]);
+                    if (b3.HasValue)
+                    {
+                        try
+                        {
+                            string decoded = System.Text.Encoding.UTF8.GetString(new byte[] { 0xE1, (byte)s[i + 1], b3.Value });
+                            sb.Append(decoded);
+                            i += 2;
+                            continue;
+                        }
+                        catch { }
+                    }
+                }
+
+                // 2-byte sequence starting with Ă (U+0102), Ã (U+00C3), Ä (U+00C4), Å (U+00C5), Æ (U+00C6)
+                if ((c == '\u0102' || c == '\u00C3' || c == '\u00C4' || c == '\u00C5' || c == '\u00C6') && i + 1 < s.Length)
+                {
+                    byte b1 = c == '\u0102' ? (byte)0xC3 : (byte)c;
+                    byte? b2 = GetCp1252Byte(s[i + 1]);
+                    if (b2.HasValue)
+                    {
+                        try
+                        {
+                            string decoded = System.Text.Encoding.UTF8.GetString(new byte[] { b1, b2.Value });
+                            sb.Append(decoded);
+                            i += 1;
+                            continue;
+                        }
+                        catch { }
+                    }
+                }
+
+                sb.Append(c);
+            }
+
+            string result = sb.ToString();
+
+            result = result.Replace("Đ ào", "Đào")
+                           .Replace("Đ ại", "Đại")
+                           .Replace("Đ ăng", "Đăng")
+                           .Replace("Đ ã", "Đã")
+                           .Replace("Đ ỗ", "Đỗ")
+                           .Replace("Đ oàn", "Đoàn")
+                           .Replace("Đ iều", "Điều")
+                           .Replace("Đ iểm", "Điểm")
+                           .Replace("Đ ầu", "Đầu")
+                           .Replace("Đ ầy", "Đầy")
+                           .Replace("Đ ủ", "Đủ")
+                           .Replace("Đ ịnh", "Định")
+                           .Replace("Đ ức", "Đức")
+                           .Replace("Đ ồng", "Đồng")
+                           .Replace("Đ ang", "Đang")
+                           .Replace("Đ ạt", "Đạt")
+                           .Replace("Đ IỂM", "ĐIỂM")
+                           .Replace("Đ ÀO", "ĐÀO")
+                           .Replace("Đ ẦY", "ĐẦY")
+                           .Replace("Đ Ủ", "ĐỦ")
+                           .Replace("Đ ẠI", "ĐẠI")
+                           .Replace("Đ ÍNẠP", "ĐÃ NẠP")
+                           .Replace("Đ ĂNG", "ĐĂNG")
+                           .Replace("MÍHE", "MÃ HE")
+                           .Replace("MÍHS", "MÃ HS")
+                           .Replace("MÍHA", "MÃ HA");
+
+            return result;
+        }
+
+        private static byte? GetCp1252Byte(char c)
+        {
+            if (c <= 0xFF) return (byte)c;
+            return c switch
+            {
+                '\u20AC' => 0x80,
+                '\u201A' => 0x82,
+                '\u0192' => 0x83,
+                '\u201E' => 0x84,
+                '\u2026' => 0x85,
+                '\u2020' => 0x86,
+                '\u2021' => 0x87,
+                '\u02C6' => 0x88,
+                '\u2030' => 0x89,
+                '\u0160' => 0x8A,
+                '\u2039' => 0x8B,
+                '\u0152' => 0x8C,
+                '\u017D' => 0x8E,
+                '\u2018' => 0x91,
+                '\u2019' => 0x92,
+                '\u201C' => 0x93,
+                '\u201D' => 0x94,
+                '\u2022' => 0x95,
+                '\u2013' => 0x96,
+                '\u2014' => 0x97,
+                '\u02DC' => 0x98,
+                '\u2122' => 0x99,
+                '\u0161' => 0x9A,
+                '\u203A' => 0x9B,
+                '\u0153' => 0x9C,
+                '\u017E' => 0x9E,
+                '\u0178' => 0x9F,
+                _ => null
+            };
+        }
+
         private static string CleanMojibake(string input)
         {
-            if (string.IsNullOrEmpty(input)) return input;
-            try
-            {
-                var bytes = System.Text.Encoding.GetEncoding("iso-8859-1").GetBytes(input);
-                var fixedStr = System.Text.Encoding.UTF8.GetString(bytes);
-                return !string.IsNullOrEmpty(fixedStr) && !fixedStr.Contains("") ? fixedStr : input;
-            }
-            catch
-            {
-                return input;
-            }
+            return FixMojibake(input);
         }
     }
 }
