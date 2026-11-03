@@ -240,5 +240,13 @@ namespace project_PRN232.Controllers
             var bytes = await _reportService.ExportSectionGradesCsvAsync(courseSectionId);
             return File(bytes, "text/csv", $"SMMS_DiemLopHocPhan_{courseSectionId}_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
         }
+
+        [HttpGet("export/section-grades-word/{courseSectionId}")]
+        [Authorize(Roles = "Admin,Lecturer")]
+        public async Task<IActionResult> ExportSectionGradesWord(int courseSectionId)
+        {
+            var bytes = await _reportService.ExportSectionGradesWordAsync(courseSectionId);
+            return File(bytes, "application/msword", $"SMMS_DiemLopHocPhan_{courseSectionId}_{DateTime.UtcNow:yyyyMMdd_HHmm}.doc");
+        }
     }
 }

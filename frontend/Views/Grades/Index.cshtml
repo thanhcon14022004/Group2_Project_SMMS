@@ -15,8 +15,8 @@
     @if (selectedSectionId.HasValue && selectedSectionId.Value > 0)
     {
         <div class="d-flex gap-2">
-            <a asp-controller="Reports" asp-action="ExportSectionGradesCsv" asp-route-sectionId="@selectedSectionId" class="btn btn-outline-success btn-sm rounded-3">
-                <i class="fa-solid fa-file-excel me-1"></i> Xuất CSV Bảng điểm
+            <a asp-controller="Reports" asp-action="ExportSectionGradesWord" asp-route-sectionId="@selectedSectionId" class="btn btn-outline-primary btn-sm rounded-3">
+                <i class="fa-solid fa-file-word me-1 text-primary"></i> Xuất Báo cáo Word
             </a>
             @if (role == "Admin")
             {

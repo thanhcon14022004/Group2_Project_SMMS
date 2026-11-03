@@ -103,6 +103,22 @@ namespace project_PRN232.Frontend.Controllers
 
             return File(bytes, "text/csv", $"SMMS_DiemLopHocPhan_{sectionId}_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportSectionGradesWord(int sectionId)
+        {
+            var authCheck = CheckAuth("Admin", "Lecturer");
+            if (authCheck != null) return authCheck;
+
+            var bytes = await ApiClient.GetByteArrayAsync($"reports/export/section-grades-word/{sectionId}");
+            if (bytes == null)
+            {
+                SetAlert("Không thể xuất file bảng điểm Word.", "danger");
+                return RedirectToAction("Index", "Grades", new { sectionId });
+            }
+
+            return File(bytes, "application/msword", $"SMMS_DiemLopHocPhan_{sectionId}_{DateTime.UtcNow:yyyyMMdd_HHmm}.doc");
+        }
     }
 }
 
