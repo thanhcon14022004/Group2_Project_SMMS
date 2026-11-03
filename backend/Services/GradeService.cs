@@ -27,18 +27,13 @@ namespace project_PRN232.Services
 
         public async Task<SectionGradeSheetDto> GetSectionGradeSheetAsync(int courseSectionId, int? currentUserId = null, string? userRole = null)
         {
+            // 1. Tải thông tin lớp học phần (truy vấn 1:1, không join bảng quan hệ nhiều-nhiều)
             var section = await _db.CourseSections
+                .AsNoTracking()
                 .Include(cs => cs.Subject)
-                    .ThenInclude(s => s!.GradeComponents)
                 .Include(cs => cs.Semester)
-                .Include(cs => cs.Lecturer)
-                .Include(cs => cs.Enrollments)
-                    .ThenInclude(e => e.Student)
-                        .ThenInclude(s => s!.User)
-                .Include(cs => cs.Enrollments)
-                    .ThenInclude(e => e.Student)
-                        .ThenInclude(s => s!.AdministrativeClass)
-                .Include(cs => cs.StudentGrades)
+                .Include(cs => cs.Lecturer).ThenInclude(l => l!.User)
+                .Include(cs => cs.AdministrativeClass)
                 .FirstOrDefaultAsync(cs => cs.Id == courseSectionId);
 
             if (section == null) throw new InvalidOperationException("Lớp học phần không tồn tại.");
@@ -46,7 +41,7 @@ namespace project_PRN232.Services
             // Kiểm tra quyền của giảng viên: Giảng viên CHỈ được xem lớp được phân công
             if (userRole == "Lecturer")
             {
-                var lecturer = await _db.Lecturers.FirstOrDefaultAsync(l => l.UserId == currentUserId);
+                var lecturer = await _db.Lecturers.AsNoTracking().FirstOrDefaultAsync(l => l.UserId == currentUserId);
                 if (lecturer == null || section.LecturerId != lecturer.Id)
                 {
                     throw new UnauthorizedAccessException("Bạn không được phân công phụ trách lớp học phần này.");
@@ -56,31 +51,58 @@ namespace project_PRN232.Services
             bool withinDeadline = section.Semester != null && DateTime.UtcNow <= section.Semester.GradeEntryDeadline;
             bool canEdit = (userRole == "Admin") || (!section.IsGradeLocked && withinDeadline && userRole == "Lecturer");
 
-            var components = section.Subject?.GradeComponents.OrderBy(c => c.OrderIndex).Select(c => new SubjectGradeComponentDto
-            {
-                Id = c.Id,
-                SubjectId = c.SubjectId,
-                Name = c.Name,
-                Weight = c.Weight,
-                Scale = c.Scale,
-                IsAdminOnly = c.IsAdminOnly,
-                OrderIndex = c.OrderIndex
-            }).ToList() ?? new();
+            // 2. Tải danh sách đầu điểm thành phần của môn học (truy vấn riêng theo SubjectId)
+            var components = await _db.SubjectGradeComponents
+                .AsNoTracking()
+                .Where(c => c.SubjectId == section.SubjectId)
+                .OrderBy(c => c.OrderIndex)
+                .Select(c => new SubjectGradeComponentDto
+                {
+                    Id = c.Id,
+                    SubjectId = c.SubjectId,
+                    Name = c.Name,
+                    Weight = c.Weight,
+                    Scale = c.Scale,
+                    IsAdminOnly = c.IsAdminOnly,
+                    OrderIndex = c.OrderIndex
+                })
+                .ToListAsync();
+
+            // 3. Tải danh sách sinh viên ghi danh trong lớp học phần (truy vấn riêng dùng index)
+            var enrollments = await _db.CourseSectionStudents
+                .AsNoTracking()
+                .Where(e => e.CourseSectionId == courseSectionId && e.Status == "Enrolled")
+                .Select(e => new
+                {
+                    e.StudentId,
+                    StudentCode = e.Student != null ? e.Student.StudentCode : "",
+                    FullName = e.Student != null && e.Student.User != null ? e.Student.User.FullName : "",
+                    AdminClassCode = e.Student != null && e.Student.AdministrativeClass != null ? e.Student.AdministrativeClass.Code : ""
+                })
+                .OrderBy(e => e.StudentCode)
+                .ToListAsync();
+
+            // 4. Tải tất cả điểm của lớp học phần này (truy vấn riêng theo CourseSectionId)
+            var grades = await _db.StudentGrades
+                .AsNoTracking()
+                .Where(g => g.CourseSectionId == courseSectionId)
+                .Select(g => new { g.StudentId, g.SubjectGradeComponentId, g.Score })
+                .ToListAsync();
+
+            var gradeLookup = grades
+                .GroupBy(g => (g.StudentId, g.SubjectGradeComponentId))
+                .ToDictionary(g => g.Key, g => g.First().Score);
 
             var studentRows = new List<StudentGradeRowDto>();
 
-            foreach (var en in section.Enrollments.OrderBy(e => e.Student?.StudentCode))
+            foreach (var en in enrollments)
             {
-                if (en.Student == null) continue;
-
-                var studentId = en.Student.Id;
                 var compScores = new Dictionary<int, decimal?>();
 
                 foreach (var c in components)
                 {
-                    var gradeRecord = section.StudentGrades
-                        .FirstOrDefault(g => g.StudentId == studentId && g.SubjectGradeComponentId == c.Id);
-                    compScores[c.Id] = gradeRecord?.Score;
+                    gradeLookup.TryGetValue((en.StudentId, c.Id), out var score);
+                    compScores[c.Id] = score;
                 }
 
                 // Tính điểm tổng kết
@@ -89,10 +111,10 @@ namespace project_PRN232.Services
 
                 studentRows.Add(new StudentGradeRowDto
                 {
-                    StudentId = studentId,
-                    StudentCode = en.Student.StudentCode,
-                    FullName = en.Student.User?.FullName ?? "",
-                    AdministrativeClassCode = en.Student.AdministrativeClass?.Code ?? "Chưa có lớp",
+                    StudentId = en.StudentId,
+                    StudentCode = en.StudentCode,
+                    FullName = en.FullName,
+                    AdministrativeClassCode = !string.IsNullOrEmpty(en.AdminClassCode) ? en.AdminClassCode : (section.AdministrativeClass?.Code ?? "Chưa có lớp"),
                     ComponentScores = compScores,
                     FinalScore = finalScore,
                     IsPassed = isPassed
@@ -106,6 +128,10 @@ namespace project_PRN232.Services
                 SubjectCode = section.Subject?.Code ?? "",
                 SubjectName = section.Subject?.Name ?? "",
                 Credits = section.Subject?.Credits ?? 0,
+                AdministrativeClassId = section.AdministrativeClassId,
+                AdministrativeClassCode = section.AdministrativeClass?.Code,
+                LecturerName = section.Lecturer?.User?.FullName ?? "Chưa phân công",
+                SemesterCode = section.Semester?.Code ?? "",
                 IsGradeLocked = section.IsGradeLocked,
                 CanEdit = canEdit,
                 Components = components,
@@ -147,10 +173,23 @@ namespace project_PRN232.Services
                     continue; // Đầu điểm không thuộc môn
                 }
 
-                // Nếu đầu điểm là IsAdminOnly và người sửa không phải admin thì từ chối sửa đầu điểm này
-                if (comp.IsAdminOnly && !isAdmin)
+                // Kiểm tra phân quyền sửa đầu điểm:
+                if (isAdmin)
                 {
-                    continue;
+                    // Admin chỉ được nhập các đầu điểm có quyền nhập (IsAdminOnly = true)
+                    // Các đầu điểm của giảng viên (Quiz, Lab, Assignment...) thì admin không can thiệp/nhập
+                    if (!comp.IsAdminOnly)
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    // Giảng viên chỉ được nhập các đầu điểm thường, không được sửa đầu điểm Chỉ Admin
+                    if (comp.IsAdminOnly)
+                    {
+                        continue;
+                    }
                 }
 
                 // Validate khoảng điểm: từ 0.0 đến 10.0 (hoặc comp.Scale)

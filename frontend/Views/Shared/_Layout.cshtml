@@ -92,9 +92,6 @@ else
                     <a asp-controller="Curriculums" asp-action="Index" class="nav-item-btn @(currentCtrl == "Curriculums" && currentAct == "Index" ? "active" : "")">
                         <i class="fa-solid fa-scroll"></i> <span>Chương trình Đào tạo</span>
                     </a>
-                    <a asp-controller="Curriculums" asp-action="Lookup" class="nav-item-btn @(currentCtrl == "Curriculums" && currentAct == "Lookup" ? "active" : "")">
-                        <i class="fa-solid fa-magnifying-glass-arrow-right"></i> <span>Tra cứu môn tự động</span>
-                    </a>
                     <a asp-controller="Classes" asp-action="Index" class="nav-item-btn @(currentCtrl == "Classes" && currentAct == "Index" ? "active" : "")">
                         <i class="fa-solid fa-chalkboard"></i> <span>Lớp hành chính</span>
                     </a>
@@ -109,22 +106,10 @@ else
                     <a asp-controller="Grades" asp-action="Index" class="nav-item-btn @(currentCtrl == "Grades" && currentAct == "Index" ? "active" : "")">
                         <i class="fa-solid fa-pen-to-square"></i> <span>Nhập & Khóa điểm</span>
                     </a>
-                    <a asp-controller="Classes" asp-action="Transfers" class="nav-item-btn @(currentCtrl == "Classes" && currentAct == "Transfers" ? "active" : "")">
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i> <span>Chuyển lớp hành chính</span>
-                    </a>
 
-                    <div class="nav-section-title">BÁO CÁO & HỆ THỐNG</div>
-                    <a asp-controller="Reports" asp-action="Index" class="nav-item-btn @(currentCtrl == "Reports" ? "active" : "")">
-                        <i class="fa-solid fa-file-invoice"></i> <span>Báo cáo & Thống kê</span>
-                    </a>
+                    <div class="nav-section-title">HỆ THỐNG</div>
                     <a asp-controller="Operations" asp-action="Users" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "Users" ? "active" : "")">
                         <i class="fa-solid fa-users"></i> <span>Tài khoản người dùng</span>
-                    </a>
-                    <a asp-controller="Operations" asp-action="AuditLogs" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "AuditLogs" ? "active" : "")">
-                        <i class="fa-solid fa-clock-rotate-left"></i> <span>Nhật ký thao tác</span>
-                    </a>
-                    <a asp-controller="Operations" asp-action="Backups" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "Backups" ? "active" : "")">
-                        <i class="fa-solid fa-database"></i> <span>Sao lưu & Khôi phục</span>
                     </a>
                 }
                 else if (role == "Lecturer")

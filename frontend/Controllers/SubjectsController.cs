@@ -75,12 +75,12 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(string code, string name, int credits, string? description, int? majorId, int? specializationId)
+        public async Task<IActionResult> Create(string code, string name, int credits, string? description, int? majorId, int? specializationId, bool isAdminOnlySubject = false)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
 
-            var (success, msg, _) = await ApiClient.PostAsync<object>("subjects", new
+            var (success, msg, createdData) = await ApiClient.PostAsync<SubjectViewModel>("subjects", new
             {
                 code = code.Trim().ToUpper(),
                 name = name.Trim(),
@@ -90,6 +90,26 @@ namespace project_PRN232.Frontend.Controllers
                 specializationId = (specializationId.HasValue && specializationId.Value > 0) ? specializationId : null,
                 isActive = true
             });
+
+            if (success && createdData != null && isAdminOnlySubject)
+            {
+                // Tự động cấu hình đầu điểm 100% Chỉ Admin cho môn này
+                await ApiClient.PostAsync<object>($"subjects/{createdData.Id}/components", new
+                {
+                    components = new List<object>
+                    {
+                        new
+                        {
+                            subjectId = createdData.Id,
+                            name = "Đánh giá & Bảo vệ tốt nghiệp (Hội đồng / Admin)",
+                            weight = 100m,
+                            scale = 10m,
+                            isAdminOnly = true,
+                            orderIndex = 1
+                        }
+                    }
+                });
+            }
 
             SetAlert(msg, success ? "success" : "danger");
             return RedirectToAction(nameof(Index));

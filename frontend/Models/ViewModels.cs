@@ -169,6 +169,7 @@ namespace project_PRN232.Frontend.Models
         public int MaxCapacity { get; set; } = 30;
         public int EnrolledCount { get; set; }
         public string Status { get; set; } = "Open";
+        public bool IsGradeLocked { get; set; }
         public List<ClassSectionScheduleViewModel> Schedules { get; set; } = new();
     }
 
@@ -385,7 +386,11 @@ namespace project_PRN232.Frontend.Models
         public string CourseSectionName { get; set; } = string.Empty;
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
+        public int Credits { get; set; }
         public string? LecturerName { get; set; }
+        public int? AdministrativeClassId { get; set; }
+        public string? AdministrativeClassCode { get; set; }
+        public string? SemesterCode { get; set; }
         public bool IsGradeLocked { get; set; }
         public bool CanEdit { get; set; }
         public List<SubjectGradeComponentViewModel> Components { get; set; } = new();
@@ -397,6 +402,7 @@ namespace project_PRN232.Frontend.Models
         public int StudentId { get; set; }
         public string StudentCode { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
+        public string? AdministrativeClassCode { get; set; }
         public Dictionary<int, decimal?> ComponentScores { get; set; } = new();
         public decimal? FinalScore { get; set; }
         public bool IsPassed { get; set; }
