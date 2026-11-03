@@ -26,6 +26,7 @@ namespace project_PRN232.DTOs
         public Dictionary<int, decimal?> ComponentScores { get; set; } = new(); // ComponentId -> Score
         public decimal? FinalScore { get; set; }
         public bool IsPassed { get; set; }
+        public bool IsCompleted { get; set; }
     }
 
     public class UpdateStudentGradeRequest
