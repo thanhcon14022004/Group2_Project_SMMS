@@ -131,27 +131,63 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public IActionResult AuditLogs()
+        public async Task<IActionResult> AuditLogs(string? action)
         {
-            return RedirectToAction(nameof(Users));
+            var authCheck = CheckAuth("Admin");
+            if (authCheck != null) return authCheck;
+
+            string endpoint = "auditlogs?limit=200";
+            if (!string.IsNullOrWhiteSpace(action))
+            {
+                endpoint += $"&action={Uri.EscapeDataString(action.Trim())}";
+            }
+
+            var logs = await ApiClient.GetAsync<List<AuditLogItemViewModel>>(endpoint) ?? new List<AuditLogItemViewModel>();
+            return View(logs);
         }
 
         [HttpGet]
-        public IActionResult Backups()
+        public async Task<IActionResult> Backups()
         {
-            return RedirectToAction(nameof(Users));
+            var authCheck = CheckAuth("Admin");
+            if (authCheck != null) return authCheck;
+
+            var records = await ApiClient.GetAsync<List<BackupItemViewModel>>("backups") ?? new List<BackupItemViewModel>();
+            return View(records);
         }
 
         [HttpPost]
-        public IActionResult CreateBackup(string? notes)
+        public async Task<IActionResult> CreateBackup(string? notes)
         {
-            return RedirectToAction(nameof(Users));
+            var authCheck = CheckAuth("Admin");
+            if (authCheck != null) return authCheck;
+
+            string endpoint = "backups/create";
+            if (!string.IsNullOrWhiteSpace(notes))
+            {
+                endpoint += $"?notes={Uri.EscapeDataString(notes.Trim())}";
+            }
+
+            var (success, msg, _) = await ApiClient.PostAsync<object>(endpoint, new { });
+            SetAlert(msg, success ? "success" : "danger");
+            return RedirectToAction(nameof(Backups));
         }
 
         [HttpPost]
-        public IActionResult RestoreBackup(int backupId, string confirmationText)
+        public async Task<IActionResult> RestoreBackup(int backupId, string confirmationText)
         {
-            return RedirectToAction(nameof(Users));
+            var authCheck = CheckAuth("Admin");
+            if (authCheck != null) return authCheck;
+
+            var (success, msg, _) = await ApiClient.PostAsync<object>("backups/restore", new
+            {
+                backupId,
+                confirmationText = confirmationText?.Trim() ?? "",
+                reason = "Khôi phục dữ liệu qua giao diện quản trị"
+            });
+
+            SetAlert(msg, success ? "success" : "danger");
+            return RedirectToAction(nameof(Backups));
         }
 
         #region Môn đăng ký của Giảng viên (AJAX)
