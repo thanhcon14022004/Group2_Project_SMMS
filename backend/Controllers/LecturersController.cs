@@ -191,7 +191,8 @@ namespace project_PRN232.Controllers
                 return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
 
             var list = await _db.LecturerSubjects
-                .Include(ls => ls.Subject)
+                .Include(ls => ls.Subject).ThenInclude(s => s!.Major)
+                .Include(ls => ls.Subject).ThenInclude(s => s!.Specialization)
                 .Include(ls => ls.Major)
                 .Include(ls => ls.Specialization)
                 .Where(ls => ls.LecturerId == lecturer.Id)
@@ -206,12 +207,12 @@ namespace project_PRN232.Controllers
                     SubjectCode = ls.Subject != null ? ls.Subject.Code : "",
                     SubjectName = ls.Subject != null ? ls.Subject.Name : "",
                     Credits = ls.Subject != null ? ls.Subject.Credits : 0,
-                    MajorId = ls.MajorId,
-                    MajorCode = ls.Major != null ? ls.Major.Code : "",
-                    MajorName = ls.Major != null ? ls.Major.Name : "",
-                    SpecializationId = ls.SpecializationId,
-                    SpecializationCode = ls.Specialization != null ? ls.Specialization.Code : "",
-                    SpecializationName = ls.Specialization != null ? ls.Specialization.Name : "",
+                    MajorId = ls.MajorId ?? (ls.Subject != null ? ls.Subject.MajorId : null),
+                    MajorCode = ls.Major != null ? ls.Major.Code : (ls.Subject != null && ls.Subject.Major != null ? ls.Subject.Major.Code : ""),
+                    MajorName = ls.Major != null ? ls.Major.Name : (ls.Subject != null && ls.Subject.Major != null ? ls.Subject.Major.Name : ""),
+                    SpecializationId = ls.SpecializationId ?? (ls.Subject != null ? ls.Subject.SpecializationId : null),
+                    SpecializationCode = ls.Specialization != null ? ls.Specialization.Code : (ls.Subject != null && ls.Subject.Specialization != null ? ls.Subject.Specialization.Code : ""),
+                    SpecializationName = ls.Specialization != null ? ls.Specialization.Name : (ls.Subject != null && ls.Subject.Specialization != null ? ls.Subject.Specialization.Name : ""),
                     RegisteredAt = ls.RegisteredAt,
                     Notes = ls.Notes
                 })

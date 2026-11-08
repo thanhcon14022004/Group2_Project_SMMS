@@ -354,9 +354,21 @@
 
 @section Scripts {
 <script>
-    const allMajors = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((ViewBag.Majors as List<MajorViewModel>) ?? new List<MajorViewModel>()));
-    const allSpecializations = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((ViewBag.Specializations as List<SpecializationViewModel>) ?? new List<SpecializationViewModel>()));
-    const allSubjects = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((ViewBag.Subjects as List<SubjectViewModel>) ?? new List<SubjectViewModel>()));
+    @{
+        var jsonCamelOpts = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+    }
+    const allMajors = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((ViewBag.Majors as List<MajorViewModel>) ?? new List<MajorViewModel>(), jsonCamelOpts));
+    const allSpecializations = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((ViewBag.Specializations as List<SpecializationViewModel>) ?? new List<SpecializationViewModel>(), jsonCamelOpts));
+    const allSubjects = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((ViewBag.Subjects as List<SubjectViewModel>) ?? new List<SubjectViewModel>(), jsonCamelOpts));
+
+    // Helper an toàn đọc thuộc tính bất kể camelCase hay PascalCase
+    function getVal(obj, ...keys) {
+        if (!obj) return '';
+        for (const k of keys) {
+            if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+        }
+        return '';
+    }
 
     let currentLecturerId = 0;
     let currentUserId = 0;
@@ -415,29 +427,42 @@
         items.forEach((item, index) => {
             const tr = document.createElement('tr');
             const dateStr = item.registeredAt ? new Date(item.registeredAt).toLocaleDateString('vi-VN') : '-';
-            const specDisplay = item.specializationName 
-                ? `<span class="badge bg-info-subtle text-info border border-info">${item.specializationCode || ''}</span> <small class="text-dark">${item.specializationName}</small>` 
+
+            const subCode = getVal(item, 'subjectCode', 'SubjectCode');
+            const subName = getVal(item, 'subjectName', 'SubjectName');
+            const subCredits = getVal(item, 'credits', 'Credits', 0);
+            const notes = getVal(item, 'notes', 'Notes');
+            const majorCode = getVal(item, 'majorCode', 'MajorCode') || getVal(item, 'majorName', 'MajorName');
+            const specCode = getVal(item, 'specializationCode', 'SpecializationCode');
+            const specName = getVal(item, 'specializationName', 'SpecializationName');
+            const majorId = getVal(item, 'majorId', 'MajorId', 0);
+            const specId = getVal(item, 'specializationId', 'SpecializationId', 0);
+            const subjectId = getVal(item, 'subjectId', 'SubjectId', 0);
+            const regId = getVal(item, 'id', 'Id', 0);
+
+            const specDisplay = specName 
+                ? `<span class="badge bg-info-subtle text-info border border-info">${specCode || ''}</span> <small class="text-dark">${specName}</small>` 
                 : '<span class="text-muted small">Cơ sở ngành</span>';
 
             tr.innerHTML = `
                 <td class="text-center text-muted">${index + 1}</td>
-                <td class="fw-bold text-primary">${item.subjectCode}</td>
+                <td class="fw-bold text-primary">${subCode}</td>
                 <td>
-                    <div class="fw-semibold text-dark">${item.subjectName}</div>
-                    ${item.notes ? `<small class="text-muted fst-italic">${item.notes}</small>` : ''}
+                    <div class="fw-semibold text-dark">${subName}</div>
+                    ${notes ? `<small class="text-muted fst-italic">${notes}</small>` : ''}
                 </td>
-                <td class="text-center"><span class="badge bg-light text-dark border">${item.credits}</span></td>
-                <td><span class="badge bg-secondary-subtle text-secondary border border-secondary">${item.majorCode || item.majorName || '-'}</span></td>
+                <td class="text-center"><span class="badge bg-light text-dark border">${subCredits}</span></td>
+                <td><span class="badge bg-secondary-subtle text-secondary border border-secondary">${majorCode || '-'}</span></td>
                 <td>${specDisplay}</td>
                 <td class="text-center small text-muted">${dateStr}</td>
                 <td class="text-end">
                     <button type="button" class="btn btn-outline-warning btn-sm rounded-3 me-1" 
-                            onclick="openEditSubjectForm(${item.id}, ${item.majorId || 0}, ${item.specializationId || 0}, ${item.subjectId}, '${item.notes || ''}')"
+                            onclick="openEditSubjectForm(${regId}, ${majorId}, ${specId}, ${subjectId}, '${notes.replace(/'/g, "\\'")}')"
                             title="Sửa môn đăng ký">
                         <i class="fa-solid fa-pen"></i>
                     </button>
                     <button type="button" class="btn btn-outline-danger btn-sm rounded-3" 
-                            onclick="deleteLecturerSubject(${item.id}, '${item.subjectCode}')"
+                            onclick="deleteLecturerSubject(${regId}, '${subCode}')"
                             title="Xóa môn đăng ký">
                         <i class="fa-solid fa-trash"></i>
                     </button>
@@ -461,8 +486,12 @@
         document.getElementById('subRegNotes').value = notes || '';
 
         initMajorDropdown(majorId);
-        onMajorChange(specId);
-        onSpecializationChange(subjectId);
+        if (majorId) {
+            onMajorChange(specId);
+            if (specId) {
+                onSpecializationChange(subjectId);
+            }
+        }
 
         document.getElementById('formSubjectContainer').style.display = 'block';
     }
@@ -478,10 +507,13 @@
         majorSelect.innerHTML = '<option value="">-- 1. Chọn Ngành --</option>';
 
         allMajors.forEach(m => {
+            const mId = getVal(m, 'id', 'Id');
+            const mCode = getVal(m, 'code', 'Code');
+            const mName = getVal(m, 'name', 'Name');
             const opt = document.createElement('option');
-            opt.value = m.id;
-            opt.textContent = `${m.code} - ${m.name}`;
-            if (m.id === selectedMajorId) opt.selected = true;
+            opt.value = mId;
+            opt.textContent = `${mCode} - ${mName}`;
+            if (parseInt(mId) === parseInt(selectedMajorId)) opt.selected = true;
             majorSelect.appendChild(opt);
         });
 
@@ -509,7 +541,7 @@
         }
 
         // Lọc các ngành hẹp thuộc ngành đã chọn
-        const specs = allSpecializations.filter(sp => sp.majorId === majorId);
+        const specs = allSpecializations.filter(sp => parseInt(getVal(sp, 'majorId', 'MajorId')) === majorId);
         if (specs.length === 0) {
             specSelect.innerHTML = '<option value="">-- Ngành này không có ngành hẹp --</option>';
             specSelect.disabled = true;
@@ -517,10 +549,13 @@
         }
 
         specs.forEach(sp => {
+            const spId = getVal(sp, 'id', 'Id');
+            const spCode = getVal(sp, 'code', 'Code');
+            const spName = getVal(sp, 'name', 'Name');
             const opt = document.createElement('option');
-            opt.value = sp.id;
-            opt.textContent = `${sp.code} - ${sp.name}`;
-            if (sp.id === selectedSpecId) opt.selected = true;
+            opt.value = spId;
+            opt.textContent = `${spCode} - ${spName}`;
+            if (parseInt(spId) === parseInt(selectedSpecId)) opt.selected = true;
             specSelect.appendChild(opt);
         });
 
@@ -539,10 +574,12 @@
             return;
         }
 
-        // Sổ ra các môn có trong chuyên ngành hẹp đó để chọn
-        const subjects = allSubjects.filter(s => 
-            s.specializationId === specId || (s.majorId === majorId && (!s.specializationId || s.specializationId === 0))
-        );
+        // Sổ ra các môn có trong chuyên ngành hẹp đó (hoặc môn của ngành đó)
+        const subjects = allSubjects.filter(s => {
+            const sSpecId = parseInt(getVal(s, 'specializationId', 'SpecializationId')) || 0;
+            const sMajorId = parseInt(getVal(s, 'majorId', 'MajorId')) || 0;
+            return (sSpecId === specId) || (sMajorId === majorId);
+        });
 
         if (subjects.length === 0) {
             subSelect.innerHTML = '<option value="">-- Không có môn học nào thuộc chuyên ngành này --</option>';
@@ -551,10 +588,14 @@
         }
 
         subjects.forEach(s => {
+            const sId = getVal(s, 'id', 'Id');
+            const sCode = getVal(s, 'code', 'Code');
+            const sName = getVal(s, 'name', 'Name');
+            const sCredits = getVal(s, 'credits', 'Credits', 3);
             const opt = document.createElement('option');
-            opt.value = s.id;
-            opt.textContent = `${s.code} - ${s.name} (${s.credits} TC)`;
-            if (s.id === selectedSubjectId) opt.selected = true;
+            opt.value = sId;
+            opt.textContent = `${sCode} - ${sName} (${sCredits} TC)`;
+            if (parseInt(sId) === parseInt(selectedSubjectId)) opt.selected = true;
             subSelect.appendChild(opt);
         });
 
