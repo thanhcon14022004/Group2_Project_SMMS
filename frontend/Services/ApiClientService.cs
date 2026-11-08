@@ -56,12 +56,21 @@ namespace project_PRN232.Frontend.Services
                 _httpContextAccessor.HttpContext?.Session.SetString("SMMS_USER_INFO", respJson);
                 _httpContextAccessor.HttpContext?.Session.SetString("SMMS_USER_ROLE", user.Role);
                 _httpContextAccessor.HttpContext?.Session.SetString("SMMS_USER_NAME", user.FullName);
+
+                // Set token in Cookie so it is visible in DevTools -> Application -> Cookies
+                _httpContextAccessor.HttpContext?.Response.Cookies.Append("SMMS_JWT_TOKEN", user.Token, new CookieOptions
+                {
+                    HttpOnly = false,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTimeOffset.UtcNow.AddDays(7)
+                });
             }
             return user;
         }
 
         public void Logout()
         {
+            _httpContextAccessor.HttpContext?.Response.Cookies.Delete("SMMS_JWT_TOKEN");
             _httpContextAccessor.HttpContext?.Session.Clear();
         }
 

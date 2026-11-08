@@ -70,6 +70,29 @@ namespace project_PRN232.Frontend.Controllers
             return RedirectToAction("Login");
         }
 
+        [HttpPost]
+        public IActionResult SetClientSession([FromBody] CurrentUserViewModel user)
+        {
+            if (user != null && !string.IsNullOrWhiteSpace(user.Token))
+            {
+                HttpContext.Session.SetString("SMMS_JWT_TOKEN", user.Token);
+                HttpContext.Session.SetString("SMMS_USER_INFO", System.Text.Json.JsonSerializer.Serialize(user));
+                HttpContext.Session.SetString("SMMS_USER_ROLE", user.Role ?? "");
+                HttpContext.Session.SetString("SMMS_USER_NAME", user.FullName ?? "");
+
+                Response.Cookies.Append("SMMS_JWT_TOKEN", user.Token, new CookieOptions
+                {
+                    HttpOnly = false,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTimeOffset.UtcNow.AddDays(7)
+                });
+
+                SetAlert($"Xin chào, {user.FullName}! Đăng nhập thành công.", "success");
+                return Ok(new { success = true });
+            }
+            return BadRequest("Dữ liệu người dùng hoặc token không hợp lệ.");
+        }
+
         [HttpGet]
         public IActionResult Logout()
         {
