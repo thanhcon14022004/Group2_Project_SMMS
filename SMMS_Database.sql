@@ -1,4 +1,4 @@
-﻿/*
+/*
 ========================================================================================
   Há»† THá»NG QUáº¢N LĂ ÄIá»‚M SINH VIĂN (SMMS - Student Mark Management System)
   MÔN HỌC: PRN232 (ASP.NET Core & C#)
@@ -239,6 +239,26 @@ BEGIN
         CONSTRAINT [PK_Lecturers] PRIMARY KEY ([Id]),
         CONSTRAINT [FK_Lecturers_Users_UserId] FOREIGN KEY ([UserId]) REFERENCES [Users] ([Id]) ON DELETE CASCADE
     );
+END;
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'LecturerSubjects')
+BEGIN
+    CREATE TABLE [LecturerSubjects] (
+        [Id] int NOT NULL IDENTITY,
+        [LecturerId] int NOT NULL,
+        [SubjectId] int NOT NULL,
+        [MajorId] int NULL,
+        [SpecializationId] int NULL,
+        [RegisteredAt] datetime2 NOT NULL DEFAULT (GETUTCDATE()),
+        [Notes] nvarchar(max) NULL,
+        CONSTRAINT [PK_LecturerSubjects] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_LecturerSubjects_Lecturers_LecturerId] FOREIGN KEY ([LecturerId]) REFERENCES [Lecturers] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_LecturerSubjects_Subjects_SubjectId] FOREIGN KEY ([SubjectId]) REFERENCES [Subjects] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_LecturerSubjects_Majors_MajorId] FOREIGN KEY ([MajorId]) REFERENCES [Majors] ([Id]) ON DELETE SET NULL,
+        CONSTRAINT [FK_LecturerSubjects_Specializations_SpecializationId] FOREIGN KEY ([SpecializationId]) REFERENCES [Specializations] ([Id]) ON DELETE SET NULL
+    );
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_LecturerSubjects_LecturerId_SubjectId] ON [LecturerSubjects] ([LecturerId], [SubjectId]);
 END;
 GO
 
@@ -1492,6 +1512,21 @@ END
 CLOSE curGv;
 DEALLOCATE curGv;
 DROP TABLE #TmpLecturers;
+
+-- Seed mẫu LecturerSubjects nếu cần
+IF NOT EXISTS (SELECT 1 FROM LecturerSubjects)
+BEGIN
+    INSERT INTO LecturerSubjects (LecturerId, SubjectId, MajorId, SpecializationId, RegisteredAt)
+    SELECT l.Id, s.Id, s.MajorId, s.SpecializationId, GETUTCDATE()
+    FROM Lecturers l
+    CROSS JOIN Subjects s
+    WHERE (l.LecturerCode IN ('GV001', 'GV002', 'GV003') AND s.Code IN ('PRF192', 'PRO192', 'PRN211', 'PRN232', 'SWP391', 'CSD201', 'DBI202'))
+       OR (l.LecturerCode = 'GV004' AND s.Code IN ('NWC203', 'SWE201', 'SWP391'))
+       OR (l.LecturerCode = 'GV005' AND s.Code IN ('AI101', 'MAS291', 'DBI202'))
+       OR (l.LecturerCode = 'GV011' AND s.Code IN ('ENG101', 'ENG102', 'ENG201'))
+       OR (l.LecturerCode = 'GV012' AND s.Code IN ('JPD113', 'JPD123'))
+       OR (l.LecturerCode = 'GV013' AND s.Code IN ('KOR101', 'KOR102'));
+END;
 
 PRINT N'==> ÄĂ£ cáº­p nháº­t 13 giảng viên cĂ¡c bá»™ mĂ´n.';
 

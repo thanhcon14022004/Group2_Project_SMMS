@@ -18,6 +18,7 @@ namespace project_PRN232.Data
         public DbSet<AdministrativeClass> AdministrativeClasses => Set<AdministrativeClass>();
         public DbSet<Student> Students => Set<Student>();
         public DbSet<Lecturer> Lecturers => Set<Lecturer>();
+        public DbSet<LecturerSubject> LecturerSubjects => Set<LecturerSubject>();
         public DbSet<CurriculumConfig> CurriculumConfigs => Set<CurriculumConfig>();
         public DbSet<CurriculumSubject> CurriculumSubjects => Set<CurriculumSubject>();
         public DbSet<Semester> Semesters => Set<Semester>();
@@ -301,6 +302,33 @@ namespace project_PRN232.Data
                     .WithMany()
                     .HasForeignKey(ss => ss.SemesterId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // LecturerSubject
+            modelBuilder.Entity<LecturerSubject>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.LecturerId, e.SubjectId }).IsUnique();
+
+                entity.HasOne(e => e.Lecturer)
+                    .WithMany(l => l.LecturerSubjects)
+                    .HasForeignKey(e => e.LecturerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Subject)
+                    .WithMany(s => s.LecturerSubjects)
+                    .HasForeignKey(e => e.SubjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Major)
+                    .WithMany()
+                    .HasForeignKey(e => e.MajorId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Specialization)
+                    .WithMany()
+                    .HasForeignKey(e => e.SpecializationId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
         }
     }

@@ -27,6 +27,7 @@ namespace project_PRN232.DTOs
         public string Email { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
         public string Role { get; set; } = string.Empty;
+        public int? LecturerId { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? LastLoginAt { get; set; }

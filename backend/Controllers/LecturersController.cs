@@ -176,6 +176,206 @@ namespace project_PRN232.Controllers
 
             return Ok(ApiResponse.SuccessResult($"Đã {(request.IsActive ? "kích hoạt" : "vô hiệu hóa")} giảng viên thành công."));
         }
+
+        #region Môn đăng ký giảng dạy (Lecturer Subjects CRUD)
+
+        [HttpGet("{id}/subjects")]
+        public async Task<IActionResult> GetLecturerSubjects(int id)
+        {
+            var lecturer = await _db.Lecturers
+                .Include(l => l.User)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(l => l.Id == id || l.UserId == id);
+
+            if (lecturer == null)
+                return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
+
+            var list = await _db.LecturerSubjects
+                .Include(ls => ls.Subject)
+                .Include(ls => ls.Major)
+                .Include(ls => ls.Specialization)
+                .Where(ls => ls.LecturerId == lecturer.Id)
+                .OrderBy(ls => ls.Subject != null ? ls.Subject.Code : "")
+                .Select(ls => new LecturerSubjectDto
+                {
+                    Id = ls.Id,
+                    LecturerId = ls.LecturerId,
+                    LecturerCode = lecturer.LecturerCode,
+                    LecturerName = lecturer.User != null ? lecturer.User.FullName : "",
+                    SubjectId = ls.SubjectId,
+                    SubjectCode = ls.Subject != null ? ls.Subject.Code : "",
+                    SubjectName = ls.Subject != null ? ls.Subject.Name : "",
+                    Credits = ls.Subject != null ? ls.Subject.Credits : 0,
+                    MajorId = ls.MajorId,
+                    MajorCode = ls.Major != null ? ls.Major.Code : "",
+                    MajorName = ls.Major != null ? ls.Major.Name : "",
+                    SpecializationId = ls.SpecializationId,
+                    SpecializationCode = ls.Specialization != null ? ls.Specialization.Code : "",
+                    SpecializationName = ls.Specialization != null ? ls.Specialization.Name : "",
+                    RegisteredAt = ls.RegisteredAt,
+                    Notes = ls.Notes
+                })
+                .ToListAsync();
+
+            return Ok(ApiResponse<List<LecturerSubjectDto>>.Ok(list));
+        }
+
+        [HttpPost("{id}/subjects")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AddLecturerSubject(int id, [FromBody] CreateLecturerSubjectRequest request)
+        {
+            if (request == null || request.MajorId <= 0 || request.SpecializationId <= 0 || request.SubjectId <= 0)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Vui lòng chọn đầy đủ Ngành, Ngành hẹp và Môn học."));
+            }
+
+            var lecturer = await _db.Lecturers.Include(l => l.User).FirstOrDefaultAsync(l => l.Id == id || l.UserId == id);
+            if (lecturer == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
+
+            var subject = await _db.Subjects.FirstOrDefaultAsync(s => s.Id == request.SubjectId);
+            if (subject == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy môn học đã chọn."));
+
+            var major = await _db.Majors.FirstOrDefaultAsync(m => m.Id == request.MajorId);
+            var spec = await _db.Specializations.FirstOrDefaultAsync(sp => sp.Id == request.SpecializationId);
+            if (major == null || spec == null)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Ngành hoặc Ngành hẹp không hợp lệ."));
+            }
+
+            // Kiểm tra trùng lặp môn học đối với giảng viên này
+            var alreadyRegistered = await _db.LecturerSubjects
+                .AnyAsync(ls => ls.LecturerId == lecturer.Id && ls.SubjectId == request.SubjectId);
+
+            if (alreadyRegistered)
+            {
+                return BadRequest(ApiResponse.ErrorResult($"Giảng viên đã đăng ký môn '{subject.Code} - {subject.Name}' rồi."));
+            }
+
+            var reg = new LecturerSubject
+            {
+                LecturerId = lecturer.Id,
+                SubjectId = request.SubjectId,
+                MajorId = request.MajorId,
+                SpecializationId = request.SpecializationId,
+                RegisteredAt = DateTime.UtcNow,
+                Notes = request.Notes
+            };
+
+            _db.LecturerSubjects.Add(reg);
+            await _db.SaveChangesAsync();
+
+            var performedBy = User.Identity?.Name ?? "Admin";
+            await _auditLog.LogAsync("LECTURER_SUBJECT_ADDED", "LecturerSubject", reg.Id.ToString(), performedBy,
+                $"Đăng ký môn học '{subject.Code}' cho giảng viên '{lecturer.LecturerCode}'.");
+
+            var dto = new LecturerSubjectDto
+            {
+                Id = reg.Id,
+                LecturerId = lecturer.Id,
+                LecturerCode = lecturer.LecturerCode,
+                LecturerName = lecturer.User?.FullName ?? "",
+                SubjectId = subject.Id,
+                SubjectCode = subject.Code,
+                SubjectName = subject.Name,
+                Credits = subject.Credits,
+                MajorId = major.Id,
+                MajorCode = major.Code,
+                MajorName = major.Name,
+                SpecializationId = spec.Id,
+                SpecializationCode = spec.Code,
+                SpecializationName = spec.Name,
+                RegisteredAt = reg.RegisteredAt,
+                Notes = reg.Notes
+            };
+
+            return Ok(ApiResponse<LecturerSubjectDto>.Ok(dto, "Thêm môn đăng ký thành công."));
+        }
+
+        [HttpPut("{id}/subjects/{subjectRegId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateLecturerSubject(int id, int subjectRegId, [FromBody] UpdateLecturerSubjectRequest request)
+        {
+            if (request == null || request.MajorId <= 0 || request.SpecializationId <= 0 || request.SubjectId <= 0)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Vui lòng chọn đầy đủ Ngành, Ngành hẹp và Môn học."));
+            }
+
+            var lecturer = await _db.Lecturers.Include(l => l.User).FirstOrDefaultAsync(l => l.Id == id || l.UserId == id);
+            if (lecturer == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
+
+            var reg = await _db.LecturerSubjects.FirstOrDefaultAsync(ls => ls.Id == subjectRegId && ls.LecturerId == lecturer.Id);
+            if (reg == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy bản ghi môn đăng ký."));
+
+            var subject = await _db.Subjects.FirstOrDefaultAsync(s => s.Id == request.SubjectId);
+            if (subject == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy môn học đã chọn."));
+
+            var major = await _db.Majors.FirstOrDefaultAsync(m => m.Id == request.MajorId);
+            var spec = await _db.Specializations.FirstOrDefaultAsync(sp => sp.Id == request.SpecializationId);
+            if (major == null || spec == null)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Ngành hoặc Ngành hẹp không hợp lệ."));
+            }
+
+            // Kiểm tra trùng môn khác
+            var duplicate = await _db.LecturerSubjects
+                .AnyAsync(ls => ls.LecturerId == lecturer.Id && ls.SubjectId == request.SubjectId && ls.Id != subjectRegId);
+
+            if (duplicate)
+            {
+                return BadRequest(ApiResponse.ErrorResult($"Giảng viên đã đăng ký môn '{subject.Code}' trong danh sách."));
+            }
+
+            reg.SubjectId = request.SubjectId;
+            reg.MajorId = request.MajorId;
+            reg.SpecializationId = request.SpecializationId;
+            reg.Notes = request.Notes;
+
+            await _db.SaveChangesAsync();
+
+            var performedBy = User.Identity?.Name ?? "Admin";
+            await _auditLog.LogAsync("LECTURER_SUBJECT_UPDATED", "LecturerSubject", reg.Id.ToString(), performedBy,
+                $"Cập nhật môn học '{subject.Code}' cho giảng viên '{lecturer.LecturerCode}'.");
+
+            return Ok(ApiResponse.SuccessResult("Cập nhật môn đăng ký thành công."));
+        }
+
+        [HttpDelete("{id}/subjects/{subjectRegId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteLecturerSubject(int id, int subjectRegId)
+        {
+            var lecturer = await _db.Lecturers.Include(l => l.User).FirstOrDefaultAsync(l => l.Id == id || l.UserId == id);
+            if (lecturer == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
+
+            var reg = await _db.LecturerSubjects
+                .Include(ls => ls.Subject)
+                .FirstOrDefaultAsync(ls => ls.Id == subjectRegId && ls.LecturerId == lecturer.Id);
+
+            if (reg == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy bản ghi môn đăng ký."));
+
+            // Ràng buộc nghiệp vụ: Không cho xóa nếu giảng viên đang dạy lớp học phần của môn này trong học kỳ mở/hoạt động
+            var isTeachingActiveSection = await _db.CourseSections
+                .Include(cs => cs.Semester)
+                .AnyAsync(cs => cs.LecturerId == lecturer.Id 
+                             && cs.SubjectId == reg.SubjectId 
+                             && (cs.Status == "Open" || (cs.Semester != null && cs.Semester.Status == "Active")));
+
+            if (isTeachingActiveSection)
+            {
+                return BadRequest(ApiResponse.ErrorResult(
+                    $"Không thể xóa môn '{reg.Subject?.Code ?? ""}'! Giảng viên đang được phân công giảng dạy lớp học phần môn này trong học kỳ hiện tại."));
+            }
+
+            _db.LecturerSubjects.Remove(reg);
+            await _db.SaveChangesAsync();
+
+            var performedBy = User.Identity?.Name ?? "Admin";
+            await _auditLog.LogAsync("LECTURER_SUBJECT_DELETED", "LecturerSubject", subjectRegId.ToString(), performedBy,
+                $"Xóa môn đăng ký '{reg.Subject?.Code ?? ""}' của giảng viên '{lecturer.LecturerCode}'.");
+
+            return Ok(ApiResponse.SuccessResult("Đã xóa môn đăng ký thành công."));
+        }
+
+        #endregion
     }
 
     public class CreateLecturerRequest

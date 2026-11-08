@@ -195,6 +195,7 @@ namespace project_PRN232.DTOs
         public string Department { get; set; } = string.Empty;
         public string AcademicTitle { get; set; } = string.Empty;
         public bool IsPreferred { get; set; }
+        public List<int> RegisteredSubjectIds { get; set; } = new();
     }
 }
 

@@ -271,6 +271,7 @@ namespace project_PRN232.Frontend.Models
         public string Department { get; set; } = string.Empty;
         public string AcademicTitle { get; set; } = string.Empty;
         public bool IsPreferred { get; set; }
+        public List<int> RegisteredSubjectIds { get; set; } = new();
     }
 
     public class SectionLecturerAssignmentInputModel
@@ -515,8 +516,48 @@ namespace project_PRN232.Frontend.Models
         public string Email { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
         public string Role { get; set; } = string.Empty;
+        public int? LecturerId { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
+    }
+
+    public class LecturerSubjectViewModel
+    {
+        public int Id { get; set; }
+        public int LecturerId { get; set; }
+        public string LecturerCode { get; set; } = string.Empty;
+        public string LecturerName { get; set; } = string.Empty;
+        public int SubjectId { get; set; }
+        public string SubjectCode { get; set; } = string.Empty;
+        public string SubjectName { get; set; } = string.Empty;
+        public int Credits { get; set; }
+        public int? MajorId { get; set; }
+        public string? MajorCode { get; set; }
+        public string? MajorName { get; set; }
+        public int? SpecializationId { get; set; }
+        public string? SpecializationCode { get; set; }
+        public string? SpecializationName { get; set; }
+        public DateTime RegisteredAt { get; set; }
+        public string? Notes { get; set; }
+    }
+
+    public class AddLecturerSubjectInputModel
+    {
+        public int LecturerId { get; set; }
+        public int MajorId { get; set; }
+        public int SpecializationId { get; set; }
+        public int SubjectId { get; set; }
+        public string? Notes { get; set; }
+    }
+
+    public class UpdateLecturerSubjectInputModel
+    {
+        public int Id { get; set; }
+        public int LecturerId { get; set; }
+        public int MajorId { get; set; }
+        public int SpecializationId { get; set; }
+        public int SubjectId { get; set; }
+        public string? Notes { get; set; }
     }
 
     public class AuditLogItemViewModel

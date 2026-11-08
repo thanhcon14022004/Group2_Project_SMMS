@@ -560,11 +560,11 @@
                 <div id="assignContent" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-3 bg-light p-3 rounded-3 border">
                         <div>
-                            <span class="fw-semibold text-dark"><i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i>Gợi ý phân công:</span>
-                            <span class="text-muted small ms-1">Hệ thống tự động ưu tiên giảng viên thuộc Khoa/Bộ môn phù hợp với ngành học (được đánh dấu ⭐ Phù hợp).</span>
+                            <span class="fw-semibold text-dark"><i class="fa-solid fa-wand-magic-sparkles text-success me-1"></i>Lọc giảng viên theo môn:</span>
+                            <span class="text-muted small ms-1">Hệ thống chỉ liệt kê các giảng viên <strong>đã đăng ký giảng dạy môn học này</strong> với nhà trường.</span>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-semibold shadow-sm" onclick="autoPickMatchingLecturers()">
-                            <i class="fa-solid fa-bolt me-1"></i>Tự động chọn GV phù hợp cho lớp này
+                            <i class="fa-solid fa-bolt me-1"></i>Tự động chọn GV đã đăng ký môn
                         </button>
                     </div>
 
@@ -740,27 +740,30 @@
                             ? s.schedules.map(sc => `${sc.dayOfWeekStr} Slot ${sc.slot} (${sc.room})`).join(', ')
                             : '<span class="text-muted small">Chưa xếp</span>';
 
-                        const preferred = lecturers.filter(l => l.isPreferred);
-                        const others = lecturers.filter(l => !l.isPreferred);
+                        // Chỉ list ra các giảng viên có đăng ký dạy môn này
+                        const qualified = lecturers.filter(l => 
+                            l.registeredSubjectIds && l.registeredSubjectIds.includes(s.subjectId)
+                        );
 
-                        let optionsHtml = '<option value="">-- Chưa phân công --</option>';
+                        let optionsHtml = '';
+                        let warningBadge = '';
 
-                        if (preferred.length > 0) {
-                            optionsHtml += `<optgroup label="⭐ Giảng viên phù hợp chuyên môn (${res.data.majorCode})">`;
-                            preferred.forEach(l => {
+                        if (qualified.length > 0) {
+                            optionsHtml = '<option value="">-- Chưa phân công --</option>';
+                            qualified.forEach(l => {
                                 const sel = (s.lecturerId === l.id) ? 'selected' : '';
-                                optionsHtml += `<option value="${l.id}" data-preferred="true" ${sel}>${l.academicTitle}. ${l.fullName} (${l.lecturerCode} - ${l.department})</option>`;
+                                const matchNote = l.isPreferred ? '⭐ ' : '';
+                                optionsHtml += `<option value="${l.id}" data-preferred="${l.isPreferred}" ${sel}>${matchNote}${l.academicTitle}. ${l.fullName} (${l.lecturerCode} - ${l.department})</option>`;
                             });
-                            optionsHtml += '</optgroup>';
-                        }
-
-                        if (others.length > 0) {
-                            optionsHtml += '<optgroup label="Giảng viên các bộ môn khác">';
-                            others.forEach(l => {
-                                const sel = (s.lecturerId === l.id) ? 'selected' : '';
-                                optionsHtml += `<option value="${l.id}" data-preferred="false" ${sel}>${l.academicTitle}. ${l.fullName} (${l.lecturerCode} - ${l.department})</option>`;
-                            });
-                            optionsHtml += '</optgroup>';
+                        } else {
+                            const currentAssigned = lecturers.find(l => l.id === s.lecturerId);
+                            if (currentAssigned) {
+                                optionsHtml = `<option value="${currentAssigned.id}" selected>${currentAssigned.academicTitle}. ${currentAssigned.fullName} (${currentAssigned.lecturerCode})</option>`;
+                                optionsHtml += '<option value="" disabled class="text-danger">⚠️ Môn này chưa có thêm GV đăng ký</option>';
+                            } else {
+                                optionsHtml = '<option value="" disabled selected class="text-danger">⚠️ Chưa có GV đăng ký dạy môn này</option>';
+                            }
+                            warningBadge = '<div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>Chưa có GV đăng ký dạy môn này</div>';
                         }
 
                         const tr = document.createElement('tr');
@@ -777,6 +780,7 @@
                                 <select class="form-select form-select-sm select-lecturer" data-section-id="${s.id}">
                                     ${optionsHtml}
                                 </select>
+                                ${warningBadge}
                             </td>
                         `;
                         tbody.appendChild(tr);
@@ -798,13 +802,11 @@
         const selects = document.querySelectorAll('#assignTableBody select.select-lecturer');
         let pickIdx = 0;
         selects.forEach(sel => {
-            const preferredOptions = sel.querySelectorAll('option[data-preferred="true"]');
-            if (preferredOptions.length > 0) {
-                const opt = preferredOptions[pickIdx % preferredOptions.length];
+            const validOptions = Array.from(sel.options).filter(opt => opt.value && !opt.disabled);
+            if (validOptions.length > 0) {
+                const opt = validOptions[pickIdx % validOptions.length];
                 sel.value = opt.value;
                 pickIdx++;
-            } else if (sel.options.length > 1) {
-                sel.selectedIndex = 1;
             }
         });
     }

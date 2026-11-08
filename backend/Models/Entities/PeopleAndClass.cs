@@ -63,6 +63,25 @@ namespace project_PRN232.Models.Entities
 
         [JsonIgnore]
         public virtual ICollection<CourseSection> CourseSections { get; set; } = new List<CourseSection>();
+
+        [JsonIgnore]
+        public virtual ICollection<LecturerSubject> LecturerSubjects { get; set; } = new List<LecturerSubject>();
+    }
+
+    public class LecturerSubject
+    {
+        public int Id { get; set; }
+        public int LecturerId { get; set; }
+        public int SubjectId { get; set; }
+        public int? MajorId { get; set; }
+        public int? SpecializationId { get; set; }
+        public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
+        public string? Notes { get; set; }
+
+        public virtual Lecturer? Lecturer { get; set; }
+        public virtual Subject? Subject { get; set; }
+        public virtual Major? Major { get; set; }
+        public virtual Specialization? Specialization { get; set; }
     }
 }
 

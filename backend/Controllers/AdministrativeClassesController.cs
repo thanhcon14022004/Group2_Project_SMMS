@@ -486,6 +486,11 @@ namespace project_PRN232.Controllers
                 .OrderBy(l => l.LecturerCode)
                 .ToListAsync();
 
+            var lecturerSubjectMap = await _db.LecturerSubjects
+                .AsNoTracking()
+                .GroupBy(ls => ls.LecturerId)
+                .ToDictionaryAsync(g => g.Key, g => g.Select(x => x.SubjectId).ToList());
+
             var lecturerOptions = lecturers.Select(l => new LecturerOptionDto
             {
                 Id = l.Id,
@@ -493,7 +498,8 @@ namespace project_PRN232.Controllers
                 FullName = l.User?.FullName ?? "",
                 Department = l.Department,
                 AcademicTitle = l.AcademicTitle,
-                IsPreferred = IsMatchingDepartment(majorCode, l.Department)
+                IsPreferred = IsMatchingDepartment(majorCode, l.Department),
+                RegisteredSubjectIds = lecturerSubjectMap.TryGetValue(l.Id, out var subIds) ? subIds : new List<int>()
             })
             .OrderByDescending(l => l.IsPreferred)
             .ThenBy(l => l.FullName)
@@ -614,6 +620,11 @@ namespace project_PRN232.Controllers
                 .Where(cs => cs.AdministrativeClassId.HasValue && adminClassIds.Contains(cs.AdministrativeClassId.Value))
                 .ToListAsync();
 
+            var lecturerSubjectMap = await _db.LecturerSubjects
+                .AsNoTracking()
+                .GroupBy(ls => ls.LecturerId)
+                .ToDictionaryAsync(g => g.Key, g => g.Select(x => x.SubjectId).ToHashSet());
+
             // Đếm số lớp hiện tại của từng giảng viên để phân bổ đều
             var lecturerLoad = allLecturers.ToDictionary(l => l.Id, l => 0);
             foreach (var s in allSections.Where(s => s.LecturerId.HasValue))
@@ -644,8 +655,15 @@ namespace project_PRN232.Controllers
 
                 foreach (var sec in classSections)
                 {
-                    // Chọn giảng viên có tải ít nhất trong nhóm phù hợp
-                    var bestLecturer = candidatePool
+                    // Ưu tiên chọn giảng viên đã đăng ký dạy đúng môn học này
+                    var qualified = candidatePool
+                        .Where(l => lecturerSubjectMap.TryGetValue(l.Id, out var sIds) && sIds.Contains(sec.SubjectId))
+                        .ToList();
+
+                    var poolToUse = qualified.Any() ? qualified : candidatePool;
+
+                    // Chọn giảng viên có tải ít nhất trong nhóm
+                    var bestLecturer = poolToUse
                         .OrderBy(l => lecturerLoad.TryGetValue(l.Id, out var load) ? load : 0)
                         .ThenBy(l => l.Id)
                         .First();

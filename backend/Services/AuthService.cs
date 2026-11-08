@@ -247,6 +247,7 @@ namespace project_PRN232.Services
                 Email = u.Email,
                 PhoneNumber = u.PhoneNumber,
                 Role = u.Role,
+                LecturerId = _db.Lecturers.Where(l => l.UserId == u.Id).Select(l => (int?)l.Id).FirstOrDefault(),
                 IsActive = u.IsActive,
                 CreatedAt = u.CreatedAt,
                 LastLoginAt = u.LastLoginAt
@@ -266,6 +267,7 @@ namespace project_PRN232.Services
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
                 Role = user.Role,
+                LecturerId = await _db.Lecturers.Where(l => l.UserId == user.Id).Select(l => (int?)l.Id).FirstOrDefaultAsync(),
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 LastLoginAt = user.LastLoginAt

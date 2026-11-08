@@ -476,6 +476,20 @@ namespace project_PRN232.Data
                 );
             }
 
+            // Đăng ký môn giảng dạy cho Giảng viên
+            if (!context.LecturerSubjects.Any())
+            {
+                context.LecturerSubjects.AddRange(
+                    new LecturerSubject { LecturerId = gv1.Id, SubjectId = subPRF192.Id, MajorId = majorSE.Id, SpecializationId = specSE_IS.Id, RegisteredAt = DateTime.UtcNow },
+                    new LecturerSubject { LecturerId = gv1.Id, SubjectId = subPRO192.Id, MajorId = majorSE.Id, SpecializationId = specSE_IS.Id, RegisteredAt = DateTime.UtcNow },
+                    new LecturerSubject { LecturerId = gv1.Id, SubjectId = subPRN211.Id, MajorId = majorSE.Id, SpecializationId = specSE_IS.Id, RegisteredAt = DateTime.UtcNow },
+                    new LecturerSubject { LecturerId = gv1.Id, SubjectId = subPRN232.Id, MajorId = majorSE.Id, SpecializationId = specSE_IS.Id, RegisteredAt = DateTime.UtcNow },
+                    new LecturerSubject { LecturerId = gv2.Id, SubjectId = subPRN232.Id, MajorId = majorSE.Id, SpecializationId = specSE_JS.Id, RegisteredAt = DateTime.UtcNow },
+                    new LecturerSubject { LecturerId = gv2.Id, SubjectId = subSWP391.Id, MajorId = majorSE.Id, SpecializationId = specSE_JS.Id, RegisteredAt = DateTime.UtcNow }
+                );
+                context.SaveChanges();
+            }
+
             // Ghi Audit Log ban đầu
             context.AuditLogs.Add(new AuditLog
             {

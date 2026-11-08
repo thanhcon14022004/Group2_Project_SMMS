@@ -26,6 +26,8 @@ namespace project_PRN232.Models.Entities
         public virtual ICollection<CurriculumSubject> CurriculumSubjects { get; set; } = new List<CurriculumSubject>();
         [JsonIgnore]
         public virtual ICollection<CourseSection> CourseSections { get; set; } = new List<CourseSection>();
+        [JsonIgnore]
+        public virtual ICollection<LecturerSubject> LecturerSubjects { get; set; } = new List<LecturerSubject>();
     }
 
     public class SubjectGradeComponent
