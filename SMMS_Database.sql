@@ -1,8 +1,8 @@
-/*
+﻿/*
 ========================================================================================
-  Há»† THá»NG QUáº¢N LĂ ÄIá»‚M SINH VIĂN (SMMS - Student Mark Management System)
+  HỆ THỐNG QUẢN LÝ ĐIỂM SINH VIÊN (SMMS - Student Mark Management System)
   MÔN HỌC: PRN232 (ASP.NET Core & C#)
-  DATABASE SCRIPT: Táº O CÆ  Sá» Dá»® LIá»†U & Náº P Dá»® LIá»†U MáºªU CHUáº¨N (DDL + DML)
+  DATABASE SCRIPT: TẠO CƠ SỞ DỮ LIỆU & NẠP DỮ LIỆU MẪU CHUẨN (DDL + DML)
 ========================================================================================
   * Hỗ trợ: Microsoft SQL Server 2017 / 2019 / 2022 / LocalDB / Azure SQL Database
   * Tên CSDL: SMMS_PRN232
@@ -11,7 +11,7 @@
     - Cách 2: Chạy lệnh terminal:
         sqlcmd -S "(localdb)\mssqllocaldb" -E -i SMMS_Database.sql
 
-  * DANH SĂCH TĂ€I KHOáº¢N MáºªU KHá»I Táº O (Máº­t kháº©u chung cho táº¥t cáº£: Admin@123):
+  * DANH SÁCH TÀI KHOẢN MẪU KHỞI TẠO (Mật khẩu chung cho tất cả: Admin@123):
     1. Quản trị viên (Admin):
        - Username: admin         | Password: Admin@123 (Quản trị toàn hệ thống)
     2. Giảng viên (Lecturer):
@@ -20,10 +20,10 @@
     3. Sinh viên (Student):
        - Username: he170001      | Password: Admin@123 (Trần Quang Minh - Lớp SE1701, Kỳ 5 SE-IS)
        - Username: he170002      | Password: Admin@123 (Lê Hoàng Nam    - Lớp SE1701, Kỳ 5 SE-JS)
-       - Username: he170003      | Password: Admin@123 (Phạm Mai Anh   - Lớp SE1702, Kỳ 4 Äang chá»n CN)
+       - Username: he170003      | Password: Admin@123 (Phạm Mai Anh   - Lớp SE1702, Kỳ 4 Đang chọn CN)
 
-  * LÆ¯U Ă LĂ€M Má»I (RESET DATABASE):
-    Náº¿u báº¡n muá»‘n xĂ³a sáº¡ch cÆ¡ sá»Ÿ dữ liệu cÅ© Ä‘á»ƒ táº¡o láº¡i tá»« Ä‘áº§u, hĂ£y bá» comment 2 dĂ²ng sau:
+  * LƯU Ý LÀM MỚI (RESET DATABASE):
+    Nếu bạn muốn xóa sạch cơ sở dữ liệu cũ để tạo lại từ đầu, hãy bỏ comment 2 dòng sau:
     -- USE master;
     -- IF EXISTS (SELECT name FROM sys.databases WHERE name = N'SMMS_PRN232') DROP DATABASE [SMMS_PRN232];
 ========================================================================================
@@ -39,7 +39,7 @@ GO
 USE [SMMS_PRN232];
 GO
 
-PRINT N'==> Äang sá»­ dá»¥ng cÆ¡ sá»Ÿ dữ liệu SMMS_PRN232...';
+PRINT N'==> Đang sử dụng cơ sở dữ liệu SMMS_PRN232...';
 GO
 
 IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
@@ -863,20 +863,20 @@ GO
 
 
 -- ======================================================
--- Náº¡p dữ liệu máº«u cho báº£ng: Majors
+-- Nạp dữ liệu mẫu cho bảng: Majors
 -- ======================================================
 IF NOT EXISTS (SELECT 1 FROM [Majors] WHERE [Id] = 1)
 BEGIN
     SET IDENTITY_INSERT [Majors] ON;
     INSERT INTO [Majors] ([Id], [Code], [Name], [Description], [IsActive]) VALUES
-(1, N'SE', N'Ká»¹ thuáº­t pháº§n má»m (Software Engineering)', N'ÄĂ o táº¡o kỹ sư pháº§n má»m cháº¥t lÆ°á»£ng cao', 1),
-(2, N'IA', N'An toàn thông tin (Information Assurance)', N'ÄĂ o táº¡o chuyên gia báº£o máº­t và phĂ²ng thá»§ khĂ´ng gian máº¡ng', 1);
+(1, N'SE', N'Kỹ thuật phần mềm (Software Engineering)', N'Đào tạo kỹ sư phần mềm chất lượng cao', 1),
+(2, N'IA', N'An toàn thông tin (Information Assurance)', N'Đào tạo chuyên gia bảo mật và phòng thủ không gian mạng', 1);
     SET IDENTITY_INSERT [Majors] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 2 báº£n ghi máº«u vào báº£ng Majors';
+    PRINT N'==> Đã nạp 2 bản ghi mẫu vào bảng Majors';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng Majors Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng Majors đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -887,14 +887,14 @@ IF NOT EXISTS (SELECT 1 FROM [Specializations] WHERE [Id] = 1)
 BEGIN
     SET IDENTITY_INSERT [Specializations] ON;
     INSERT INTO [Specializations] ([Id], [MajorId], [Code], [Name], [Description], [IsActive]) VALUES
-(1, 1, N'SE-IS', N'Hệ thống thông tin doanh nghiệp (Information Systems)', N'ChuyĂªn sĂ¢u vá» kiáº¿n trĂºc hệ thống và ERP', 1),
-(2, 1, N'SE-JS', N'Ká»¹ thuáº­t pháº§n má»m Nháº­t Báº£n (Japanese Software)', N'ChuyĂªn sĂ¢u vá» cáº§u ná»‘i phát triển pháº§n má»m cho thá»‹ trÆ°á»ng Nháº­t', 1);
+(1, 1, N'SE-IS', N'Hệ thống thông tin doanh nghiệp (Information Systems)', N'Chuyên sâu về kiến trúc hệ thống và ERP', 1),
+(2, 1, N'SE-JS', N'Kỹ thuật phần mềm Nhật Bản (Japanese Software)', N'Chuyên sâu về cầu nối phát triển phần mềm cho thị trường Nhật', 1);
     SET IDENTITY_INSERT [Specializations] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 2 báº£n ghi máº«u vào báº£ng Specializations';
+    PRINT N'==> Đã nạp 2 bản ghi mẫu vào bảng Specializations';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng Specializations Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng Specializations đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -909,13 +909,13 @@ BEGIN
 (2, N'PRO192', N'Lập trình hướng đối tượng Java', 3, NULL, 1),
 (3, N'PRN211', N'Lập trình C# cơ bản & Windows Apps', 3, NULL, 1),
 (4, N'PRN232', N'Xây dựng ứng dụng Web với ASP.NET Core', 3, NULL, 1),
-(5, N'SWP391', N'Dự án phát triển pháº§n má»m thực chiến', 3, NULL, 1);
+(5, N'SWP391', N'Dự án phát triển phần mềm thực chiến', 3, NULL, 1);
     SET IDENTITY_INSERT [Subjects] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 5 báº£n ghi máº«u vào báº£ng Subjects';
+    PRINT N'==> Đã nạp 5 bản ghi mẫu vào bảng Subjects';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng Subjects Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng Subjects đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -947,11 +947,11 @@ BEGIN
 (19, 5, N'Sprint 3', 20.00, 10.00, 0, 3),
 (20, 5, N'Final Presentation', 40.00, 10.00, 1, 4);
     SET IDENTITY_INSERT [SubjectGradeComponents] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 20 báº£n ghi máº«u vào báº£ng SubjectGradeComponents';
+    PRINT N'==> Đã nạp 20 bản ghi mẫu vào bảng SubjectGradeComponents';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng SubjectGradeComponents Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng SubjectGradeComponents đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -967,11 +967,11 @@ BEGIN
 (3, 4, 3, 5.00),
 (4, 5, 3, 5.00);
     SET IDENTITY_INSERT [PrerequisiteSubjects] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 4 báº£n ghi máº«u vào báº£ng PrerequisiteSubjects';
+    PRINT N'==> Đã nạp 4 bản ghi mẫu vào bảng PrerequisiteSubjects';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng PrerequisiteSubjects Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng PrerequisiteSubjects đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -989,11 +989,11 @@ BEGIN
 (5, N'he170002', N'$2a$11$MZ2SbSCMUf8iv/WabQ7B5.qrWIbNGMG3SgJQTcLrL3iXkJFl4BcaW', N'Lê Hoàng Nam', N'namlhhe170002@fpt.edu.vn', N'0945678901', N'Student', 1, '2026-11-01 19:24:36.297', NULL),
 (6, N'he170003', N'$2a$11$MZ2SbSCMUf8iv/WabQ7B5.qrWIbNGMG3SgJQTcLrL3iXkJFl4BcaW', N'Phạm Mai Anh', N'anhpmhe170003@fpt.edu.vn', N'0956789012', N'Student', 1, '2026-11-01 19:24:36.297', NULL);
     SET IDENTITY_INSERT [Users] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 6 báº£n ghi máº«u vào báº£ng Users';
+    PRINT N'==> Đã nạp 6 bản ghi mẫu vào bảng Users';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng Users Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng Users đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -1007,11 +1007,11 @@ BEGIN
 (1, N'GV001', 2, N'Software Engineering', N'Master'),
 (2, N'GV002', 3, N'Software Engineering', N'PhD');
     SET IDENTITY_INSERT [Lecturers] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 2 báº£n ghi máº«u vào báº£ng Lecturers';
+    PRINT N'==> Đã nạp 2 bản ghi mẫu vào bảng Lecturers';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng Lecturers Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng Lecturers đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -1022,14 +1022,14 @@ IF NOT EXISTS (SELECT 1 FROM [AdministrativeClasses] WHERE [Id] = 1)
 BEGIN
     SET IDENTITY_INSERT [AdministrativeClasses] ON;
     INSERT INTO [AdministrativeClasses] ([Id], [Code], [Name], [MajorId], [Cohort], [AcademicYear], [SpecializationId], [CurrentSemester], [IsActive]) VALUES
-(1, N'SE1701', N'Ká»¹ thuáº­t pháº§n má»m K17 Lớp 1', 1, 17, N'2023-2027', NULL, 5, 1),
-(2, N'SE1702', N'Ká»¹ thuáº­t pháº§n má»m K17 Lớp 2', 1, 17, N'2023-2027', NULL, 5, 1);
+(1, N'SE1701', N'Kỹ thuật phần mềm K17 Lớp 1', 1, 17, N'2023-2027', NULL, 5, 1),
+(2, N'SE1702', N'Kỹ thuật phần mềm K17 Lớp 2', 1, 17, N'2023-2027', NULL, 5, 1);
     SET IDENTITY_INSERT [AdministrativeClasses] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 2 báº£n ghi máº«u vào báº£ng AdministrativeClasses';
+    PRINT N'==> Đã nạp 2 bản ghi mẫu vào bảng AdministrativeClasses';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng AdministrativeClasses Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng AdministrativeClasses đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -1044,18 +1044,18 @@ BEGIN
 (2, N'SE170002', 5, 1, 2, 1, 17, 5, N'Studying'),
 (3, N'SE170003', 6, 1, NULL, 2, 17, 4, N'Studying');
     SET IDENTITY_INSERT [Students] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 3 báº£n ghi máº«u vào báº£ng Students';
+    PRINT N'==> Đã nạp 3 bản ghi mẫu vào bảng Students';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng Students Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng Students đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
 -- ======================================================
--- Báº£ng: CurriculumConfigs & CurriculumSubjects (Äá»ƒ trá»‘ng cáº¥u hĂ¬nh Ä‘á»ƒ Quản trị viĂªn tá»± thiáº¿t láº­p)
+-- Bảng: CurriculumConfigs & CurriculumSubjects (Để trống cấu hình để Quản trị viên tự thiết lập)
 -- ======================================================
-PRINT N'==> Báº£ng CurriculumConfigs & CurriculumSubjects sáºµn sĂ ng (Ä‘á»ƒ trá»‘ng cáº¥u hĂ¬nh)';
+PRINT N'==> Bảng CurriculumConfigs & CurriculumSubjects sẵn sàng (để trống cấu hình)';
 GO
 
 -- ======================================================
@@ -1069,11 +1069,11 @@ BEGIN
 (2, N'SP25', N'Spring 2025', '2026-07-01 19:24:36.704', '2026-10-17 19:24:36.704', '2026-08-01 19:24:36.704', '2026-10-22 19:24:36.704', N'Ended', 0, NULL),
 (3, N'SU25', N'Summer 2025', '2026-10-22 19:24:36.704', '2027-02-01 19:24:36.704', '2026-11-15 19:24:36.704', '2027-01-27 19:24:36.704', N'Active', 0, NULL);
     SET IDENTITY_INSERT [Semesters] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 3 báº£n ghi máº«u vào báº£ng Semesters';
+    PRINT N'==> Đã nạp 3 bản ghi mẫu vào bảng Semesters';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng Semesters Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng Semesters đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -1085,13 +1085,13 @@ BEGIN
     SET IDENTITY_INSERT [CourseSections] ON;
     INSERT INTO [CourseSections] ([Id], [Code], [Name], [SubjectId], [SemesterId], [LecturerId], [MaxCapacity], [IsGradeLocked], [GradeLockedAt], [GradeLockedBy], [Status], [CreatedAt]) VALUES
 (1, N'PRN232_SU25_SE1701', N'Lập trình Web ASP.NET Core - Lớp SE1701', 4, 3, 1, 30, 0, NULL, NULL, N'Open', '2026-11-01 19:24:36.728'),
-(2, N'SWP391_SU25_SE1701', N'Dự án phát triển pháº§n má»m - Lớp SE1701', 5, 3, 2, 30, 0, NULL, NULL, N'Open', '2026-11-01 19:24:36.728');
+(2, N'SWP391_SU25_SE1701', N'Dự án phát triển phần mềm - Lớp SE1701', 5, 3, 2, 30, 0, NULL, NULL, N'Open', '2026-11-01 19:24:36.728');
     SET IDENTITY_INSERT [CourseSections] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 2 báº£n ghi máº«u vào báº£ng CourseSections';
+    PRINT N'==> Đã nạp 2 bản ghi mẫu vào bảng CourseSections';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng CourseSections Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng CourseSections đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -1107,11 +1107,11 @@ BEGIN
 (3, 2, 2, 3, N'AL-204'),
 (4, 2, 5, 3, N'AL-204');
     SET IDENTITY_INSERT [CourseSectionSchedules] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 4 báº£n ghi máº«u vào báº£ng CourseSectionSchedules';
+    PRINT N'==> Đã nạp 4 bản ghi mẫu vào bảng CourseSectionSchedules';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng CourseSectionSchedules Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng CourseSectionSchedules đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -1127,11 +1127,11 @@ BEGIN
 (3, 2, 1, '2026-11-01 19:24:36.773', N'Enrolled'),
 (4, 2, 2, '2026-11-01 19:24:36.773', N'Enrolled');
     SET IDENTITY_INSERT [CourseSectionStudents] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 4 báº£n ghi máº«u vào báº£ng CourseSectionStudents';
+    PRINT N'==> Đã nạp 4 bản ghi mẫu vào bảng CourseSectionStudents';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng CourseSectionStudents Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng CourseSectionStudents đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -1148,11 +1148,11 @@ BEGIN
 (4, 1, 2, 13, 7.00, NULL, '2026-11-01 19:24:36.839', N'gv_hungnv'),
 (5, 1, 2, 14, 7.50, NULL, '2026-11-01 19:24:36.839', N'gv_hungnv');
     SET IDENTITY_INSERT [StudentGrades] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 5 báº£n ghi máº«u vào báº£ng StudentGrades';
+    PRINT N'==> Đã nạp 5 bản ghi mẫu vào bảng StudentGrades';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng StudentGrades Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng StudentGrades đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -1163,13 +1163,13 @@ IF NOT EXISTS (SELECT 1 FROM [AuditLogs] WHERE [Id] = 1)
 BEGIN
     SET IDENTITY_INSERT [AuditLogs] ON;
     INSERT INTO [AuditLogs] ([Id], [Action], [EntityName], [EntityId], [PerformedBy], [PerformedAt], [Details], [IpAddress]) VALUES
-(1, N'SYSTEM_INITIALIZED', N'Database', N'ALL', N'System', '2026-11-01 19:24:36.852', N'Khá»Ÿi táº¡o hệ thống SMMS và náº¡p dữ liệu chuáº©n cho ngành Ká»¹ thuáº­t pháº§n má»m (K17, K18)', NULL);
+(1, N'SYSTEM_INITIALIZED', N'Database', N'ALL', N'System', '2026-11-01 19:24:36.852', N'Khởi tạo hệ thống SMMS và nạp dữ liệu chuẩn cho ngành Kỹ thuật phần mềm (K17, K18)', NULL);
     SET IDENTITY_INSERT [AuditLogs] OFF;
-    PRINT N'==> ÄĂ£ náº¡p 1 báº£n ghi máº«u vào báº£ng AuditLogs';
+    PRINT N'==> Đã nạp 1 bản ghi mẫu vào bảng AuditLogs';
 END
 ELSE
 BEGIN
-    PRINT N'==> Báº£ng AuditLogs Ä‘Ă£ cĂ³ dữ liệu, bá» qua bÆ°á»›c náº¡p máº«u';
+    PRINT N'==> Bảng AuditLogs đã có dữ liệu, bỏ qua bước nạp mẫu';
 END;
 GO
 
@@ -1183,37 +1183,37 @@ GO
 
 SET NOCOUNT ON;
 
-PRINT N'==> Báº®T Äáº¦U Náº P Dá»® LIá»†U Äáº¦Y Äá»¦ CHÆ¯Æ NG TRĂŒNH ÄĂ€O Táº O Äáº I Há»ŒC FPT...';
+PRINT N'==> BẮT ĐẦU NẠP DỮ LIỆU ĐẦY ĐỦ CHƯƠNG TRÌNH ĐÀO TẠO ĐẠI HỌC FPT...';
 
--- 1. NGĂ€NH ÄĂ€O Táº O (MAJORS)
+-- 1. NGÀNH ĐÀO TẠO (MAJORS)
 IF NOT EXISTS (SELECT 1 FROM Majors WHERE Code = 'AI')
-    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('AI', N'Trí tuệ nhân tạo (Artificial Intelligence)', N'ÄĂ o táº¡o chuyên gia AI, Machine Learning và Khoa há»c dữ liệu', 1);
+    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('AI', N'Trí tuệ nhân tạo (Artificial Intelligence)', N'Đào tạo chuyên gia AI, Machine Learning và Khoa học dữ liệu', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Majors WHERE Code = 'DS')
-    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('DS', N'Khoa há»c dữ liệu (Data Science)', N'ÄĂ o táº¡o kỹ sư phân tích dữ liệu lớn và trực quan hóa kinh doanh', 1);
+    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('DS', N'Khoa học dữ liệu (Data Science)', N'Đào tạo kỹ sư phân tích dữ liệu lớn và trực quan hóa kinh doanh', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Majors WHERE Code = 'IT')
-    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('IT', N'Công nghệ thông tin (Information Technology)', N'ÄĂ o táº¡o kỹ sư CNTT tổng hợp, Cloud và Quản trị hệ thống', 1);
+    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('IT', N'Công nghệ thông tin (Information Technology)', N'Đào tạo kỹ sư CNTT tổng hợp, Cloud và Quản trị hệ thống', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Majors WHERE Code = 'GD')
-    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('GD', N'Thiết kế Mỹ thuật số (Digital Art & Graphic Design)', N'ÄĂ o táº¡o thiết kế Ä‘á»“ há»a 2D/3D, UI/UX và truyá»n thĂ´ng hình ảnh', 1);
+    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('GD', N'Thiết kế Mỹ thuật số (Digital Art & Graphic Design)', N'Đào tạo thiết kế đồ họa 2D/3D, UI/UX và truyền thông hình ảnh', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Majors WHERE Code = 'BA')
-    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('BA', N'Quản trị kinh doanh (Business Administration)', N'ÄĂ o táº¡o cử nhân QTKD, Digital Marketing và Kinh doanh quốc tế', 1);
+    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('BA', N'Quản trị kinh doanh (Business Administration)', N'Đào tạo cử nhân QTKD, Digital Marketing và Kinh doanh quốc tế', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Majors WHERE Code = 'MC')
-    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('MC', N'Truyá»n thĂ´ng Ä‘a phÆ°Æ¡ng tiá»‡n (Multimedia Communication)', N'ÄĂ o táº¡o chuyên viên truyá»n thĂ´ng sá»‘, báo chí và tổ chức sự kiện', 1);
+    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('MC', N'Truyền thông đa phương tiện (Multimedia Communication)', N'Đào tạo chuyên viên truyền thông số, báo chí và tổ chức sự kiện', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Majors WHERE Code = 'EN')
-    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('EN', N'Ngôn ngữ Anh (English Language)', N'ÄĂ o táº¡o chuyên gia ngôn ngữ Anh thương mại và biên phiên dịch', 1);
+    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('EN', N'Ngôn ngữ Anh (English Language)', N'Đào tạo chuyên gia ngôn ngữ Anh thương mại và biên phiên dịch', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Majors WHERE Code = 'JP')
-    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('JP', N'Ngôn ngữ Nhật (Japanese Language)', N'ÄĂ o táº¡o cử nhân tiếng Nhật CNTT và tiếng Nhật thương mại', 1);
+    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('JP', N'Ngôn ngữ Nhật (Japanese Language)', N'Đào tạo cử nhân tiếng Nhật CNTT và tiếng Nhật thương mại', 1);
 
 IF NOT EXISTS (SELECT 1 FROM Majors WHERE Code = 'KR')
-    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('KR', N'Ngôn ngữ Hàn (Korean Language)', N'ÄĂ o táº¡o cử nhân tiếng Hàn thương mại và truyá»n thĂ´ng', 1);
+    INSERT INTO Majors (Code, Name, Description, IsActive) VALUES ('KR', N'Ngôn ngữ Hàn (Korean Language)', N'Đào tạo cử nhân tiếng Hàn thương mại và truyền thông', 1);
 
-PRINT N'==> ÄĂ£ cáº­p nháº­t 11 ngành Ä‘Ă o táº¡o FPT.';
+PRINT N'==> Đã cập nhật 11 ngành đào tạo FPT.';
 
 -- Lấy ID các ngành
 DECLARE @idSE INT = (SELECT Id FROM Majors WHERE Code = 'SE');
@@ -1228,22 +1228,22 @@ DECLARE @idEN INT = (SELECT Id FROM Majors WHERE Code = 'EN');
 DECLARE @idJP INT = (SELECT Id FROM Majors WHERE Code = 'JP');
 DECLARE @idKR INT = (SELECT Id FROM Majors WHERE Code = 'KR');
 
--- 2. CHUYĂN NGĂ€NH Háº¸P (SPECIALIZATIONS)
+-- 2. CHUYÊN NGÀNH HẸP (SPECIALIZATIONS)
 -- SE
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'SE-ES')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idSE, 'SE-ES', N'Hệ thống nhúng & IoT (Embedded Systems & IoT)', N'Lập trình vi Ä‘iá»u khiá»ƒn, hệ thống nhúng và thiết bị thông minh', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idSE, 'SE-ES', N'Hệ thống nhúng & IoT (Embedded Systems & IoT)', N'Lập trình vi điều khiển, hệ thống nhúng và thiết bị thông minh', 1);
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'SE-AS')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idSE, 'SE-AS', N'Ká»¹ thuáº­t pháº§n má»m Ă´ tĂ´ (Automotive Software)', N'Phát triển pháº§n má»m Ä‘iá»u khiá»ƒn và xe tự hành', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idSE, 'SE-AS', N'Kỹ thuật phần mềm ô tô (Automotive Software)', N'Phát triển phần mềm điều khiển và xe tự hành', 1);
 
 -- IA
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'IA-NW')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idIA, 'IA-NW', N'An ninh máº¡ng & Äiá»‡n toĂ¡n Ä‘Ă¡m mĂ¢y (Cyber & Cloud Security)', N'Bảo mật hạ tầng mạng, phòng chống tấn công DDoS', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idIA, 'IA-NW', N'An ninh mạng & Điện toán đám mây (Cyber & Cloud Security)', N'Bảo mật hạ tầng mạng, phòng chống tấn công DDoS', 1);
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'IA-DF')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idIA, 'IA-DF', N'Äiá»u tra sá»‘ & á»¨ng phĂ³ sá»± cá»‘ an ninh (Digital Forensics)', N'Khôi phục chứng cứ số và giám định bảo mật', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idIA, 'IA-DF', N'Điều tra số & Ứng phó sự cố an ninh (Digital Forensics)', N'Khôi phục chứng cứ số và giám định bảo mật', 1);
 
 -- AI
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'AI-ML')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idAI, 'AI-ML', N'Há»c mĂ¡y & Há»c sĂ¢u ứng dụng (Machine Learning & Deep Learning)', N'Xây dựng các mô hình AI dự báo và huấn luyện mạng nơ-ron', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idAI, 'AI-ML', N'Học máy & Học sâu ứng dụng (Machine Learning & Deep Learning)', N'Xây dựng các mô hình AI dự báo và huấn luyện mạng nơ-ron', 1);
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'AI-CV')
     INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idAI, 'AI-CV', N'Thị giác máy tính & Xử lý ngôn ngữ tự nhiên (Computer Vision & NLP)', N'Nhận diện khuôn mặt, chatbot và xử lý văn bản', 1);
 
@@ -1257,13 +1257,13 @@ IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'DS-DE')
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'IT-WD')
     INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idIT, 'IT-WD', N'Phát triển ứng dụng Web Full-stack (Full-stack Web Development)', N'Thiết kế và phát triển web hiện đại với Frontend & Backend', 1);
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'IT-SA')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idIT, 'IT-SA', N'Quản trị hệ thống & Äiá»‡n toĂ¡n Ä‘Ă¡m mĂ¢y (Cloud & Systems)', N'Triển khai AWS/Azure, CI/CD và DevOps', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idIT, 'IT-SA', N'Quản trị hệ thống & Điện toán đám mây (Cloud & Systems)', N'Triển khai AWS/Azure, CI/CD và DevOps', 1);
 
 -- GD
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'GD-3D')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idGD, 'GD-3D', N'Thiết kế Ä‘á»“ há»a 3D & Kỹ xảo hình ảnh (3D Animation & VFX)', N'Dựng hình nhân vật 3D, làm hoạt hình và kỹ xảo điện ảnh', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idGD, 'GD-3D', N'Thiết kế đồ họa 3D & Kỹ xảo hình ảnh (3D Animation & VFX)', N'Dựng hình nhân vật 3D, làm hoạt hình và kỹ xảo điện ảnh', 1);
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'GD-UX')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idGD, 'GD-UX', N'Thiết kế giao diá»‡n & Tráº£i nghiá»‡m ngÆ°á»i dĂ¹ng (UI/UX Design)', N'NghiĂªn cá»©u hĂ nh vi ngÆ°á»i dĂ¹ng, thiết kế wireframe và prototype', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idGD, 'GD-UX', N'Thiết kế giao diện & Trải nghiệm người dùng (UI/UX Design)', N'Nghiên cứu hành vi người dùng, thiết kế wireframe và prototype', 1);
 
 -- BA
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'BA-DM')
@@ -1277,9 +1277,9 @@ IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'BA-FT')
 
 -- MC
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'MC-PR')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idMC, 'MC-PR', N'Quan hệ công chúng & Quản trị sự kiện (PR & Event)', N'Truyá»n thĂ´ng thÆ°Æ¡ng hiá»‡u, xá»­ lĂ½ khá»§ng hoáº£ng và tổ chức sự kiện', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idMC, 'MC-PR', N'Quan hệ công chúng & Quản trị sự kiện (PR & Event)', N'Truyền thông thương hiệu, xử lý khủng hoảng và tổ chức sự kiện', 1);
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'MC-NM')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idMC, 'MC-NM', N'Báo chí số & Sáng tạo nội dung (Digital Journalism)', N'Sáº£n xuáº¥t video, podcast và báo chí truyá»n thĂ´ng sá»‘', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idMC, 'MC-NM', N'Báo chí số & Sáng tạo nội dung (Digital Journalism)', N'Sản xuất video, podcast và báo chí truyền thông số', 1);
 
 -- EN
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'EN-BC')
@@ -1289,7 +1289,7 @@ IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'EN-TI')
 
 -- JP
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'JP-IT')
-    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idJP, 'JP-IT', N'Tiếng Nhật Công nghệ thông tin (IT Japanese)', N'Cáº§u ná»‘i phát triển pháº§n má»m Bridge SE cho doanh nghiá»‡p Nháº­t', 1);
+    INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idJP, 'JP-IT', N'Tiếng Nhật Công nghệ thông tin (IT Japanese)', N'Cầu nối phát triển phần mềm Bridge SE cho doanh nghiệp Nhật', 1);
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'JP-BC')
     INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idJP, 'JP-BC', N'Tiếng Nhật Thương mại (Business Japanese)', N'Giao tiếp văn phòng và thương mại với đối tác Nhật Bản', 1);
 
@@ -1299,69 +1299,69 @@ IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'KR-BC')
 IF NOT EXISTS (SELECT 1 FROM Specializations WHERE Code = 'KR-TI')
     INSERT INTO Specializations (MajorId, Code, Name, Description, IsActive) VALUES (@idKR, 'KR-TI', N'Tiếng Hàn Biên phiên dịch (Korean Translation)', N'Dịch thuật cabin, hội nghị và tài liệu kinh tế', 1);
 
-PRINT N'==> ÄĂ£ cáº­p nháº­t 26 chuyên ngành háº¹p FPT.';
+PRINT N'==> Đã cập nhật 26 chuyên ngành hẹp FPT.';
 
--- 3. Há»ŒC Ká»² (SEMESTERS)
+-- 3. HỌC KỲ (SEMESTERS)
 IF NOT EXISTS (SELECT 1 FROM Semesters WHERE Code = 'FA23')
     INSERT INTO Semesters (Code, Name, StartDate, EndDate, TransferClassDeadline, GradeEntryDeadline, Status, IsClosedWithExceptions)
-    VALUES ('FA23', N'Há»c ká»³ Fall 2023', '2023-09-05', '2023-12-25', '2023-09-20', '2023-12-30', 'Closed', 0);
+    VALUES ('FA23', N'Học kỳ Fall 2023', '2023-09-05', '2023-12-25', '2023-09-20', '2023-12-30', 'Closed', 0);
 
 IF NOT EXISTS (SELECT 1 FROM Semesters WHERE Code = 'SP24')
     INSERT INTO Semesters (Code, Name, StartDate, EndDate, TransferClassDeadline, GradeEntryDeadline, Status, IsClosedWithExceptions)
-    VALUES ('SP24', N'Há»c ká»³ Spring 2024', '2024-01-08', '2024-04-25', '2024-01-20', '2024-04-30', 'Closed', 0);
+    VALUES ('SP24', N'Học kỳ Spring 2024', '2024-01-08', '2024-04-25', '2024-01-20', '2024-04-30', 'Closed', 0);
 
 IF NOT EXISTS (SELECT 1 FROM Semesters WHERE Code = 'SU24')
     INSERT INTO Semesters (Code, Name, StartDate, EndDate, TransferClassDeadline, GradeEntryDeadline, Status, IsClosedWithExceptions)
-    VALUES ('SU24', N'Há»c ká»³ Summer 2024', '2024-05-06', '2024-08-20', '2024-05-18', '2024-08-25', 'Closed', 0);
+    VALUES ('SU24', N'Học kỳ Summer 2024', '2024-05-06', '2024-08-20', '2024-05-18', '2024-08-25', 'Closed', 0);
 
 IF NOT EXISTS (SELECT 1 FROM Semesters WHERE Code = 'FA24')
     INSERT INTO Semesters (Code, Name, StartDate, EndDate, TransferClassDeadline, GradeEntryDeadline, Status, IsClosedWithExceptions)
-    VALUES ('FA24', N'Há»c ká»³ Fall 2024 (Hiá»‡n táº¡i)', '2024-09-03', '2024-12-28', '2024-09-18', '2024-12-30', 'Active', 0);
+    VALUES ('FA24', N'Học kỳ Fall 2024 (Hiện tại)', '2024-09-03', '2024-12-28', '2024-09-18', '2024-12-30', 'Active', 0);
 
 IF NOT EXISTS (SELECT 1 FROM Semesters WHERE Code = 'SP25')
     INSERT INTO Semesters (Code, Name, StartDate, EndDate, TransferClassDeadline, GradeEntryDeadline, Status, IsClosedWithExceptions)
-    VALUES ('SP25', N'Há»c ká»³ Spring 2025 (Sáº¯p tá»›i)', '2025-01-06', '2025-04-26', '2025-01-18', '2025-04-30', 'Upcoming', 0);
+    VALUES ('SP25', N'Học kỳ Spring 2025 (Sắp tới)', '2025-01-06', '2025-04-26', '2025-01-18', '2025-04-30', 'Upcoming', 0);
 
-PRINT N'==> ÄĂ£ cáº­p nháº­t cĂ¡c há»c ká»³.';
+PRINT N'==> Đã cập nhật các học kỳ.';
 
--- 4. DANH SĂCH MĂ”N Há»ŒC CHUáº¨N FPT (SUBJECTS)
+-- 4. DANH SÁCH MÔN HỌC CHUẨN FPT (SUBJECTS)
 CREATE TABLE #TmpSubjects (Code NVARCHAR(50), Name NVARCHAR(255), Credits INT);
 INSERT INTO #TmpSubjects VALUES
-('MAE101', N'ToĂ¡n cao cáº¥p cho ká»¹ thuáº­t (Mathematics for Engineering)', 3),
-('MAD101', N'ToĂ¡n rá»i ráº¡c (Discrete Mathematics)', 3),
-('MAS291', N'XĂ¡c suáº¥t và Thá»‘ng kĂª (Probability & Statistics)', 3),
-('SSL101c', N'Ká»¹ nÄƒng há»c táº­p Ä‘áº¡i há»c (Academic Skills)', 3),
-('EXE101', N'Khá»Ÿi nghiá»‡p Ä‘á»•i má»›i sĂ¡ng táº¡o (Experiential Entrepreneurship 1)', 3),
-('CSD201', N'Cấu trúc dữ liệu và giáº£i thuáº­t (Data Structures & Algorithms)', 3),
-('DBI202', N'Giá»›i thiá»‡u Há»‡ quáº£n trá»‹ CSDL (Introduction to Databases)', 3),
+('MAE101', N'Toán cao cấp cho kỹ thuật (Mathematics for Engineering)', 3),
+('MAD101', N'Toán rời rạc (Discrete Mathematics)', 3),
+('MAS291', N'Xác suất và Thống kê (Probability & Statistics)', 3),
+('SSL101c', N'Kỹ năng học tập đại học (Academic Skills)', 3),
+('EXE101', N'Khởi nghiệp đổi mới sáng tạo (Experiential Entrepreneurship 1)', 3),
+('CSD201', N'Cấu trúc dữ liệu và giải thuật (Data Structures & Algorithms)', 3),
+('DBI202', N'Giới thiệu Hệ quản trị CSDL (Introduction to Databases)', 3),
 ('PRJ301', N'Lập trình ứng dụng Java Web (Java Web Application Development)', 3),
-('SWE201c', N'Nháº­p mĂ´n Ká»¹ thuáº­t pháº§n má»m (Introduction to Software Engineering)', 3),
-('SWT301', N'Kiá»ƒm thá»­ pháº§n má»m (Software Testing)', 3),
-('SWR302', N'Ká»¹ thuáº­t yĂªu cáº§u pháº§n má»m (Software Requirements)', 3),
-('SWD392', N'Kiáº¿n trĂºc và thiết kế pháº§n má»m (Software Architecture & Design)', 3),
-('PRM392', N'Lập trình ứng dụng di Ä‘á»™ng (Mobile Programming)', 3),
-('NWC203c', N'Máº¡ng mĂ¡y tĂ­nh cÄƒn báº£n (Computer Networking)', 3),
-('OSG202', N'Há»‡ Ä‘iá»u hĂ nh (Operating Systems)', 3),
-('IAE201', N'NguyĂªn lĂ½ An toĂ n thông tin (Principles of Information Assurance)', 3),
-('IAS301', N'An ninh máº¡ng & PhĂ¢n tĂ­ch lá»— há»•ng (Network Security & Vulnerability)', 3),
-('CRY301', N'Máº­t mĂ£ há»c và ứng dụng (Cryptography)', 3),
-('AIL302m', N'TrĂ­ tuá»‡ nhĂ¢n táº¡o & Machine Learning (Machine Learning Fundamentals)', 3),
+('SWE201c', N'Nhập môn Kỹ thuật phần mềm (Introduction to Software Engineering)', 3),
+('SWT301', N'Kiểm thử phần mềm (Software Testing)', 3),
+('SWR302', N'Kỹ thuật yêu cầu phần mềm (Software Requirements)', 3),
+('SWD392', N'Kiến trúc và thiết kế phần mềm (Software Architecture & Design)', 3),
+('PRM392', N'Lập trình ứng dụng di động (Mobile Programming)', 3),
+('NWC203c', N'Mạng máy tính căn bản (Computer Networking)', 3),
+('OSG202', N'Hệ điều hành (Operating Systems)', 3),
+('IAE201', N'Nguyên lý An toàn thông tin (Principles of Information Assurance)', 3),
+('IAS301', N'An ninh mạng & Phân tích lỗ hổng (Network Security & Vulnerability)', 3),
+('CRY301', N'Mật mã học và ứng dụng (Cryptography)', 3),
+('AIL302m', N'Trí tuệ nhân tạo & Machine Learning (Machine Learning Fundamentals)', 3),
 ('DBS301', N'Hệ thống cơ sở dữ liệu nâng cao & NoSQL (Advanced Database Systems)', 3),
-('DVP301', N'Trá»±c quan hĂ³a dữ liệu với Python & BI (Data Visualization)', 3),
-('DES101', N'NguyĂªn lĂ½ thiết kế má»¹ thuáº­t sá»‘ (Principles of Visual Design)', 3),
-('VFX201', N'Kỹ xảo hình ảnh & Hoáº¡t há»a ká»¹ thuáº­t sá»‘ (Visual Effects & 3D)', 3),
-('UIX201', N'Thiết kế giao diá»‡n & Tráº£i nghiá»‡m ngÆ°á»i dĂ¹ng (UI/UX Design Studio)', 3),
-('MKT101', N'NguyĂªn lĂ½ Marketing (Principles of Marketing)', 3),
-('ECO111', N'Kinh táº¿ vi mĂ´ (Microeconomics)', 3),
-('OBE102', N'HĂ nh vi tổ chức (Organizational Behavior)', 3),
-('FIN301', N'Quản trị tĂ i chĂ­nh doanh nghiá»‡p (Corporate Finance)', 3),
-('MMC101', N'Nháº­p mĂ´n Truyá»n thĂ´ng Ä‘a phÆ°Æ¡ng tiá»‡n (Intro to Multimedia)', 3),
-('PRS201', N'Ká»¹ nÄƒng viáº¿t và Quan há»‡ cĂ´ng chĂºng (Public Relations Writing)', 3),
-('ENW492', N'Viáº¿t há»c thuáº­t và Tiáº¿ng Anh nghá» nghiá»‡p (Academic English)', 3),
-('JPD113', N'Tiáº¿ng Nháº­t sÆ¡ cáº¥p 1 (Elementary Japanese 1)', 3),
-('JPD123', N'Tiáº¿ng Nháº­t sÆ¡ cáº¥p 2 (Elementary Japanese 2)', 3),
-('KRD113', N'Tiáº¿ng HĂ n sÆ¡ cáº¥p 1 (Elementary Korean 1)', 3),
-('KRD123', N'Tiáº¿ng HĂ n sÆ¡ cáº¥p 2 (Elementary Korean 2)', 3);
+('DVP301', N'Trực quan hóa dữ liệu với Python & BI (Data Visualization)', 3),
+('DES101', N'Nguyên lý thiết kế mỹ thuật số (Principles of Visual Design)', 3),
+('VFX201', N'Kỹ xảo hình ảnh & Hoạt họa kỹ thuật số (Visual Effects & 3D)', 3),
+('UIX201', N'Thiết kế giao diện & Trải nghiệm người dùng (UI/UX Design Studio)', 3),
+('MKT101', N'Nguyên lý Marketing (Principles of Marketing)', 3),
+('ECO111', N'Kinh tế vi mô (Microeconomics)', 3),
+('OBE102', N'Hành vi tổ chức (Organizational Behavior)', 3),
+('FIN301', N'Quản trị tài chính doanh nghiệp (Corporate Finance)', 3),
+('MMC101', N'Nhập môn Truyền thông đa phương tiện (Intro to Multimedia)', 3),
+('PRS201', N'Kỹ năng viết và Quan hệ công chúng (Public Relations Writing)', 3),
+('ENW492', N'Viết học thuật và Tiếng Anh nghề nghiệp (Academic English)', 3),
+('JPD113', N'Tiếng Nhật sơ cấp 1 (Elementary Japanese 1)', 3),
+('JPD123', N'Tiếng Nhật sơ cấp 2 (Elementary Japanese 2)', 3),
+('KRD113', N'Tiếng Hàn sơ cấp 1 (Elementary Korean 1)', 3),
+('KRD123', N'Tiếng Hàn sơ cấp 2 (Elementary Korean 2)', 3);
 
 DECLARE @subCode NVARCHAR(50), @subName NVARCHAR(255), @subCred INT;
 DECLARE curSub CURSOR FOR SELECT Code, Name, Credits FROM #TmpSubjects;
@@ -1372,16 +1372,16 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM Subjects WHERE Code = @subCode)
     BEGIN
         INSERT INTO Subjects (Code, Name, Credits, Description, IsActive)
-        VALUES (@subCode, @subName, @subCred, N'MĂ´n há»c chÆ°Æ¡ng trĂ¬nh chuáº©n Äáº¡i há»c FPT', 1);
+        VALUES (@subCode, @subName, @subCred, N'Môn học chương trình chuẩn Đại học FPT', 1);
 
         DECLARE @newSubId INT = SCOPE_IDENTITY();
-        -- Cáº¥u hĂ¬nh Ä‘áº§u Ä‘iá»ƒm chuáº©n 100%: Quiz 10%, Lab 20%, Progress Test 30%, Final Exam 40%
+        -- Cấu hình đầu điểm chuẩn 100%: Quiz 10%, Lab 20%, Progress Test 30%, Final Exam 40%
         INSERT INTO SubjectGradeComponents (SubjectId, Name, Weight, Scale, IsAdminOnly, OrderIndex)
         VALUES 
-        (@newSubId, N'Quiz / Äiá»ƒm danh', 10.0, 10.0, 0, 1),
-        (@newSubId, N'BĂ i thá»±c hĂ nh (Lab)', 20.0, 10.0, 0, 2),
-        (@newSubId, N'Kiá»ƒm tra tiến độ (Progress Test)', 30.0, 10.0, 0, 3),
-        (@newSubId, N'Thi káº¿t thĂºc mĂ´n (Final Exam)', 40.0, 10.0, 1, 4);
+        (@newSubId, N'Quiz / Điểm danh', 10.0, 10.0, 0, 1),
+        (@newSubId, N'Bài thực hành (Lab)', 20.0, 10.0, 0, 2),
+        (@newSubId, N'Kiểm tra tiến độ (Progress Test)', 30.0, 10.0, 0, 3),
+        (@newSubId, N'Thi kết thúc môn (Final Exam)', 40.0, 10.0, 1, 4);
     END
     FETCH NEXT FROM curSub INTO @subCode, @subName, @subCred;
 END
@@ -1389,9 +1389,9 @@ CLOSE curSub;
 DEALLOCATE curSub;
 DROP TABLE #TmpSubjects;
 
-PRINT N'==> ÄĂ£ cáº­p nháº­t toĂ n bá»™ 40 mĂ´n há»c FPT và cáº¥u hĂ¬nh Ä‘áº§u Ä‘iá»ƒm 100%.';
+PRINT N'==> Đã cập nhật toàn bộ 40 môn học FPT và cấu hình đầu điểm 100%.';
 
--- MĂ´n tiĂªn quyáº¿t
+-- Môn tiên quyết
 DECLARE @idPRF INT = (SELECT Id FROM Subjects WHERE Code = 'PRF192');
 DECLARE @idPRO INT = (SELECT Id FROM Subjects WHERE Code = 'PRO192');
 DECLARE @idPRN211 INT = (SELECT Id FROM Subjects WHERE Code = 'PRN211');
@@ -1425,35 +1425,35 @@ IF @idJPD1 IS NOT NULL AND @idJPD2 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Pre
 IF @idKRD1 IS NOT NULL AND @idKRD2 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM PrerequisiteSubjects WHERE SubjectId = @idKRD2 AND PrerequisiteSubjectId = @idKRD1)
     INSERT INTO PrerequisiteSubjects (SubjectId, PrerequisiteSubjectId, MinScore) VALUES (@idKRD2, @idKRD1, 5.0);
 
-PRINT N'==> ÄĂ£ cáº­p nháº­t cĂ¢y Ä‘iá»u kiá»‡n mĂ´n tiĂªn quyáº¿t.';
+PRINT N'==> Đã cập nhật cây điều kiện môn tiên quyết.';
 
--- 5. Lá»P HĂ€NH CHĂNH (ADMINISTRATIVE CLASSES)
+-- 5. LỚP HÀNH CHÍNH (ADMINISTRATIVE CLASSES)
 CREATE TABLE #TmpClasses (Code NVARCHAR(50), Name NVARCHAR(255), MajorCode NVARCHAR(50), Cohort INT, Year NVARCHAR(50), Sem INT);
 INSERT INTO #TmpClasses VALUES
-('SE1703', N'Ká»¹ thuáº­t pháº§n má»m K17 Lớp 3', 'SE', 17, '2023-2027', 5),
-('SE1801', N'Ká»¹ thuáº­t pháº§n má»m K18 Lớp 1', 'SE', 18, '2024-2028', 3),
-('SE1802', N'Ká»¹ thuáº­t pháº§n má»m K18 Lớp 2', 'SE', 18, '2024-2028', 3),
-('IA1701', N'An toĂ n thông tin K17 Lớp 1', 'IA', 17, '2023-2027', 5),
-('IA1801', N'An toĂ n thông tin K18 Lớp 1', 'IA', 18, '2024-2028', 3),
-('AI1701', N'TrĂ­ tuá»‡ nhĂ¢n táº¡o K17 Lớp 1', 'AI', 17, '2023-2027', 5),
-('AI1801', N'TrĂ­ tuá»‡ nhĂ¢n táº¡o K18 Lớp 1', 'AI', 18, '2024-2028', 3),
-('DS1701', N'Khoa há»c dữ liệu K17 Lớp 1', 'DS', 17, '2023-2027', 5),
-('IT1701', N'CĂ´ng nghá»‡ thông tin K17 Lớp 1', 'IT', 17, '2023-2027', 5),
-('GD1701', N'Thiết kế Ä‘á»“ há»a K17 Lớp 1', 'GD', 17, '2023-2027', 5),
-('GD1801', N'Thiết kế Ä‘á»“ há»a K18 Lớp 1', 'GD', 18, '2024-2028', 3),
+('SE1703', N'Kỹ thuật phần mềm K17 Lớp 3', 'SE', 17, '2023-2027', 5),
+('SE1801', N'Kỹ thuật phần mềm K18 Lớp 1', 'SE', 18, '2024-2028', 3),
+('SE1802', N'Kỹ thuật phần mềm K18 Lớp 2', 'SE', 18, '2024-2028', 3),
+('IA1701', N'An toàn thông tin K17 Lớp 1', 'IA', 17, '2023-2027', 5),
+('IA1801', N'An toàn thông tin K18 Lớp 1', 'IA', 18, '2024-2028', 3),
+('AI1701', N'Trí tuệ nhân tạo K17 Lớp 1', 'AI', 17, '2023-2027', 5),
+('AI1801', N'Trí tuệ nhân tạo K18 Lớp 1', 'AI', 18, '2024-2028', 3),
+('DS1701', N'Khoa học dữ liệu K17 Lớp 1', 'DS', 17, '2023-2027', 5),
+('IT1701', N'Công nghệ thông tin K17 Lớp 1', 'IT', 17, '2023-2027', 5),
+('GD1701', N'Thiết kế đồ họa K17 Lớp 1', 'GD', 17, '2023-2027', 5),
+('GD1801', N'Thiết kế đồ họa K18 Lớp 1', 'GD', 18, '2024-2028', 3),
 ('BA1701', N'Quản trị kinh doanh K17 Lớp 1', 'BA', 17, '2023-2027', 5),
 ('BA1702', N'Quản trị kinh doanh K17 Lớp 2', 'BA', 17, '2023-2027', 5),
 ('BA1801', N'Quản trị kinh doanh K18 Lớp 1', 'BA', 18, '2024-2028', 3),
-('MC1701', N'Truyá»n thĂ´ng Ä‘a phÆ°Æ¡ng tiá»‡n K17 Lớp 1', 'MC', 17, '2023-2027', 5),
-('MC1801', N'Truyá»n thĂ´ng Ä‘a phÆ°Æ¡ng tiá»‡n K18 Lớp 1', 'MC', 18, '2024-2028', 3),
-('EN1701', N'NgĂ´n ngá»¯ Anh K17 Lớp 1', 'EN', 17, '2023-2027', 5),
-('JP1701', N'NgĂ´n ngá»¯ Nháº­t K17 Lớp 1', 'JP', 17, '2023-2027', 5),
-('KR1701', N'NgĂ´n ngá»¯ HĂ n K17 Lớp 1', 'KR', 17, '2023-2027', 5),
-('DS1801', N'Khoa há»c dữ liệu K18 Lớp 1', 'DS', 18, '2024-2028', 3),
-('IT1801', N'CĂ´ng nghá»‡ thông tin K18 Lớp 1', 'IT', 18, '2024-2028', 3),
-('EN1801', N'NgĂ´n ngá»¯ Anh K18 Lớp 1', 'EN', 18, '2024-2028', 3),
-('JP1801', N'NgĂ´n ngá»¯ Nháº­t K18 Lớp 1', 'JP', 18, '2024-2028', 3),
-('KR1801', N'NgĂ´n ngá»¯ HĂ n K18 Lớp 1', 'KR', 18, '2024-2028', 3);
+('MC1701', N'Truyền thông đa phương tiện K17 Lớp 1', 'MC', 17, '2023-2027', 5),
+('MC1801', N'Truyền thông đa phương tiện K18 Lớp 1', 'MC', 18, '2024-2028', 3),
+('EN1701', N'Ngôn ngữ Anh K17 Lớp 1', 'EN', 17, '2023-2027', 5),
+('JP1701', N'Ngôn ngữ Nhật K17 Lớp 1', 'JP', 17, '2023-2027', 5),
+('KR1701', N'Ngôn ngữ Hàn K17 Lớp 1', 'KR', 17, '2023-2027', 5),
+('DS1801', N'Khoa học dữ liệu K18 Lớp 1', 'DS', 18, '2024-2028', 3),
+('IT1801', N'Công nghệ thông tin K18 Lớp 1', 'IT', 18, '2024-2028', 3),
+('EN1801', N'Ngôn ngữ Anh K18 Lớp 1', 'EN', 18, '2024-2028', 3),
+('JP1801', N'Ngôn ngữ Nhật K18 Lớp 1', 'JP', 18, '2024-2028', 3),
+('KR1801', N'Ngôn ngữ Hàn K18 Lớp 1', 'KR', 18, '2024-2028', 3);
 
 DECLARE @cCode NVARCHAR(50), @cName NVARCHAR(255), @cMaj NVARCHAR(50), @cCoh INT, @cYear NVARCHAR(50), @cSem INT;
 DECLARE curCls CURSOR FOR SELECT Code, Name, MajorCode, Cohort, Year, Sem FROM #TmpClasses;
@@ -1473,24 +1473,24 @@ CLOSE curCls;
 DEALLOCATE curCls;
 DROP TABLE #TmpClasses;
 
-PRINT N'==> ÄĂ£ cáº­p nháº­t 21 lá»›p hĂ nh chĂ­nh phá»§ kháº¯p cĂ¡c ngành.';
+PRINT N'==> Đã cập nhật 21 lớp hành chính phủ khắp các ngành.';
 
--- 6. TĂ€I KHOáº¢N GIáº¢NG VIĂN (LECTURERS)
+-- 6. TÀI KHOẢN GIẢNG VIÊN (LECTURERS)
 DECLARE @pwdHash NVARCHAR(255) = N'$2a$11$MZ2SbSCMUf8iv/WabQ7B5.qrWIbNGMG3SgJQTcLrL3iXkJFl4BcaW';
 
 CREATE TABLE #TmpLecturers (Username NVARCHAR(50), FullName NVARCHAR(100), Email NVARCHAR(100), Phone NVARCHAR(50), Code NVARCHAR(50), Dept NVARCHAR(100), Degree NVARCHAR(50));
 INSERT INTO #TmpLecturers VALUES
-('gv_cuongnk', N'TS. Nguyá»…n Kim CÆ°Æ¡ng', 'cuongnk@fpt.edu.vn', '0912111222', 'GV003', N'Ká»¹ thuáº­t pháº§n má»m', 'PhD'),
-('gv_sondh', N'ThS. Äá»— HoĂ ng SÆ¡n', 'sondh@fpt.edu.vn', '0912222333', 'GV004', N'An toĂ n thông tin', 'Master'),
-('gv_lanpt', N'TS. Pháº¡m Thá»‹ Lan', 'lanpt@fpt.edu.vn', '0912333444', 'GV005', N'TrĂ­ tuá»‡ nhĂ¢n táº¡o & Dá»¯ liá»‡u', 'PhD'),
-('gv_namth', N'ThS. Tráº§n Háº£i Nam', 'namth@fpt.edu.vn', '0912444555', 'GV006', N'Há»‡ thá»‘ng thông tin & Máº¡ng', 'Master'),
-('gv_trivm', N'ThS. VÅ© Minh TrĂ­', 'trivm@fpt.edu.vn', '0912555666', 'GV007', N'Thiết kế Má»¹ thuáº­t sá»‘', 'Master'),
-('gv_huonghm', N'TS. HoĂ ng Mai HÆ°Æ¡ng', 'huonghm@fpt.edu.vn', '0912666777', 'GV008', N'Quản trị kinh doanh', 'PhD'),
-('gv_kietdt', N'ThS. Äáº·ng Tuáº¥n Kiá»‡t', 'kietdt@fpt.edu.vn', '0912777888', 'GV009', N'Marketing & Kinh doanh sá»‘', 'Master'),
-('gv_thaobp', N'ThS. BĂ¹i PhÆ°Æ¡ng Tháº£o', 'thaobp@fpt.edu.vn', '0912888999', 'GV010', N'Truyá»n thĂ´ng Ä‘a phÆ°Æ¡ng tiá»‡n', 'Master'),
-('gv_john', N'ThS. John Smith', 'johnsmith@fpt.edu.vn', '0912999000', 'GV011', N'NgĂ´n ngá»¯ Anh', 'Master'),
-('gv_tanaka', N'ThS. Tanaka Hiroshi', 'tanaka@fpt.edu.vn', '0913000111', 'GV012', N'NgĂ´n ngá»¯ Nháº­t', 'Master'),
-('gv_park', N'ThS. Park Min Woo', 'parkmw@fpt.edu.vn', '0913111222', 'GV013', N'NgĂ´n ngá»¯ HĂ n', 'Master');
+('gv_cuongnk', N'TS. Nguyễn Kim Cương', 'cuongnk@fpt.edu.vn', '0912111222', 'GV003', N'Kỹ thuật phần mềm', 'PhD'),
+('gv_sondh', N'ThS. Đỗ Hoàng Sơn', 'sondh@fpt.edu.vn', '0912222333', 'GV004', N'An toàn thông tin', 'Master'),
+('gv_lanpt', N'TS. Phạm Thị Lan', 'lanpt@fpt.edu.vn', '0912333444', 'GV005', N'Trí tuệ nhân tạo & Dữ liệu', 'PhD'),
+('gv_namth', N'ThS. Trần Hải Nam', 'namth@fpt.edu.vn', '0912444555', 'GV006', N'Hệ thống thông tin & Mạng', 'Master'),
+('gv_trivm', N'ThS. Vũ Minh Trí', 'trivm@fpt.edu.vn', '0912555666', 'GV007', N'Thiết kế Mỹ thuật số', 'Master'),
+('gv_huonghm', N'TS. Hoàng Mai Hương', 'huonghm@fpt.edu.vn', '0912666777', 'GV008', N'Quản trị kinh doanh', 'PhD'),
+('gv_kietdt', N'ThS. Đặng Tuấn Kiệt', 'kietdt@fpt.edu.vn', '0912777888', 'GV009', N'Marketing & Kinh doanh số', 'Master'),
+('gv_thaobp', N'ThS. Bùi Phương Thảo', 'thaobp@fpt.edu.vn', '0912888999', 'GV010', N'Truyền thông đa phương tiện', 'Master'),
+('gv_john', N'ThS. John Smith', 'johnsmith@fpt.edu.vn', '0912999000', 'GV011', N'Ngôn ngữ Anh', 'Master'),
+('gv_tanaka', N'ThS. Tanaka Hiroshi', 'tanaka@fpt.edu.vn', '0913000111', 'GV012', N'Ngôn ngữ Nhật', 'Master'),
+('gv_park', N'ThS. Park Min Woo', 'parkmw@fpt.edu.vn', '0913111222', 'GV013', N'Ngôn ngữ Hàn', 'Master');
 
 DECLARE @gvUser NVARCHAR(50), @gvName NVARCHAR(100), @gvEmail NVARCHAR(100), @gvPhone NVARCHAR(50), @gvCode NVARCHAR(50), @gvDept NVARCHAR(100), @gvDeg NVARCHAR(50);
 DECLARE curGv CURSOR FOR SELECT Username, FullName, Email, Phone, Code, Dept, Degree FROM #TmpLecturers;
@@ -1528,9 +1528,9 @@ BEGIN
        OR (l.LecturerCode = 'GV013' AND s.Code IN ('KOR101', 'KOR102'));
 END;
 
-PRINT N'==> ÄĂ£ cáº­p nháº­t 13 giảng viên cĂ¡c bá»™ mĂ´n.';
+PRINT N'==> Đã cập nhật 13 giảng viên các bộ môn.';
 
--- 7. THĂM THáº¬T NHIá»€U SINH VIĂN (STUDENTS) VĂ€O Táº¤T Cáº¢ CĂC NGĂ€NH
+-- 7. THÊM THẬT NHIỀU SINH VIÊN (STUDENTS) VÀO TẤT CẢ CÁC NGÀNH
 CREATE TABLE #TmpStudents (
     Username NVARCHAR(50),
     FullName NVARCHAR(100),
@@ -1545,169 +1545,169 @@ CREATE TABLE #TmpStudents (
 );
 
 INSERT INTO #TmpStudents VALUES
--- KHá»I CĂ”NG NGHá»† THĂ”NG TIN (MĂƒ HE)
--- SE - Ká»¹ thuáº­t pháº§n má»m
-('he170010', N'Nguyá»…n HoĂ ng Long', 'longnhhe170010@fpt.edu.vn', '0981000010', 'HE170010', 'SE', 'SE-IS', 'SE1701', 17, 5),
-('he170011', N'VÅ© ÄĂ¬nh Trá»ng', 'trongvdhe170011@fpt.edu.vn', '0981000011', 'HE170011', 'SE', 'SE-IS', 'SE1701', 17, 5),
-('he170012', N'Äá»— Quá»‘c Báº£o', 'baodqhe170012@fpt.edu.vn', '0981000012', 'HE170012', 'SE', 'SE-JS', 'SE1701', 17, 5),
-('he170013', N'BĂ¹i PhÆ°Æ¡ng Linh', 'linhbphe170013@fpt.edu.vn', '0981000013', 'HE170013', 'SE', 'SE-JS', 'SE1701', 17, 5),
-('he170014', N'HoĂ ng Tuáº¥n DÅ©ng', 'dunghthe170014@fpt.edu.vn', '0981000014', 'HE170014', 'SE', 'SE-ES', 'SE1702', 17, 5),
-('he170015', N'LĂª Thá»‹ Thu Trang', 'trangltthe170015@fpt.edu.vn', '0981000015', 'HE170015', 'SE', 'SE-ES', 'SE1702', 17, 5),
-('he170016', N'Tráº§n Minh Äá»©c', 'ductmhe170016@fpt.edu.vn', '0981000016', 'HE170016', 'SE', 'SE-AS', 'SE1702', 17, 5),
-('he170017', N'NgĂ´ Thanh TĂ¹ng', 'tungnthe170017@fpt.edu.vn', '0981000017', 'HE170017', 'SE', 'SE-AS', 'SE1702', 17, 5),
-('he170018', N'Pháº¡m Gia Huy', 'huypghe170018@fpt.edu.vn', '0981000018', 'HE170018', 'SE', 'SE-IS', 'SE1703', 17, 5),
-('he170019', N'Äinh Báº£o Ngá»c', 'ngocdbhe170019@fpt.edu.vn', '0981000019', 'HE170019', 'SE', 'SE-JS', 'SE1703', 17, 5),
-('he180001', N'Nguyá»…n Quang Háº£i', 'hainqhe180001@fpt.edu.vn', '0981000101', 'HE180001', 'SE', NULL, 'SE1801', 18, 3),
-('he180002', N'ÄoĂ n VÄƒn Háº­u', 'haudvhe180002@fpt.edu.vn', '0981000102', 'HE180002', 'SE', NULL, 'SE1801', 18, 3),
-('he180003', N'Nguyá»…n Tiáº¿n Linh', 'linhnthe180003@fpt.edu.vn', '0981000103', 'HE180003', 'SE', NULL, 'SE1802', 18, 3),
-('he180004', N'Phan VÄƒn Äá»©c', 'ducpvhe180004@fpt.edu.vn', '0981000104', 'HE180004', 'SE', NULL, 'SE1802', 18, 3),
+-- KHỐI CÔNG NGHỆ THÔNG TIN (MÃ HE)
+-- SE - Kỹ thuật phần mềm
+('he170010', N'Nguyễn Hoàng Long', 'longnhhe170010@fpt.edu.vn', '0981000010', 'HE170010', 'SE', 'SE-IS', 'SE1701', 17, 5),
+('he170011', N'Vũ Đình Trọng', 'trongvdhe170011@fpt.edu.vn', '0981000011', 'HE170011', 'SE', 'SE-IS', 'SE1701', 17, 5),
+('he170012', N'Đỗ Quốc Bảo', 'baodqhe170012@fpt.edu.vn', '0981000012', 'HE170012', 'SE', 'SE-JS', 'SE1701', 17, 5),
+('he170013', N'Bùi Phương Linh', 'linhbphe170013@fpt.edu.vn', '0981000013', 'HE170013', 'SE', 'SE-JS', 'SE1701', 17, 5),
+('he170014', N'Hoàng Tuấn Dũng', 'dunghthe170014@fpt.edu.vn', '0981000014', 'HE170014', 'SE', 'SE-ES', 'SE1702', 17, 5),
+('he170015', N'Lê Thị Thu Trang', 'trangltthe170015@fpt.edu.vn', '0981000015', 'HE170015', 'SE', 'SE-ES', 'SE1702', 17, 5),
+('he170016', N'Trần Minh Đức', 'ductmhe170016@fpt.edu.vn', '0981000016', 'HE170016', 'SE', 'SE-AS', 'SE1702', 17, 5),
+('he170017', N'Ngô Thanh Tùng', 'tungnthe170017@fpt.edu.vn', '0981000017', 'HE170017', 'SE', 'SE-AS', 'SE1702', 17, 5),
+('he170018', N'Phạm Gia Huy', 'huypghe170018@fpt.edu.vn', '0981000018', 'HE170018', 'SE', 'SE-IS', 'SE1703', 17, 5),
+('he170019', N'Đinh Bảo Ngọc', 'ngocdbhe170019@fpt.edu.vn', '0981000019', 'HE170019', 'SE', 'SE-JS', 'SE1703', 17, 5),
+('he180001', N'Nguyễn Quang Hải', 'hainqhe180001@fpt.edu.vn', '0981000101', 'HE180001', 'SE', NULL, 'SE1801', 18, 3),
+('he180002', N'Đoàn Văn Hậu', 'haudvhe180002@fpt.edu.vn', '0981000102', 'HE180002', 'SE', NULL, 'SE1801', 18, 3),
+('he180003', N'Nguyễn Tiến Linh', 'linhnthe180003@fpt.edu.vn', '0981000103', 'HE180003', 'SE', NULL, 'SE1802', 18, 3),
+('he180004', N'Phan Văn Đức', 'ducpvhe180004@fpt.edu.vn', '0981000104', 'HE180004', 'SE', NULL, 'SE1802', 18, 3),
 
--- IA - An toĂ n thông tin
-('he170101', N'Trá»‹nh XuĂ¢n BĂ¡ch', 'bachtxhe170101@fpt.edu.vn', '0982000001', 'HE170101', 'IA', 'IA-NW', 'IA1701', 17, 5),
-('he170102', N'DÆ°Æ¡ng ThĂ¹y Chi', 'chidtdhe170102@fpt.edu.vn', '0982000002', 'HE170102', 'IA', 'IA-NW', 'IA1701', 17, 5),
-('he170103', N'Táº¡ Quang Tháº¯ng', 'thangtqhe170103@fpt.edu.vn', '0982000003', 'HE170103', 'IA', 'IA-DF', 'IA1701', 17, 5),
-('he170104', N'Cao HoĂ i Nam', 'namchhe170104@fpt.edu.vn', '0982000004', 'HE170104', 'IA', 'IA-DF', 'IA1701', 17, 5),
-('he180101', N'LÆ°u ÄĂ¬nh Phong', 'phongldhe180101@fpt.edu.vn', '0982000101', 'HE180101', 'IA', NULL, 'IA1801', 18, 3),
-('he180102', N'Mai Há»“ng QuĂ¢n', 'quanmhhe180102@fpt.edu.vn', '0982000102', 'HE180102', 'IA', NULL, 'IA1801', 18, 3),
+-- IA - An toàn thông tin
+('he170101', N'Trịnh Xuân Bách', 'bachtxhe170101@fpt.edu.vn', '0982000001', 'HE170101', 'IA', 'IA-NW', 'IA1701', 17, 5),
+('he170102', N'Dương Thùy Chi', 'chidtdhe170102@fpt.edu.vn', '0982000002', 'HE170102', 'IA', 'IA-NW', 'IA1701', 17, 5),
+('he170103', N'Tạ Quang Thắng', 'thangtqhe170103@fpt.edu.vn', '0982000003', 'HE170103', 'IA', 'IA-DF', 'IA1701', 17, 5),
+('he170104', N'Cao Hoài Nam', 'namchhe170104@fpt.edu.vn', '0982000004', 'HE170104', 'IA', 'IA-DF', 'IA1701', 17, 5),
+('he180101', N'Lưu Đình Phong', 'phongldhe180101@fpt.edu.vn', '0982000101', 'HE180101', 'IA', NULL, 'IA1801', 18, 3),
+('he180102', N'Mai Hồng Quân', 'quanmhhe180102@fpt.edu.vn', '0982000102', 'HE180102', 'IA', NULL, 'IA1801', 18, 3),
 
--- AI - TrĂ­ tuá»‡ nhĂ¢n táº¡o
-('he170201', N'Pháº¡m Minh Tuáº¥n', 'tuanpmhe170201@fpt.edu.vn', '0983000001', 'HE170201', 'AI', 'AI-ML', 'AI1701', 17, 5),
-('he170202', N'Nguyá»…n KhĂ¡nh Vy', 'vynkhe170202@fpt.edu.vn', '0983000002', 'HE170202', 'AI', 'AI-ML', 'AI1701', 17, 5),
-('he170203', N'Tráº§n Quá»‘c Anh', 'anhtqhe170203@fpt.edu.vn', '0983000003', 'HE170203', 'AI', 'AI-CV', 'AI1701', 17, 5),
-('he170204', N'LĂª Minh ChĂ¢u', 'chaulmhe170204@fpt.edu.vn', '0983000004', 'HE170204', 'AI', 'AI-CV', 'AI1701', 17, 5),
-('he180201', N'VĂµ Táº¥n PhĂ¡t', 'phatvthe180201@fpt.edu.vn', '0983000101', 'HE180201', 'AI', NULL, 'AI1801', 18, 3),
-('he180202', N'HoĂ ng Yáº¿n Nhi', 'nhiyhhe180202@fpt.edu.vn', '0983000102', 'HE180202', 'AI', NULL, 'AI1801', 18, 3),
+-- AI - Trí tuệ nhân tạo
+('he170201', N'Phạm Minh Tuấn', 'tuanpmhe170201@fpt.edu.vn', '0983000001', 'HE170201', 'AI', 'AI-ML', 'AI1701', 17, 5),
+('he170202', N'Nguyễn Khánh Vy', 'vynkhe170202@fpt.edu.vn', '0983000002', 'HE170202', 'AI', 'AI-ML', 'AI1701', 17, 5),
+('he170203', N'Trần Quốc Anh', 'anhtqhe170203@fpt.edu.vn', '0983000003', 'HE170203', 'AI', 'AI-CV', 'AI1701', 17, 5),
+('he170204', N'Lê Minh Châu', 'chaulmhe170204@fpt.edu.vn', '0983000004', 'HE170204', 'AI', 'AI-CV', 'AI1701', 17, 5),
+('he180201', N'Võ Tấn Phát', 'phatvthe180201@fpt.edu.vn', '0983000101', 'HE180201', 'AI', NULL, 'AI1801', 18, 3),
+('he180202', N'Hoàng Yến Nhi', 'nhiyhhe180202@fpt.edu.vn', '0983000102', 'HE180202', 'AI', NULL, 'AI1801', 18, 3),
 
--- DS - Khoa há»c dữ liệu
-('he170301', N'Äá»— HoĂ ng PhĂºc', 'phucdhhe170301@fpt.edu.vn', '0984000001', 'HE170301', 'DS', 'DS-BA', 'DS1701', 17, 5),
-('he170302', N'Nguyá»…n ThĂºy Háº±ng', 'hangnthe170302@fpt.edu.vn', '0984000002', 'HE170302', 'DS', 'DS-BA', 'DS1701', 17, 5),
-('he170303', N'Tráº§n Äáº¡i NghÄ©a', 'nghiatdhe170303@fpt.edu.vn', '0984000003', 'HE170303', 'DS', 'DS-DE', 'DS1701', 17, 5),
-('he170304', N'Phan Thanh BĂ¬nh', 'binhpthe170304@fpt.edu.vn', '0984000004', 'HE170304', 'DS', 'DS-DE', 'DS1701', 17, 5),
+-- DS - Khoa học dữ liệu
+('he170301', N'Đỗ Hoàng Phúc', 'phucdhhe170301@fpt.edu.vn', '0984000001', 'HE170301', 'DS', 'DS-BA', 'DS1701', 17, 5),
+('he170302', N'Nguyễn Thúy Hằng', 'hangnthe170302@fpt.edu.vn', '0984000002', 'HE170302', 'DS', 'DS-BA', 'DS1701', 17, 5),
+('he170303', N'Trần Đại Nghĩa', 'nghiatdhe170303@fpt.edu.vn', '0984000003', 'HE170303', 'DS', 'DS-DE', 'DS1701', 17, 5),
+('he170304', N'Phan Thanh Bình', 'binhpthe170304@fpt.edu.vn', '0984000004', 'HE170304', 'DS', 'DS-DE', 'DS1701', 17, 5),
 
--- IT - CĂ´ng nghá»‡ thông tin
-('he170401', N'LĂª VÄƒn Tháº¯ng', 'thanglvhe170401@fpt.edu.vn', '0985000001', 'HE170401', 'IT', 'IT-WD', 'IT1701', 17, 5),
-('he170402', N'BĂ¹i Thá»‹ Ănh', 'anhbthe170402@fpt.edu.vn', '0985000002', 'HE170402', 'IT', 'IT-WD', 'IT1701', 17, 5),
-('he170403', N'Nguyá»…n VÄƒn ToĂ n', 'toannvhe170403@fpt.edu.vn', '0985000003', 'HE170403', 'IT', 'IT-SA', 'IT1701', 17, 5),
-('he170404', N'HoĂ ng Trung KiĂªn', 'kienhthe170404@fpt.edu.vn', '0985000004', 'HE170404', 'IT', 'IT-SA', 'IT1701', 17, 5),
+-- IT - Công nghệ thông tin
+('he170401', N'Lê Văn Thắng', 'thanglvhe170401@fpt.edu.vn', '0985000001', 'HE170401', 'IT', 'IT-WD', 'IT1701', 17, 5),
+('he170402', N'Bùi Thị Ánh', 'anhbthe170402@fpt.edu.vn', '0985000002', 'HE170402', 'IT', 'IT-WD', 'IT1701', 17, 5),
+('he170403', N'Nguyễn Văn Toàn', 'toannvhe170403@fpt.edu.vn', '0985000003', 'HE170403', 'IT', 'IT-SA', 'IT1701', 17, 5),
+('he170404', N'Hoàng Trung Kiên', 'kienhthe170404@fpt.edu.vn', '0985000004', 'HE170404', 'IT', 'IT-SA', 'IT1701', 17, 5),
 
--- GD - Thiết kế Ä‘á»“ há»a
-('he170501', N'Nguyá»…n ThĂ¹y Dung', 'dungnthe170501@fpt.edu.vn', '0986000001', 'HE170501', 'GD', 'GD-3D', 'GD1701', 17, 5),
-('he170502', N'TrÆ°Æ¡ng Má»¹ DuyĂªn', 'duyentmhe170502@fpt.edu.vn', '0986000002', 'HE170502', 'GD', 'GD-3D', 'GD1701', 17, 5),
-('he170503', N'Pháº¡m ÄÄƒng KhĂ´i', 'khoipdhe170503@fpt.edu.vn', '0986000003', 'HE170503', 'GD', 'GD-UX', 'GD1701', 17, 5),
-('he170504', N'LĂ½ NhĂ£ Kỳ', 'kylnhe170504@fpt.edu.vn', '0986000004', 'HE170504', 'GD', 'GD-UX', 'GD1701', 17, 5),
-('he180501', N'HĂ  Anh Tuáº¥n', 'tuanhahe180501@fpt.edu.vn', '0986000101', 'HE180501', 'GD', NULL, 'GD1801', 18, 3),
-('he180502', N'Trá»‹nh ThÄƒng BĂ¬nh', 'binhtthe180502@fpt.edu.vn', '0986000102', 'HE180502', 'GD', NULL, 'GD1801', 18, 3),
+-- GD - Thiết kế đồ họa
+('he170501', N'Nguyễn Thùy Dung', 'dungnthe170501@fpt.edu.vn', '0986000001', 'HE170501', 'GD', 'GD-3D', 'GD1701', 17, 5),
+('he170502', N'Trương Mỹ Duyên', 'duyentmhe170502@fpt.edu.vn', '0986000002', 'HE170502', 'GD', 'GD-3D', 'GD1701', 17, 5),
+('he170503', N'Phạm Đăng Khôi', 'khoipdhe170503@fpt.edu.vn', '0986000003', 'HE170503', 'GD', 'GD-UX', 'GD1701', 17, 5),
+('he170504', N'Lý Nhã Kỳ', 'kylnhe170504@fpt.edu.vn', '0986000004', 'HE170504', 'GD', 'GD-UX', 'GD1701', 17, 5),
+('he180501', N'Hà Anh Tuấn', 'tuanhahe180501@fpt.edu.vn', '0986000101', 'HE180501', 'GD', NULL, 'GD1801', 18, 3),
+('he180502', N'Trịnh Thăng Bình', 'binhtthe180502@fpt.edu.vn', '0986000102', 'HE180502', 'GD', NULL, 'GD1801', 18, 3),
 
--- KHá»I MARKETING VĂ€ TRUYá»€N THĂ”NG (MĂƒ HS)
+-- KHỐI MARKETING VÀ TRUYỀN THÔNG (MÃ HS)
 -- BA - Quản trị kinh doanh & Marketing
-('hs170001', N'Nguyá»…n Trá»ng Äáº¡i', 'dainths170001@fpt.edu.vn', '0987000001', 'HS170001', 'BA', 'BA-DM', 'BA1701', 17, 5),
-('hs170002', N'LĂª Báº£o TrĂ¢m', 'tramlths170002@fpt.edu.vn', '0987000002', 'HS170002', 'BA', 'BA-DM', 'BA1701', 17, 5),
-('hs170003', N'Tráº§n Ngá»c HĂ¢n', 'hantnhs170003@fpt.edu.vn', '0987000003', 'HS170003', 'BA', 'BA-IB', 'BA1701', 17, 5),
-('hs170004', N'VÅ© Äá»©c Thá»‹nh', 'thinhvdhs170004@fpt.edu.vn', '0987000004', 'HS170004', 'BA', 'BA-IB', 'BA1701', 17, 5),
-('hs170005', N'HoĂ ng Gia CĂ¡t', 'cathghs170005@fpt.edu.vn', '0987000005', 'HS170005', 'BA', 'BA-HM', 'BA1702', 17, 5),
-('hs170006', N'Äáº·ng PhÆ°Æ¡ng Mai', 'maidphs170006@fpt.edu.vn', '0987000006', 'HS170006', 'BA', 'BA-HM', 'BA1702', 17, 5),
-('hs170007', N'BĂ¹i Anh Tuáº¥n', 'tuanbahs170007@fpt.edu.vn', '0987000007', 'HS170007', 'BA', 'BA-FT', 'BA1702', 17, 5),
-('hs170008', N'NgĂ´ Kiá»u Oanh', 'oanhnkhs170008@fpt.edu.vn', '0987000008', 'HS170008', 'BA', 'BA-FT', 'BA1702', 17, 5),
-('hs180001', N'Phan Thanh Háº­u', 'haupthhs180001@fpt.edu.vn', '0987000101', 'HS180001', 'BA', NULL, 'BA1801', 18, 3),
-('hs180002', N'LÆ°Æ¡ng XuĂ¢n TrÆ°á»ng', 'truonglxhs180002@fpt.edu.vn', '0987000102', 'HS180002', 'BA', NULL, 'BA1801', 18, 3),
+('hs170001', N'Nguyễn Trọng Đại', 'dainths170001@fpt.edu.vn', '0987000001', 'HS170001', 'BA', 'BA-DM', 'BA1701', 17, 5),
+('hs170002', N'Lê Bảo Trâm', 'tramlths170002@fpt.edu.vn', '0987000002', 'HS170002', 'BA', 'BA-DM', 'BA1701', 17, 5),
+('hs170003', N'Trần Ngọc Hân', 'hantnhs170003@fpt.edu.vn', '0987000003', 'HS170003', 'BA', 'BA-IB', 'BA1701', 17, 5),
+('hs170004', N'Vũ Đức Thịnh', 'thinhvdhs170004@fpt.edu.vn', '0987000004', 'HS170004', 'BA', 'BA-IB', 'BA1701', 17, 5),
+('hs170005', N'Hoàng Gia Cát', 'cathghs170005@fpt.edu.vn', '0987000005', 'HS170005', 'BA', 'BA-HM', 'BA1702', 17, 5),
+('hs170006', N'Đặng Phương Mai', 'maidphs170006@fpt.edu.vn', '0987000006', 'HS170006', 'BA', 'BA-HM', 'BA1702', 17, 5),
+('hs170007', N'Bùi Anh Tuấn', 'tuanbahs170007@fpt.edu.vn', '0987000007', 'HS170007', 'BA', 'BA-FT', 'BA1702', 17, 5),
+('hs170008', N'Ngô Kiều Oanh', 'oanhnkhs170008@fpt.edu.vn', '0987000008', 'HS170008', 'BA', 'BA-FT', 'BA1702', 17, 5),
+('hs180001', N'Phan Thanh Hậu', 'haupthhs180001@fpt.edu.vn', '0987000101', 'HS180001', 'BA', NULL, 'BA1801', 18, 3),
+('hs180002', N'Lương Xuân Trường', 'truonglxhs180002@fpt.edu.vn', '0987000102', 'HS180002', 'BA', NULL, 'BA1801', 18, 3),
 
--- MC - Truyá»n thĂ´ng Ä‘a phÆ°Æ¡ng tiá»‡n
-('hs170101', N'Tráº§n Minh TĂ¢m', 'tamtm_hs17@fpt.edu.vn', '0988000001', 'HS170101', 'MC', 'MC-PR', 'MC1701', 17, 5),
-('hs170102', N'VÅ© ThĂ¹y Linh', 'linhvt_hs17@fpt.edu.vn', '0988000002', 'HS170102', 'MC', 'MC-PR', 'MC1701', 17, 5),
-('hs170103', N'Äá»— Tuáº¥n Khang', 'khangdt_hs17@fpt.edu.vn', '0988000003', 'HS170103', 'MC', 'MC-NM', 'MC1701', 17, 5),
-('hs170104', N'LĂª Diá»…m My', 'myld_hs17@fpt.edu.vn', '0988000004', 'HS170104', 'MC', 'MC-NM', 'MC1701', 17, 5),
-('hs180101', N'Nguyá»…n Quang DÅ©ng', 'dungnq_hs18@fpt.edu.vn', '0988000101', 'HS180101', 'MC', NULL, 'MC1801', 18, 3),
-('hs180102', N'Pháº¡m HÆ°Æ¡ng Ly', 'lyph_hs18@fpt.edu.vn', '0988000102', 'HS180102', 'MC', NULL, 'MC1801', 18, 3),
+-- MC - Truyền thông đa phương tiện
+('hs170101', N'Trần Minh Tâm', 'tamtm_hs17@fpt.edu.vn', '0988000001', 'HS170101', 'MC', 'MC-PR', 'MC1701', 17, 5),
+('hs170102', N'Vũ Thùy Linh', 'linhvt_hs17@fpt.edu.vn', '0988000002', 'HS170102', 'MC', 'MC-PR', 'MC1701', 17, 5),
+('hs170103', N'Đỗ Tuấn Khang', 'khangdt_hs17@fpt.edu.vn', '0988000003', 'HS170103', 'MC', 'MC-NM', 'MC1701', 17, 5),
+('hs170104', N'Lê Diễm My', 'myld_hs17@fpt.edu.vn', '0988000004', 'HS170104', 'MC', 'MC-NM', 'MC1701', 17, 5),
+('hs180101', N'Nguyễn Quang Dũng', 'dungnq_hs18@fpt.edu.vn', '0988000101', 'HS180101', 'MC', NULL, 'MC1801', 18, 3),
+('hs180102', N'Phạm Hương Ly', 'lyph_hs18@fpt.edu.vn', '0988000102', 'HS180102', 'MC', NULL, 'MC1801', 18, 3),
 
--- KHá»I NGĂ”N NGá»® (MĂƒ HA)
--- EN, JP, KR - NgĂ´n ngá»¯
-('ha170001', N'Tráº§n Kim NgĂ¢n', 'ngantk_ha17@fpt.edu.vn', '0989000001', 'HA170001', 'EN', 'EN-BC', 'EN1701', 17, 5),
-('ha170002', N'Nguyá»…n HoĂ ng BĂ¡ch', 'bachnh_ha17@fpt.edu.vn', '0989000002', 'HA170002', 'EN', 'EN-TI', 'EN1701', 17, 5),
-('ha170003', N'LĂª Minh Tuáº¥n', 'tuanlm_ha17@fpt.edu.vn', '0989000003', 'HA170003', 'EN', 'EN-BC', 'EN1701', 17, 5),
-('ha170101', N'HoĂ ng Mai Anh', 'anhhm_ha17@fpt.edu.vn', '0989000011', 'HA170101', 'JP', 'JP-IT', 'JP1701', 17, 5),
-('ha170102', N'Äá»— Nháº­t Quang', 'quangdn_ha17@fpt.edu.vn', '0989000012', 'HA170102', 'JP', 'JP-IT', 'JP1701', 17, 5),
-('ha170103', N'Pháº¡m Thu Tháº£o', 'thaopt_ha17@fpt.edu.vn', '0989000013', 'HA170103', 'JP', 'JP-BC', 'JP1701', 17, 5),
-('ha170201', N'VÅ© Ngá»c Lan', 'lanvn_ha17@fpt.edu.vn', '0989000021', 'HA170201', 'KR', 'KR-BC', 'KR1701', 17, 5),
-('ha170202', N'Tráº§n ÄÄƒng Khoa', 'khoatd_ha17@fpt.edu.vn', '0989000022', 'HA170202', 'KR', 'KR-TI', 'KR1701', 17, 5),
-('ha170203', N'Nguyá»…n KhĂ¡nh Linh', 'linhnk_ha17@fpt.edu.vn', '0989000023', 'HA170203', 'KR', 'KR-BC', 'KR1701', 17, 5),
+-- KHỐI NGÔN NGỮ (MÃ HA)
+-- EN, JP, KR - Ngôn ngữ
+('ha170001', N'Trần Kim Ngân', 'ngantk_ha17@fpt.edu.vn', '0989000001', 'HA170001', 'EN', 'EN-BC', 'EN1701', 17, 5),
+('ha170002', N'Nguyễn Hoàng Bách', 'bachnh_ha17@fpt.edu.vn', '0989000002', 'HA170002', 'EN', 'EN-TI', 'EN1701', 17, 5),
+('ha170003', N'Lê Minh Tuấn', 'tuanlm_ha17@fpt.edu.vn', '0989000003', 'HA170003', 'EN', 'EN-BC', 'EN1701', 17, 5),
+('ha170101', N'Hoàng Mai Anh', 'anhhm_ha17@fpt.edu.vn', '0989000011', 'HA170101', 'JP', 'JP-IT', 'JP1701', 17, 5),
+('ha170102', N'Đỗ Nhật Quang', 'quangdn_ha17@fpt.edu.vn', '0989000012', 'HA170102', 'JP', 'JP-IT', 'JP1701', 17, 5),
+('ha170103', N'Phạm Thu Thảo', 'thaopt_ha17@fpt.edu.vn', '0989000013', 'HA170103', 'JP', 'JP-BC', 'JP1701', 17, 5),
+('ha170201', N'Vũ Ngọc Lan', 'lanvn_ha17@fpt.edu.vn', '0989000021', 'HA170201', 'KR', 'KR-BC', 'KR1701', 17, 5),
+('ha170202', N'Trần Đăng Khoa', 'khoatd_ha17@fpt.edu.vn', '0989000022', 'HA170202', 'KR', 'KR-TI', 'KR1701', 17, 5),
+('ha170203', N'Nguyễn Khánh Linh', 'linhnk_ha17@fpt.edu.vn', '0989000023', 'HA170203', 'KR', 'KR-BC', 'KR1701', 17, 5),
 
--- KHá»I CNTT Bá»” SUNG (MĂƒ HE)
-('he180010', N'Nguyá»…n Háº£i ÄÄƒng', 'dangnhhe180010@fpt.edu.vn', '0981100010', 'HE180010', 'SE', NULL, 'SE1801', 18, 3),
-('he180011', N'Tráº§n Quá»‘c Huy', 'huytqhe180011@fpt.edu.vn', '0981100011', 'HE180011', 'SE', NULL, 'SE1801', 18, 3),
-('he180012', N'LĂª KhĂ¡nh ToĂ n', 'toanlkhe180012@fpt.edu.vn', '0981100012', 'HE180012', 'SE', NULL, 'SE1802', 18, 3),
-('he180013', N'Pháº¡m Thanh Tháº£o', 'thaoptthhe180013@fpt.edu.vn', '0981100013', 'HE180013', 'SE', NULL, 'SE1802', 18, 3),
-('he190001', N'Äáº·ng Quang Kháº£i', 'khaidqhe190001@fpt.edu.vn', '0981100014', 'HE190001', 'SE', NULL, 'SE1801', 18, 3),
-('he170020', N'VĂµ HoĂ ng Yáº¿n', 'yenvhhe170020@fpt.edu.vn', '0981100020', 'HE170020', 'SE', 'SE-IS', 'SE1703', 17, 5),
-('he170021', N'Nguyá»…n ThĂ nh Äáº¡t', 'datnthe170021@fpt.edu.vn', '0981100021', 'HE170021', 'SE', 'SE-JS', 'SE1703', 17, 5),
-('he170105', N'BĂ¹i Minh TrĂ­', 'tribmhe170105@fpt.edu.vn', '0982100005', 'HE170105', 'IA', 'IA-NW', 'IA1701', 17, 5),
-('he170106', N'Äá»— Thu HĂ ', 'hadthe170106@fpt.edu.vn', '0982100006', 'HE170106', 'IA', 'IA-DF', 'IA1701', 17, 5),
-('he180103', N'TrÆ°Æ¡ng Gia BĂ¬nh', 'binhtghe180103@fpt.edu.vn', '0982100103', 'HE180103', 'IA', NULL, 'IA1801', 18, 3),
-('he180104', N'HoĂ ng Trá»ng NghÄ©a', 'nghiahthe180104@fpt.edu.vn', '0982100104', 'HE180104', 'IA', NULL, 'IA1801', 18, 3),
-('he180105', N'Nguyá»…n Tuáº¥n Anh', 'anhnthe180105@fpt.edu.vn', '0982100105', 'HE180105', 'IA', NULL, 'IA1801', 18, 3),
-('he170205', N'VÅ© Anh Khoa', 'khoavakhe170205@fpt.edu.vn', '0983100005', 'HE170205', 'AI', 'AI-ML', 'AI1701', 17, 5),
-('he170206', N'LĂª Tháº£o NguyĂªn', 'nguyenlthe170206@fpt.edu.vn', '0983100006', 'HE170206', 'AI', 'AI-CV', 'AI1701', 17, 5),
-('he180203', N'Äinh Quang DÅ©ng', 'dungdqhe180203@fpt.edu.vn', '0983100103', 'HE180203', 'AI', NULL, 'AI1801', 18, 3),
-('he180204', N'Tráº§n Ngá»c Lan', 'lantnhe180204@fpt.edu.vn', '0983100104', 'HE180204', 'AI', NULL, 'AI1801', 18, 3),
-('he180205', N'Pháº¡m Quá»‘c CÆ°á»ng', 'cuongpqhe180205@fpt.edu.vn', '0983100105', 'HE180205', 'AI', NULL, 'AI1801', 18, 3),
-('he170305', N'Nguyá»…n VÄƒn Hiáº¿u', 'hieunvhe170305@fpt.edu.vn', '0984100005', 'HE170305', 'DS', 'DS-BA', 'DS1701', 17, 5),
-('he170306', N'BĂ¹i ThĂ¹y TiĂªn', 'tienbthe170306@fpt.edu.vn', '0984100006', 'HE170306', 'DS', 'DS-DE', 'DS1701', 17, 5),
-('he180301', N'Phan Nháº­t Minh', 'minhpnhe180301@fpt.edu.vn', '0984100101', 'HE180301', 'DS', NULL, 'DS1801', 18, 3),
-('he180302', N'ÄoĂ n Tuáº¥n Phong', 'phongdthe180302@fpt.edu.vn', '0984100102', 'HE180302', 'DS', NULL, 'DS1801', 18, 3),
-('he170405', N'Tráº§n Äá»©c Duy', 'duytdhe170405@fpt.edu.vn', '0985100005', 'HE170405', 'IT', 'IT-WD', 'IT1701', 17, 5),
-('he170406', N'VÅ© Thá»‹ Kim Oanh', 'oanhvtkhe170406@fpt.edu.vn', '0985100006', 'HE170406', 'IT', 'IT-SA', 'IT1701', 17, 5),
-('he180401', N'Nguyá»…n Há»¯u PhÆ°á»›c', 'phuocnhhe180401@fpt.edu.vn', '0985100101', 'HE180401', 'IT', NULL, 'IT1801', 18, 3),
-('he180402', N'Äáº·ng Há»¯u Tháº¯ng', 'thangdthe180402@fpt.edu.vn', '0985100102', 'HE180402', 'IT', NULL, 'IT1801', 18, 3),
-('he170505', N'HoĂ ng Kim NgĂ¢n', 'nganhkhe170505@fpt.edu.vn', '0986100005', 'HE170505', 'GD', 'GD-3D', 'GD1701', 17, 5),
-('he170506', N'NgĂ´ Gia Huy', 'huynghe170506@fpt.edu.vn', '0986100006', 'HE170506', 'GD', 'GD-UX', 'GD1701', 17, 5),
-('he180503', N'Pháº¡m Mai PhÆ°Æ¡ng', 'phuongmphe180503@fpt.edu.vn', '0986100103', 'HE180503', 'GD', NULL, 'GD1801', 18, 3),
-('he180504', N'Trá»‹nh Quang Huy', 'huytqhe180504@fpt.edu.vn', '0986100104', 'HE180504', 'GD', NULL, 'GD1801', 18, 3),
-('he180505', N'Äá»— Háº£i Yáº¿n', 'yendhhe180505@fpt.edu.vn', '0986100105', 'HE180505', 'GD', NULL, 'GD1801', 18, 3),
+-- KHỐI CNTT BỔ SUNG (MÃ HE)
+('he180010', N'Nguyễn Hải Đăng', 'dangnhhe180010@fpt.edu.vn', '0981100010', 'HE180010', 'SE', NULL, 'SE1801', 18, 3),
+('he180011', N'Trần Quốc Huy', 'huytqhe180011@fpt.edu.vn', '0981100011', 'HE180011', 'SE', NULL, 'SE1801', 18, 3),
+('he180012', N'Lê Khánh Toàn', 'toanlkhe180012@fpt.edu.vn', '0981100012', 'HE180012', 'SE', NULL, 'SE1802', 18, 3),
+('he180013', N'Phạm Thanh Thảo', 'thaoptthhe180013@fpt.edu.vn', '0981100013', 'HE180013', 'SE', NULL, 'SE1802', 18, 3),
+('he190001', N'Đặng Quang Khải', 'khaidqhe190001@fpt.edu.vn', '0981100014', 'HE190001', 'SE', NULL, 'SE1801', 18, 3),
+('he170020', N'Võ Hoàng Yến', 'yenvhhe170020@fpt.edu.vn', '0981100020', 'HE170020', 'SE', 'SE-IS', 'SE1703', 17, 5),
+('he170021', N'Nguyễn Thành Đạt', 'datnthe170021@fpt.edu.vn', '0981100021', 'HE170021', 'SE', 'SE-JS', 'SE1703', 17, 5),
+('he170105', N'Bùi Minh Trí', 'tribmhe170105@fpt.edu.vn', '0982100005', 'HE170105', 'IA', 'IA-NW', 'IA1701', 17, 5),
+('he170106', N'Đỗ Thu Hà', 'hadthe170106@fpt.edu.vn', '0982100006', 'HE170106', 'IA', 'IA-DF', 'IA1701', 17, 5),
+('he180103', N'Trương Gia Bình', 'binhtghe180103@fpt.edu.vn', '0982100103', 'HE180103', 'IA', NULL, 'IA1801', 18, 3),
+('he180104', N'Hoàng Trọng Nghĩa', 'nghiahthe180104@fpt.edu.vn', '0982100104', 'HE180104', 'IA', NULL, 'IA1801', 18, 3),
+('he180105', N'Nguyễn Tuấn Anh', 'anhnthe180105@fpt.edu.vn', '0982100105', 'HE180105', 'IA', NULL, 'IA1801', 18, 3),
+('he170205', N'Vũ Anh Khoa', 'khoavakhe170205@fpt.edu.vn', '0983100005', 'HE170205', 'AI', 'AI-ML', 'AI1701', 17, 5),
+('he170206', N'Lê Thảo Nguyên', 'nguyenlthe170206@fpt.edu.vn', '0983100006', 'HE170206', 'AI', 'AI-CV', 'AI1701', 17, 5),
+('he180203', N'Đinh Quang Dũng', 'dungdqhe180203@fpt.edu.vn', '0983100103', 'HE180203', 'AI', NULL, 'AI1801', 18, 3),
+('he180204', N'Trần Ngọc Lan', 'lantnhe180204@fpt.edu.vn', '0983100104', 'HE180204', 'AI', NULL, 'AI1801', 18, 3),
+('he180205', N'Phạm Quốc Cường', 'cuongpqhe180205@fpt.edu.vn', '0983100105', 'HE180205', 'AI', NULL, 'AI1801', 18, 3),
+('he170305', N'Nguyễn Văn Hiếu', 'hieunvhe170305@fpt.edu.vn', '0984100005', 'HE170305', 'DS', 'DS-BA', 'DS1701', 17, 5),
+('he170306', N'Bùi Thùy Tiên', 'tienbthe170306@fpt.edu.vn', '0984100006', 'HE170306', 'DS', 'DS-DE', 'DS1701', 17, 5),
+('he180301', N'Phan Nhật Minh', 'minhpnhe180301@fpt.edu.vn', '0984100101', 'HE180301', 'DS', NULL, 'DS1801', 18, 3),
+('he180302', N'Đoàn Tuấn Phong', 'phongdthe180302@fpt.edu.vn', '0984100102', 'HE180302', 'DS', NULL, 'DS1801', 18, 3),
+('he170405', N'Trần Đức Duy', 'duytdhe170405@fpt.edu.vn', '0985100005', 'HE170405', 'IT', 'IT-WD', 'IT1701', 17, 5),
+('he170406', N'Vũ Thị Kim Oanh', 'oanhvtkhe170406@fpt.edu.vn', '0985100006', 'HE170406', 'IT', 'IT-SA', 'IT1701', 17, 5),
+('he180401', N'Nguyễn Hữu Phước', 'phuocnhhe180401@fpt.edu.vn', '0985100101', 'HE180401', 'IT', NULL, 'IT1801', 18, 3),
+('he180402', N'Đặng Hữu Thắng', 'thangdthe180402@fpt.edu.vn', '0985100102', 'HE180402', 'IT', NULL, 'IT1801', 18, 3),
+('he170505', N'Hoàng Kim Ngân', 'nganhkhe170505@fpt.edu.vn', '0986100005', 'HE170505', 'GD', 'GD-3D', 'GD1701', 17, 5),
+('he170506', N'Ngô Gia Huy', 'huynghe170506@fpt.edu.vn', '0986100006', 'HE170506', 'GD', 'GD-UX', 'GD1701', 17, 5),
+('he180503', N'Phạm Mai Phương', 'phuongmphe180503@fpt.edu.vn', '0986100103', 'HE180503', 'GD', NULL, 'GD1801', 18, 3),
+('he180504', N'Trịnh Quang Huy', 'huytqhe180504@fpt.edu.vn', '0986100104', 'HE180504', 'GD', NULL, 'GD1801', 18, 3),
+('he180505', N'Đỗ Hải Yến', 'yendhhe180505@fpt.edu.vn', '0986100105', 'HE180505', 'GD', NULL, 'GD1801', 18, 3),
 
--- KHá»I MARKETING & TRUYá»€N THĂ”NG Bá»” SUNG (MĂƒ HS)
-('hs170009', N'Nguyá»…n Báº£o ChĂ¢u', 'chounbhs170009@fpt.edu.vn', '0987100009', 'HS170009', 'BA', 'BA-DM', 'BA1701', 17, 5),
-('hs170010', N'LĂª HoĂ ng Kim', 'kimlhhs170010@fpt.edu.vn', '0987100010', 'HS170010', 'BA', 'BA-IB', 'BA1701', 17, 5),
-('hs170011', N'Tráº§n Thá»¥c Anh', 'anhtths170011@fpt.edu.vn', '0987100011', 'HS170011', 'BA', 'BA-HM', 'BA1702', 17, 5),
-('hs170012', N'Äáº·ng Tuáº¥n Khanh', 'khanhdths170012@fpt.edu.vn', '0987100012', 'HS170012', 'BA', 'BA-FT', 'BA1702', 17, 5),
-('hs180003', N'VÅ© Quá»³nh NhÆ°', 'nhuvqhs180003@fpt.edu.vn', '0987100103', 'HS180003', 'BA', NULL, 'BA1801', 18, 3),
-('hs180004', N'Phan Quá»‘c Äáº¡t', 'datpqhs180004@fpt.edu.vn', '0987100104', 'HS180004', 'BA', NULL, 'BA1801', 18, 3),
-('hs180005', N'BĂ¹i Tháº¿ Anh', 'anhbths180005@fpt.edu.vn', '0987100105', 'HS180005', 'BA', NULL, 'BA1801', 18, 3),
-('hs180006', N'Äá»— Thanh Háº±ng', 'hangdths180006@fpt.edu.vn', '0987100106', 'HS180006', 'BA', NULL, 'BA1801', 18, 3),
-('hs180007', N'Nguyá»…n Tuáº¥n Kiá»‡t', 'kietnths180007@fpt.edu.vn', '0987100107', 'HS180007', 'BA', NULL, 'BA1801', 18, 3),
-('hs180008', N'HoĂ ng Má»¹ TĂ¢m', 'tamhmhs180008@fpt.edu.vn', '0987100108', 'HS180008', 'BA', NULL, 'BA1801', 18, 3),
-('hs180009', N'Trá»‹nh Báº£o Nam', 'namtbhs180009@fpt.edu.vn', '0987100109', 'HS180009', 'BA', NULL, 'BA1801', 18, 3),
-('hs170105', N'Pháº¡m ThĂ¹y TiĂªn', 'tienpt_hs17@fpt.edu.vn', '0988100005', 'HS170105', 'MC', 'MC-PR', 'MC1701', 17, 5),
-('hs170106', N'Tráº§n Thanh VĂ¢n', 'vantt_hs17@fpt.edu.vn', '0988100006', 'HS170106', 'MC', 'MC-NM', 'MC1701', 17, 5),
-('hs170107', N'LĂª Duy Khoa', 'khoald_hs17@fpt.edu.vn', '0988100007', 'HS170107', 'MC', 'MC-PR', 'MC1701', 17, 5),
-('hs180103', N'Nguyá»…n KhĂ¡nh Huyá»n', 'huyennk_hs18@fpt.edu.vn', '0988100103', 'HS180103', 'MC', NULL, 'MC1801', 18, 3),
-('hs180104', N'VĂµ ThĂ nh Nam', 'namvt_hs18@fpt.edu.vn', '0988100104', 'HS180104', 'MC', NULL, 'MC1801', 18, 3),
-('hs180105', N'Äáº·ng Diá»‡u Linh', 'linhdd_hs18@fpt.edu.vn', '0988100105', 'HS180105', 'MC', NULL, 'MC1801', 18, 3),
-('hs180106', N'TrÆ°Æ¡ng TrĂ­ ThĂ´ng', 'thongtt_hs18@fpt.edu.vn', '0988100106', 'HS180106', 'MC', NULL, 'MC1801', 18, 3),
-('hs180107', N'HoĂ ng Tháº£o My', 'myht_hs18@fpt.edu.vn', '0988100107', 'HS180107', 'MC', NULL, 'MC1801', 18, 3),
-('hs180108', N'VÅ© ThĂ¡i SÆ¡n', 'sonvt_hs18@fpt.edu.vn', '0988100108', 'HS180108', 'MC', NULL, 'MC1801', 18, 3),
-('hs180109', N'Nguyá»…n HĂ  PhÆ°Æ¡ng', 'phuongnh_hs18@fpt.edu.vn', '0988100109', 'HS180109', 'MC', NULL, 'MC1801', 18, 3),
-('hs180110', N'ÄoĂ n Minh TrĂ­', 'tridm_hs18@fpt.edu.vn', '0988100110', 'HS180110', 'MC', NULL, 'MC1801', 18, 3),
+-- KHỐI MARKETING & TRUYỀN THÔNG BỔ SUNG (MÃ HS)
+('hs170009', N'Nguyễn Bảo Châu', 'chounbhs170009@fpt.edu.vn', '0987100009', 'HS170009', 'BA', 'BA-DM', 'BA1701', 17, 5),
+('hs170010', N'Lê Hoàng Kim', 'kimlhhs170010@fpt.edu.vn', '0987100010', 'HS170010', 'BA', 'BA-IB', 'BA1701', 17, 5),
+('hs170011', N'Trần Thục Anh', 'anhtths170011@fpt.edu.vn', '0987100011', 'HS170011', 'BA', 'BA-HM', 'BA1702', 17, 5),
+('hs170012', N'Đặng Tuấn Khanh', 'khanhdths170012@fpt.edu.vn', '0987100012', 'HS170012', 'BA', 'BA-FT', 'BA1702', 17, 5),
+('hs180003', N'Vũ Quỳnh Như', 'nhuvqhs180003@fpt.edu.vn', '0987100103', 'HS180003', 'BA', NULL, 'BA1801', 18, 3),
+('hs180004', N'Phan Quốc Đạt', 'datpqhs180004@fpt.edu.vn', '0987100104', 'HS180004', 'BA', NULL, 'BA1801', 18, 3),
+('hs180005', N'Bùi Thế Anh', 'anhbths180005@fpt.edu.vn', '0987100105', 'HS180005', 'BA', NULL, 'BA1801', 18, 3),
+('hs180006', N'Đỗ Thanh Hằng', 'hangdths180006@fpt.edu.vn', '0987100106', 'HS180006', 'BA', NULL, 'BA1801', 18, 3),
+('hs180007', N'Nguyễn Tuấn Kiệt', 'kietnths180007@fpt.edu.vn', '0987100107', 'HS180007', 'BA', NULL, 'BA1801', 18, 3),
+('hs180008', N'Hoàng Mỹ Tâm', 'tamhmhs180008@fpt.edu.vn', '0987100108', 'HS180008', 'BA', NULL, 'BA1801', 18, 3),
+('hs180009', N'Trịnh Bảo Nam', 'namtbhs180009@fpt.edu.vn', '0987100109', 'HS180009', 'BA', NULL, 'BA1801', 18, 3),
+('hs170105', N'Phạm Thùy Tiên', 'tienpt_hs17@fpt.edu.vn', '0988100005', 'HS170105', 'MC', 'MC-PR', 'MC1701', 17, 5),
+('hs170106', N'Trần Thanh Vân', 'vantt_hs17@fpt.edu.vn', '0988100006', 'HS170106', 'MC', 'MC-NM', 'MC1701', 17, 5),
+('hs170107', N'Lê Duy Khoa', 'khoald_hs17@fpt.edu.vn', '0988100007', 'HS170107', 'MC', 'MC-PR', 'MC1701', 17, 5),
+('hs180103', N'Nguyễn Khánh Huyền', 'huyennk_hs18@fpt.edu.vn', '0988100103', 'HS180103', 'MC', NULL, 'MC1801', 18, 3),
+('hs180104', N'Võ Thành Nam', 'namvt_hs18@fpt.edu.vn', '0988100104', 'HS180104', 'MC', NULL, 'MC1801', 18, 3),
+('hs180105', N'Đặng Diệu Linh', 'linhdd_hs18@fpt.edu.vn', '0988100105', 'HS180105', 'MC', NULL, 'MC1801', 18, 3),
+('hs180106', N'Trương Trí Thông', 'thongtt_hs18@fpt.edu.vn', '0988100106', 'HS180106', 'MC', NULL, 'MC1801', 18, 3),
+('hs180107', N'Hoàng Thảo My', 'myht_hs18@fpt.edu.vn', '0988100107', 'HS180107', 'MC', NULL, 'MC1801', 18, 3),
+('hs180108', N'Vũ Thái Sơn', 'sonvt_hs18@fpt.edu.vn', '0988100108', 'HS180108', 'MC', NULL, 'MC1801', 18, 3),
+('hs180109', N'Nguyễn Hà Phương', 'phuongnh_hs18@fpt.edu.vn', '0988100109', 'HS180109', 'MC', NULL, 'MC1801', 18, 3),
+('hs180110', N'Đoàn Minh Trí', 'tridm_hs18@fpt.edu.vn', '0988100110', 'HS180110', 'MC', NULL, 'MC1801', 18, 3),
 
--- KHá»I NGĂ”N NGá»® Bá»” SUNG (MĂƒ HA)
-('ha170004', N'Nguyá»…n Thanh Háº±ng', 'hangnt_ha17@fpt.edu.vn', '0989100004', 'HA170004', 'EN', 'EN-BC', 'EN1701', 17, 5),
-('ha170005', N'Äá»— Quang Minh', 'minhdq_ha17@fpt.edu.vn', '0989100005', 'HA170005', 'EN', 'EN-TI', 'EN1701', 17, 5),
-('ha170006', N'LĂª Tháº£o Vy', 'vylt_ha17@fpt.edu.vn', '0989100006', 'HA170006', 'EN', 'EN-BC', 'EN1701', 17, 5),
-('ha180001', N'Tráº§n Quá»‘c Báº£o', 'baotq_ha18@fpt.edu.vn', '0989100101', 'HA180001', 'EN', NULL, 'EN1801', 18, 3),
-('ha180002', N'BĂ¹i HoĂ ng Oanh', 'oanhbh_ha18@fpt.edu.vn', '0989100102', 'HA180002', 'EN', NULL, 'EN1801', 18, 3),
-('ha180003', N'VÅ© ÄĂ¬nh Khang', 'khangvd_ha18@fpt.edu.vn', '0989100103', 'HA180003', 'EN', NULL, 'EN1801', 18, 3),
-('ha180004', N'Phan Thá»¥c QuyĂªn', 'quyenpt_ha18@fpt.edu.vn', '0989100104', 'HA180004', 'EN', NULL, 'EN1801', 18, 3),
-('ha170104', N'Pháº¡m Gia Báº£o', 'baopg_ha17@fpt.edu.vn', '0989100014', 'HA170104', 'JP', 'JP-IT', 'JP1701', 17, 5),
-('ha170105', N'Nguyá»…n PhÆ°Æ¡ng UyĂªn', 'uyennp_ha17@fpt.edu.vn', '0989100015', 'HA170105', 'JP', 'JP-BC', 'JP1701', 17, 5),
-('ha170106', N'Äáº·ng Minh KhĂ´i', 'khoidm_ha17@fpt.edu.vn', '0989100016', 'HA170106', 'JP', 'JP-IT', 'JP1701', 17, 5),
-('ha180101', N'Trá»‹nh ThĂ¹y Trang', 'trangtt_ha18@fpt.edu.vn', '0989100111', 'HA180101', 'JP', NULL, 'JP1801', 18, 3),
-('ha180102', N'LĂª VÄƒn Quyáº¿t', 'quyetlv_ha18@fpt.edu.vn', '0989100112', 'HA180102', 'JP', NULL, 'JP1801', 18, 3),
-('ha180103', N'HoĂ ng Ănh DÆ°Æ¡ng', 'duongha_ha18@fpt.edu.vn', '0989100113', 'HA180103', 'JP', NULL, 'JP1801', 18, 3),
-('ha180104', N'VĂµ Mai Chi', 'chivm_ha18@fpt.edu.vn', '0989100114', 'HA180104', 'JP', NULL, 'JP1801', 18, 3),
-('ha170204', N'Tráº§n Diá»‡u HÆ°Æ¡ng', 'huongtd_ha17@fpt.edu.vn', '0989100024', 'HA170204', 'KR', 'KR-BC', 'KR1701', 17, 5),
-('ha170205', N'VÅ© Anh Tuáº¥n', 'tuanva_ha17@fpt.edu.vn', '0989100025', 'HA170205', 'KR', 'KR-TI', 'KR1701', 17, 5),
-('ha170206', N'LĂª Báº£o HĂ¢n', 'hanlb_ha17@fpt.edu.vn', '0989100026', 'HA170206', 'KR', 'KR-BC', 'KR1701', 17, 5),
-('ha180201', N'Nguyá»…n Minh Háº¡nh', 'hanhnm_ha18@fpt.edu.vn', '0989100121', 'HA180201', 'KR', NULL, 'KR1801', 18, 3),
-('ha180202', N'Äá»— Tuáº¥n Kiá»‡t', 'kietdt_ha18@fpt.edu.vn', '0989100122', 'HA180202', 'KR', NULL, 'KR1801', 18, 3),
-('ha180203', N'Phan Ngá»c Diá»‡p', 'dieppn_ha18@fpt.edu.vn', '0989100123', 'HA180203', 'KR', NULL, 'KR1801', 18, 3);
+-- KHỐI NGÔN NGỮ BỔ SUNG (MÃ HA)
+('ha170004', N'Nguyễn Thanh Hằng', 'hangnt_ha17@fpt.edu.vn', '0989100004', 'HA170004', 'EN', 'EN-BC', 'EN1701', 17, 5),
+('ha170005', N'Đỗ Quang Minh', 'minhdq_ha17@fpt.edu.vn', '0989100005', 'HA170005', 'EN', 'EN-TI', 'EN1701', 17, 5),
+('ha170006', N'Lê Thảo Vy', 'vylt_ha17@fpt.edu.vn', '0989100006', 'HA170006', 'EN', 'EN-BC', 'EN1701', 17, 5),
+('ha180001', N'Trần Quốc Bảo', 'baotq_ha18@fpt.edu.vn', '0989100101', 'HA180001', 'EN', NULL, 'EN1801', 18, 3),
+('ha180002', N'Bùi Hoàng Oanh', 'oanhbh_ha18@fpt.edu.vn', '0989100102', 'HA180002', 'EN', NULL, 'EN1801', 18, 3),
+('ha180003', N'Vũ Đình Khang', 'khangvd_ha18@fpt.edu.vn', '0989100103', 'HA180003', 'EN', NULL, 'EN1801', 18, 3),
+('ha180004', N'Phan Thục Quyên', 'quyenpt_ha18@fpt.edu.vn', '0989100104', 'HA180004', 'EN', NULL, 'EN1801', 18, 3),
+('ha170104', N'Phạm Gia Bảo', 'baopg_ha17@fpt.edu.vn', '0989100014', 'HA170104', 'JP', 'JP-IT', 'JP1701', 17, 5),
+('ha170105', N'Nguyễn Phương Uyên', 'uyennp_ha17@fpt.edu.vn', '0989100015', 'HA170105', 'JP', 'JP-BC', 'JP1701', 17, 5),
+('ha170106', N'Đặng Minh Khôi', 'khoidm_ha17@fpt.edu.vn', '0989100016', 'HA170106', 'JP', 'JP-IT', 'JP1701', 17, 5),
+('ha180101', N'Trịnh Thùy Trang', 'trangtt_ha18@fpt.edu.vn', '0989100111', 'HA180101', 'JP', NULL, 'JP1801', 18, 3),
+('ha180102', N'Lê Văn Quyết', 'quyetlv_ha18@fpt.edu.vn', '0989100112', 'HA180102', 'JP', NULL, 'JP1801', 18, 3),
+('ha180103', N'Hoàng Ánh Dương', 'duongha_ha18@fpt.edu.vn', '0989100113', 'HA180103', 'JP', NULL, 'JP1801', 18, 3),
+('ha180104', N'Võ Mai Chi', 'chivm_ha18@fpt.edu.vn', '0989100114', 'HA180104', 'JP', NULL, 'JP1801', 18, 3),
+('ha170204', N'Trần Diệu Hương', 'huongtd_ha17@fpt.edu.vn', '0989100024', 'HA170204', 'KR', 'KR-BC', 'KR1701', 17, 5),
+('ha170205', N'Vũ Anh Tuấn', 'tuanva_ha17@fpt.edu.vn', '0989100025', 'HA170205', 'KR', 'KR-TI', 'KR1701', 17, 5),
+('ha170206', N'Lê Bảo Hân', 'hanlb_ha17@fpt.edu.vn', '0989100026', 'HA170206', 'KR', 'KR-BC', 'KR1701', 17, 5),
+('ha180201', N'Nguyễn Minh Hạnh', 'hanhnm_ha18@fpt.edu.vn', '0989100121', 'HA180201', 'KR', NULL, 'KR1801', 18, 3),
+('ha180202', N'Đỗ Tuấn Kiệt', 'kietdt_ha18@fpt.edu.vn', '0989100122', 'HA180202', 'KR', NULL, 'KR1801', 18, 3),
+('ha180203', N'Phan Ngọc Diệp', 'dieppn_ha18@fpt.edu.vn', '0989100123', 'HA180203', 'KR', NULL, 'KR1801', 18, 3);
 
 DECLARE @stUser NVARCHAR(50), @stName NVARCHAR(100), @stEmail NVARCHAR(100), @stPhone NVARCHAR(50), @stCode NVARCHAR(50);
 DECLARE @stMaj NVARCHAR(50), @stSpec NVARCHAR(50), @stCls NVARCHAR(50), @stCoh INT, @stSem INT;
@@ -1741,9 +1741,9 @@ CLOSE curSt;
 DEALLOCATE curSt;
 DROP TABLE #TmpStudents;
 
-PRINT N'==> ÄĂ£ cáº­p nháº­t 60+ sinh viên Ä‘áº§y Ä‘á»§ há»“ sÆ¡ và tĂ i khoáº£n Ä‘Äƒng nháº­p (Admin@123).';
+PRINT N'==> Đã cập nhật 60+ sinh viên đầy đủ hồ sơ và tài khoản đăng nhập (Admin@123).';
 
--- 8. Má» THĂM CĂC Lá»P Há»ŒC PHáº¦N (COURSE SECTIONS) & NHáº¬P ÄIá»‚M
+-- 8. MỞ THÊM CÁC LỚP HỌC PHẦN (COURSE SECTIONS) & NHẬP ĐIỂM
 DECLARE @semFA24 INT = (SELECT Id FROM Semesters WHERE Code = 'FA24');
 DECLARE @idPRN232_sub INT = (SELECT Id FROM Subjects WHERE Code = 'PRN232');
 DECLARE @idSWP391_sub INT = (SELECT Id FROM Subjects WHERE Code = 'SWP391');
@@ -1773,7 +1773,7 @@ END
 IF NOT EXISTS (SELECT 1 FROM CourseSections WHERE Code = 'SWP391_FA24_01')
 BEGIN
     INSERT INTO CourseSections (Code, Name, SubjectId, SemesterId, LecturerId, MaxCapacity, IsGradeLocked, Status, CreatedAt)
-    VALUES ('SWP391_FA24_01', N'Dự án phát triển pháº§n má»m - Lớp 01', @idSWP391_sub, @semFA24, @gvHuongId, 30, 0, 'Active', GETUTCDATE());
+    VALUES ('SWP391_FA24_01', N'Dự án phát triển phần mềm - Lớp 01', @idSWP391_sub, @semFA24, @gvHuongId, 30, 0, 'Active', GETUTCDATE());
     DECLARE @csSWP INT = SCOPE_IDENTITY();
     INSERT INTO CourseSectionSchedules (CourseSectionId, DayOfWeek, Slot, Room) VALUES (@csSWP, 2, 4, 'LAB-101');
 END
@@ -1814,7 +1814,7 @@ BEGIN
     INSERT INTO CourseSectionSchedules (CourseSectionId, DayOfWeek, Slot, Room) VALUES (@csJPD, 3, 4, 'DELTA-201');
 END
 
-PRINT N'==> ÄĂ£ má»Ÿ cĂ¡c lá»›p há»c pháº§n ká»³ FA24.';
+PRINT N'==> Đã mở các lớp học phần kỳ FA24.';
 
 -- Phân bổ tự động sinh viên vào các lớp HP mới mở và sinh điểm mẫu
 DECLARE @csPRN_Id INT = (SELECT Id FROM CourseSections WHERE Code = 'PRN232_FA24_02');
@@ -1835,17 +1835,17 @@ BEGIN
     WHERE s.MajorId = @idSE AND s.Id IN (SELECT StudentId FROM StudentGrades WHERE CourseSectionId = @csPRN_Id AND SubjectGradeComponentId = @c1);
 END
 
-PRINT N'==> Náº P Dá»® LIá»†U Äáº I Há»ŒC FPT THĂ€NH CĂ”NG VĂ€ HOĂ€N Táº¤T!';
+PRINT N'==> NẠP DỮ LIỆU ĐẠI HỌC FPT THÀNH CÔNG VÀ HOÀN TẤT!';
 GO
 
 
 
 -- ========================================================================================
--- KIá»‚M TRA Tá»”NG Káº¾T Báº¢NG & Sá» DĂ’NG Dá»® LIá»†U ÄĂƒ Náº P
+-- KIỂM TRA TỔNG KẾT BẢNG & SỐ DÒNG DỮ LIỆU ĐÃ NẠP
 -- ========================================================================================
 PRINT N'';
 PRINT N'=============================================================================';
-PRINT N'  KHá»I Táº O CÆ  Sá» Dá»® LIá»†U SMMS_PRN232 THĂ€NH CĂ”NG!';
+PRINT N'  KHỞI TẠO CƠ SỞ DỮ LIỆU SMMS_PRN232 THÀNH CÔNG!';
 PRINT N'=============================================================================';
 SELECT 
     t.name AS [Bảng Dữ Liệu],
@@ -1857,7 +1857,7 @@ GO
 
 PRINT N'';
 PRINT N'=============================================================================';
-PRINT N'  DANH SĂCH TĂ€I KHOáº¢N ÄÄ‚NG NHáº¬P MáºªU TRONG Há»† THá»NG (Pass: Admin@123)';
+PRINT N'  DANH SÁCH TÀI KHOẢN ĐĂNG NHẬP MẪU TRONG HỆ THỐNG (Pass: Admin@123)';
 PRINT N'=============================================================================';
 SELECT [Id], [Username], [FullName], [Role], [Email], [PhoneNumber] FROM [Users] ORDER BY [Id];
 GO
