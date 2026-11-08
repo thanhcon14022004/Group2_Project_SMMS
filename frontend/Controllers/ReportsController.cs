@@ -13,7 +13,7 @@ namespace project_PRN232.Frontend.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(int? majorId, int? classId)
         {
-            var authCheck = CheckAuth("Admin", "Lecturer");
+            var authCheck = CheckAuth("Lecturer");
             if (authCheck != null) return authCheck;
 
             string endpoint = "reports/gpa";
@@ -41,7 +41,7 @@ namespace project_PRN232.Frontend.Controllers
         [HttpGet]
         public async Task<IActionResult> ExportGpaCsv(int? majorId, int? classId)
         {
-            var authCheck = CheckAuth("Admin", "Lecturer");
+            var authCheck = CheckAuth("Lecturer");
             if (authCheck != null) return authCheck;
 
             string endpoint = "reports/export/gpa-csv";
