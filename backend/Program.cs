@@ -16,7 +16,23 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Database Context
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Mycnn"));
+    var connectionString = builder.Configuration.GetConnectionString("Mycnn")
+        ?? builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Server=(localdb)\\mssqllocaldb;Database=SMMS_PRN232;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
+
+    // Tự động fallback về LocalDB nếu connection string đang trỏ vào máy của thành viên khác
+    if (connectionString.Contains("DESKTOP-RNCOH10") && Environment.MachineName != "DESKTOP-RNCOH10")
+    {
+        connectionString = "Server=(localdb)\\mssqllocaldb;Database=SMMS_PRN232;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
+    }
+
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null);
+    });
 });
 
 // 2. Authentication & JWT

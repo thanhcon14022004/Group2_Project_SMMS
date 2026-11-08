@@ -323,12 +323,12 @@ namespace project_PRN232.Data
                 entity.HasOne(e => e.Major)
                     .WithMany()
                     .HasForeignKey(e => e.MajorId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(e => e.Specialization)
                     .WithMany()
                     .HasForeignKey(e => e.SpecializationId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.NoAction);
             });
         }
     }
