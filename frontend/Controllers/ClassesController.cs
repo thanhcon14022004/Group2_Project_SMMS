@@ -229,10 +229,21 @@ namespace project_PRN232.Frontend.Controllers
 
             var selectedSemesterId = semesterId ?? activeSemesters.FirstOrDefault()?.Id ?? allSemesters.FirstOrDefault()?.Id ?? 0;
 
-            var model = new AllocationViewModel
+            // Nếu các lớp của mùa này đã được phân bổ hành chính trước đó, tự động tải và hiển thị
+            AllocationViewModel? model = null;
+            if (selectedSemesterId > 0)
             {
-                SemesterId = selectedSemesterId
-            };
+                model = await ApiClient.GetAsync<AllocationViewModel>($"allocations/status/{selectedSemesterId}");
+            }
+
+            if (model == null)
+            {
+                model = new AllocationViewModel { SemesterId = selectedSemesterId };
+            }
+            else
+            {
+                model.SemesterId = selectedSemesterId;
+            }
 
             return View(model);
         }

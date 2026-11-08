@@ -1,0 +1,13 @@
+* text=auto eol=lf
+
+*.cs linguist-detectable=true
+*.cshtml linguist-detectable=true
+
+*.sql linguist-detectable=false
+*.json linguist-detectable=false
+*.css linguist-detectable=false
+*.docx linguist-detectable=false
+*.txt linguist-detectable=false
+*.sln linguist-detectable=false
+*.csproj linguist-detectable=false
+*.ps1 linguist-detectable=false
