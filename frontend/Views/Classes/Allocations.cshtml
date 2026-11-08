@@ -92,7 +92,7 @@
     </div>
 </div>
 
-@if (Model.TotalEligibleStudents > 0 || Model.Allocations.Any() || Model.Exceptions.Any() || Model.ClassSummaries.Any())
+@if (Model.TotalEligibleStudents > 0 || (Model.Allocations != null && Model.Allocations.Any()) || (Model.Exceptions != null && Model.Exceptions.Any()) || (Model.ClassSummaries != null && Model.ClassSummaries.Any()))
 {
     <!-- 3 Thẻ Thống Kê Tổng Quan -->
     <div class="row g-3 mb-4">
@@ -114,7 +114,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small class="text-muted fw-semibold">Số lớp hành chính đạt chuẩn</small>
-                        <h3 class="fw-bold text-success mt-1 mb-0">@Model.ClassSummaries.Count lớp</h3>
+                        <h3 class="fw-bold text-success mt-1 mb-0">@(Model.ClassSummaries?.Count ?? 0) lớp</h3>
                     </div>
                     <div class="bg-success-subtle text-success p-3 rounded-circle">
                         <i class="fa-solid fa-chalkboard-user fa-lg"></i>
@@ -137,7 +137,7 @@
         </div>
     </div>
 
-    @if (Model.ClassSummaries.Any())
+    @if (Model.ClassSummaries != null && Model.ClassSummaries.Any())
     {
         <!-- Bảng Tổng kết Sĩ số các Lớp Hành chính Sau Phân bổ -->
         <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">

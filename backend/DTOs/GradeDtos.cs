@@ -7,6 +7,10 @@ namespace project_PRN232.DTOs
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
         public int Credits { get; set; }
+        public int? AdministrativeClassId { get; set; }
+        public string? AdministrativeClassCode { get; set; }
+        public string? LecturerName { get; set; }
+        public string? SemesterCode { get; set; }
         public bool IsGradeLocked { get; set; }
         public bool CanEdit { get; set; } // true if not locked and within deadline and user is assigned lecturer or admin
         public List<SubjectGradeComponentDto> Components { get; set; } = new();

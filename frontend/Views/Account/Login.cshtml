@@ -14,135 +14,55 @@
                 <p class="text-muted small">Hệ thống Quản lý Điểm Sinh viên (PRN232 .NET Project)</p>
             </div>
 
-            <div id="loginAlert" class="alert alert-danger py-2 small mb-3 @(string.IsNullOrEmpty(Model.ErrorMessage) ? "d-none" : "")">
-                <i class="fa-solid fa-triangle-exclamation me-1"></i> <span id="loginAlertText">@Model.ErrorMessage</span>
-            </div>
+            @if (!string.IsNullOrEmpty(Model?.ErrorMessage))
+            {
+                <div class="alert alert-danger py-2 small mb-3">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i> @Model.ErrorMessage
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger py-2 small mb-3">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i> @TempData["Error"]
+                </div>
+            }
 
-            <form id="loginForm" onsubmit="handleFormSubmit(event)">
-                <input type="hidden" id="returnUrlInput" name="returnUrl" value="@ViewBag.ReturnUrl" />
+            <form asp-controller="Account" asp-action="Login" method="post">
+                <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Tên đăng nhập</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                        <input type="text" class="form-control" id="loginUsername" name="Username" value="@Model.Username" required placeholder="Tên đăng nhập...">
+                        <input type="text" class="form-control" name="Username" value="@Model?.Username" required placeholder="Tên đăng nhập...">
                     </div>
                 </div>
                 <div class="mb-4">
                     <label class="form-label small fw-semibold">Mật khẩu</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                        <input type="password" class="form-control" id="loginPassword" name="Password" value="@Model.Password" required placeholder="Mật khẩu...">
+                        <input type="password" class="form-control" name="Password" value="@Model?.Password" required placeholder="Mật khẩu...">
                     </div>
                 </div>
-                <button type="submit" id="btnSubmitLogin" class="btn btn-primary w-100 py-2 fw-semibold rounded-3">
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold rounded-3">
                     <i class="fa-solid fa-right-to-bracket me-2"></i> Đăng nhập hệ thống
                 </button>
             </form>
 
             <div class="mt-4 pt-3 border-top text-center">
                 <p class="text-muted small mb-2 fw-semibold">Đăng nhập nhanh thử nghiệm (1-Click):</p>
-                <div class="d-flex flex-wrap gap-2 justify-content-center">
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="quickFillAndLogin('admin', 'Admin@123')">
+                <form asp-controller="Account" asp-action="QuickLogin" method="post" class="d-flex flex-wrap gap-2 justify-content-center">
+                    <input type="hidden" name="password" value="Admin@123" />
+                    <button type="submit" name="username" value="admin" class="btn btn-sm btn-outline-danger">
                         <i class="fa-solid fa-shield me-1"></i> Admin
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="quickFillAndLogin('gv_hungnv', 'Admin@123')">
+                    <button type="submit" name="username" value="gv_hungnv" class="btn btn-sm btn-outline-primary">
                         <i class="fa-solid fa-chalkboard-user me-1"></i> Giảng viên
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-success" onclick="quickFillAndLogin('he170001', 'Admin@123')">
+                    <button type="submit" name="username" value="he170001" class="btn btn-sm btn-outline-success">
                         <i class="fa-solid fa-user-graduate me-1"></i> Sinh viên
                     </button>
-                </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-    async function executeLogin(username, password) {
-        const alertBox = document.getElementById('loginAlert');
-        const alertText = document.getElementById('loginAlertText');
-        const submitBtn = document.getElementById('btnSubmitLogin');
-
-        alertBox.classList.add('d-none');
-        if (alertText) alertText.textContent = '';
-
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang xác thực...';
-        }
-
-        try {
-            // 1. GỌI TRỰC TIẾP API BACKEND (Hiển thị ngay trong tab Fetch/XHR của DevTools)
-            const response = await fetch('http://localhost:5050/api/Auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ username, password })
-            });
-
-            // 2. KHI NHẬP SAI: Backend trả về status 401 hoặc 400 kèm thông báo lỗi
-            if (!response.ok) {
-                let errorMsg = 'Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản hoặc mật khẩu.';
-                try {
-                    const errData = await response.json();
-                    errorMsg = errData.message || errData.error || errorMsg;
-                } catch {
-                    const text = await response.text();
-                    if (text) errorMsg = text;
-                }
-                alertBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> ' + errorMsg;
-                alertBox.classList.remove('d-none');
-                return;
-            }
-
-            // 3. KHI NHẬP ĐÚNG: Backend trả về đối tượng JSON chứa token, username, role...
-            const userData = await response.json();
-            console.log('✅ Đăng nhập thành công! Object trả về:', userData);
-
-            // Lưu JWT token vào localStorage của trình duyệt
-            if (userData.token) {
-                localStorage.setItem('smms_jwt_token', userData.token);
-                localStorage.setItem('smms_user', JSON.stringify(userData));
-            }
-
-            // 4. Đồng bộ Session lên Frontend Server (Port 3000)
-            await fetch('/Account/SetClientSession', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(userData)
-            });
-
-            // Chuyển hướng vào trang chính Dashboard
-            const returnUrl = document.getElementById('returnUrlInput')?.value;
-            window.location.href = (returnUrl && returnUrl.startsWith('/')) ? returnUrl : '/';
-
-        } catch (error) {
-            console.error('Lỗi gọi API Backend:', error);
-            alertBox.innerHTML = '<i class="fa-solid fa-circle-exclamation me-1"></i> Không thể kết nối tới Backend API tại http://localhost:5050. Vui lòng đảm bảo Backend đang chạy.';
-            alertBox.classList.remove('d-none');
-        } finally {
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket me-2"></i> Đăng nhập hệ thống';
-            }
-        }
-    }
-
-    function handleFormSubmit(e) {
-        e.preventDefault();
-        const u = document.getElementById('loginUsername').value.trim();
-        const p = document.getElementById('loginPassword').value;
-        executeLogin(u, p);
-    }
-
-    function quickFillAndLogin(u, p) {
-        document.getElementById('loginUsername').value = u;
-        document.getElementById('loginPassword').value = p;
-        executeLogin(u, p);
-    }
-</script>
-

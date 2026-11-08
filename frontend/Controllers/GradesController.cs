@@ -11,30 +11,86 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int? sectionId)
+        public async Task<IActionResult> Index(int? classId, string? classSearch, int? sectionId, int? semesterId)
         {
             var authCheck = CheckAuth("Admin", "Lecturer");
             if (authCheck != null) return authCheck;
 
-            ViewBag.Sections = await ApiClient.GetAsync<List<CourseSectionViewModel>>("course-sections") ?? new List<CourseSectionViewModel>();
+            // 1. Tải danh sách học kỳ và lớp hành chính
+            var semestersTask = ApiClient.GetAsync<List<SemesterViewModel>>("semesters");
+            var classesTask = ApiClient.GetAsync<List<ClassViewModel>>("classes");
 
-            if (!sectionId.HasValue && ViewBag.Sections.Count > 0)
+            await Task.WhenAll(semestersTask, classesTask);
+
+            var semesters = await semestersTask ?? new List<SemesterViewModel>();
+            var allClasses = await classesTask ?? new List<ClassViewModel>();
+
+            ViewBag.Semesters = semesters;
+            ViewBag.AllClasses = allClasses;
+            ViewBag.ClassSearch = classSearch;
+            ViewBag.SelectedSemesterId = semesterId;
+
+            // 2. Xử lý tìm kiếm theo tên lớp / mã lớp
+            var displayClasses = allClasses;
+            if (!string.IsNullOrWhiteSpace(classSearch))
             {
-                sectionId = ((List<CourseSectionViewModel>)ViewBag.Sections)[0].Id;
+                var kw = classSearch.Trim().ToLower();
+                displayClasses = allClasses.Where(c =>
+                    c.Code.ToLower().Contains(kw) ||
+                    c.Name.ToLower().Contains(kw) ||
+                    (!string.IsNullOrEmpty(c.MajorCode) && c.MajorCode.ToLower().Contains(kw))
+                ).ToList();
+
+                // Nếu người dùng nhập tìm kiếm và chưa chọn classId cụ thể, tự động chọn lớp khớp nhất
+                if (!classId.HasValue && displayClasses.Any())
+                {
+                    var exactMatch = displayClasses.FirstOrDefault(c => c.Code.Equals(classSearch.Trim(), StringComparison.OrdinalIgnoreCase));
+                    classId = exactMatch != null ? exactMatch.Id : displayClasses.First().Id;
+                }
+            }
+            ViewBag.AdministrativeClasses = displayClasses;
+
+            // 3. Tải thông tin lớp và danh sách các môn học của lớp đó đang học
+            ClassSectionsResponseViewModel? classDetail = null;
+            if (classId.HasValue && classId.Value > 0)
+            {
+                classDetail = await ApiClient.GetAsync<ClassSectionsResponseViewModel>($"classes/{classId.Value}/sections");
+                ViewBag.SelectedClass = classDetail;
+                ViewBag.SelectedClassId = classId.Value;
             }
 
-            if (sectionId.HasValue)
+            // 4. Nếu có chọn môn học cụ thể (sectionId), tải bảng điểm của môn học đó
+            GradeSheetViewModel? gradeSheet = null;
+            if (sectionId.HasValue && sectionId.Value > 0)
             {
-                var gradeSheet = await ApiClient.GetAsync<GradeSheetViewModel>($"grades/section/{sectionId.Value}");
-                ViewBag.SelectedSectionId = sectionId.Value;
-                return View(gradeSheet ?? new GradeSheetViewModel { CourseSectionId = sectionId.Value });
+                gradeSheet = await ApiClient.GetAsync<GradeSheetViewModel>($"grades/section/{sectionId.Value}");
+                if (gradeSheet != null)
+                {
+                    ViewBag.SelectedSectionId = sectionId.Value;
+
+                    // Nếu chưa có classId nhưng lớp học phần có liên kết lớp hành chính, đồng bộ classDetail
+                    if (!classId.HasValue && gradeSheet.AdministrativeClassId.HasValue)
+                    {
+                        classId = gradeSheet.AdministrativeClassId.Value;
+                        classDetail = await ApiClient.GetAsync<ClassSectionsResponseViewModel>($"classes/{classId.Value}/sections");
+                        ViewBag.SelectedClass = classDetail;
+                        ViewBag.SelectedClassId = classId.Value;
+                    }
+                }
             }
 
-            return View(new GradeSheetViewModel());
+            var model = gradeSheet ?? new GradeSheetViewModel
+            {
+                CourseSectionId = sectionId ?? 0,
+                AdministrativeClassId = classId,
+                AdministrativeClassCode = classDetail?.ClassCode
+            };
+
+            return View(model);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Save(int courseSectionId, List<StudentGradeEntryModel> grades)
+        public async Task<IActionResult> Save(int courseSectionId, int? classId, List<StudentGradeEntryModel> grades)
         {
             var authCheck = CheckAuth("Admin", "Lecturer");
             if (authCheck != null) return authCheck;
@@ -51,11 +107,11 @@ namespace project_PRN232.Frontend.Controllers
             });
 
             SetAlert(msg, success ? "success" : "danger");
-            return RedirectToAction(nameof(Index), new { sectionId = courseSectionId });
+            return RedirectToAction(nameof(Index), new { classId, sectionId = courseSectionId });
         }
 
         [HttpPost]
-        public async Task<IActionResult> ToggleLock(int sectionId, bool isLocked)
+        public async Task<IActionResult> ToggleLock(int sectionId, int? classId, bool isLocked)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
@@ -65,7 +121,7 @@ namespace project_PRN232.Frontend.Controllers
                 : await ApiClient.PostAsync<object>($"grades/{sectionId}/unlock", new { });
 
             SetAlert(msg, success ? "success" : "danger");
-            return RedirectToAction(nameof(Index), new { sectionId });
+            return RedirectToAction(nameof(Index), new { classId, sectionId });
         }
 
         [HttpGet]

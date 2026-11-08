@@ -16,7 +16,9 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Database Context
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Mycnn"));
+    var connStr = builder.Configuration.GetConnectionString("DefaultConnection") 
+               ?? builder.Configuration.GetConnectionString("Mycnn");
+    options.UseSqlServer(connStr);
 });
 
 // 2. Authentication & JWT
