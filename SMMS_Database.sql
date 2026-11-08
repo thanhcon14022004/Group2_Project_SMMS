@@ -1,4 +1,4 @@
-﻿/*
+/*
 ========================================================================================
   HỆ THỐNG QUẢN LÝ ĐIỂM SINH VIÊN (SMMS - Student Mark Management System)
   MÔN HỌC: PRN232 (ASP.NET Core & C#)
@@ -143,6 +143,7 @@ BEGIN
         [Name] nvarchar(max) NOT NULL,
         [Credits] int NOT NULL,
         [Description] nvarchar(max) NULL,
+        [MajorId] int NULL,
         [SpecializationId] int NULL,
         [IsActive] bit NOT NULL,
         CONSTRAINT [PK_Subjects] PRIMARY KEY ([Id])
@@ -255,8 +256,8 @@ BEGIN
         CONSTRAINT [PK_LecturerSubjects] PRIMARY KEY ([Id]),
         CONSTRAINT [FK_LecturerSubjects_Lecturers_LecturerId] FOREIGN KEY ([LecturerId]) REFERENCES [Lecturers] ([Id]) ON DELETE CASCADE,
         CONSTRAINT [FK_LecturerSubjects_Subjects_SubjectId] FOREIGN KEY ([SubjectId]) REFERENCES [Subjects] ([Id]) ON DELETE NO ACTION,
-        CONSTRAINT [FK_LecturerSubjects_Majors_MajorId] FOREIGN KEY ([MajorId]) REFERENCES [Majors] ([Id]) ON DELETE SET NULL,
-        CONSTRAINT [FK_LecturerSubjects_Specializations_SpecializationId] FOREIGN KEY ([SpecializationId]) REFERENCES [Specializations] ([Id]) ON DELETE SET NULL
+        CONSTRAINT [FK_LecturerSubjects_Majors_MajorId] FOREIGN KEY ([MajorId]) REFERENCES [Majors] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_LecturerSubjects_Specializations_SpecializationId] FOREIGN KEY ([SpecializationId]) REFERENCES [Specializations] ([Id]) ON DELETE NO ACTION
     );
     CREATE UNIQUE NONCLUSTERED INDEX [IX_LecturerSubjects_LecturerId_SubjectId] ON [LecturerSubjects] ([LecturerId], [SubjectId]);
 END;
