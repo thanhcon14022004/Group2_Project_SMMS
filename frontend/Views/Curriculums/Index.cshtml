@@ -105,11 +105,6 @@
                     </a>
                 </div>
             </div>
-            <!-- OData Live Preview Badge -->
-            <div class="mt-2 pt-2 border-top d-flex align-items-center gap-2">
-                <small class="text-muted fw-semibold" style="font-size: 0.75rem;">URL Preview:</small>
-                <code id="currODataPreview" class="text-primary bg-light px-2 py-1 rounded small border" style="font-size: 0.75rem;">/api/curriculums</code>
-            </div>
         </form>
     </div>
 </div>
@@ -582,26 +577,7 @@
         }
     }
 
-    // Cập nhật URL Preview chuẩn OData
     function updateCurriculumFilterPreview() {
-        const search = document.getElementById('currFilterSearch')?.value?.trim();
-        const majorSelect = document.getElementById('currFilterMajor');
-        const majorCode = majorSelect?.options[majorSelect.selectedIndex]?.dataset?.code;
-        const semester = document.getElementById('currFilterSemester')?.value;
-        const version = document.getElementById('currFilterVersion')?.value;
-        
-        let filters = [];
-        if (search) filters.push(`contains(tolower(Name), '${search.toLowerCase()}')`);
-        if (majorCode) filters.push(`MajorCode eq '${majorCode}'`);
-        if (semester) filters.push(`SemesterNumber eq ${semester}`);
-        if (version) filters.push(`Version eq '${version}'`);
-        
-        let url = '/api/curriculums';
-        if (filters.length > 0) {
-            url += '?$filter=' + encodeURIComponent(filters.join(' and '));
-        }
-        const preview = document.getElementById('currODataPreview');
-        if (preview) preview.textContent = url;
     }
 </script>
 }
