@@ -179,13 +179,22 @@ namespace project_PRN232.Controllers
 
         #region Môn đăng ký giảng dạy (Lecturer Subjects CRUD)
 
+        private async Task<Lecturer?> FindLecturerByIdOrUserIdAsync(int id, bool asNoTracking = false)
+        {
+            // Ưu tiên tìm chính xác theo Lecturer.Id trước để tránh xung đột với User.Id của người khác
+            if (asNoTracking)
+            {
+                return await _db.Lecturers.Include(l => l.User).AsNoTracking().FirstOrDefaultAsync(l => l.Id == id)
+                    ?? await _db.Lecturers.Include(l => l.User).AsNoTracking().FirstOrDefaultAsync(l => l.UserId == id);
+            }
+            return await _db.Lecturers.Include(l => l.User).FirstOrDefaultAsync(l => l.Id == id)
+                ?? await _db.Lecturers.Include(l => l.User).FirstOrDefaultAsync(l => l.UserId == id);
+        }
+
         [HttpGet("{id}/subjects")]
         public async Task<IActionResult> GetLecturerSubjects(int id)
         {
-            var lecturer = await _db.Lecturers
-                .Include(l => l.User)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(l => l.Id == id || l.UserId == id);
+            var lecturer = await FindLecturerByIdOrUserIdAsync(id, asNoTracking: true);
 
             if (lecturer == null)
                 return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
@@ -230,7 +239,7 @@ namespace project_PRN232.Controllers
                 return BadRequest(ApiResponse.ErrorResult("Vui lòng chọn đầy đủ Ngành, Ngành hẹp và Môn học."));
             }
 
-            var lecturer = await _db.Lecturers.Include(l => l.User).FirstOrDefaultAsync(l => l.Id == id || l.UserId == id);
+            var lecturer = await FindLecturerByIdOrUserIdAsync(id);
             if (lecturer == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
 
             var subject = await _db.Subjects.FirstOrDefaultAsync(s => s.Id == request.SubjectId);
@@ -301,7 +310,7 @@ namespace project_PRN232.Controllers
                 return BadRequest(ApiResponse.ErrorResult("Vui lòng chọn đầy đủ Ngành, Ngành hẹp và Môn học."));
             }
 
-            var lecturer = await _db.Lecturers.Include(l => l.User).FirstOrDefaultAsync(l => l.Id == id || l.UserId == id);
+            var lecturer = await FindLecturerByIdOrUserIdAsync(id);
             if (lecturer == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
 
             var reg = await _db.LecturerSubjects.FirstOrDefaultAsync(ls => ls.Id == subjectRegId && ls.LecturerId == lecturer.Id);
@@ -344,7 +353,7 @@ namespace project_PRN232.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteLecturerSubject(int id, int subjectRegId)
         {
-            var lecturer = await _db.Lecturers.Include(l => l.User).FirstOrDefaultAsync(l => l.Id == id || l.UserId == id);
+            var lecturer = await FindLecturerByIdOrUserIdAsync(id);
             if (lecturer == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
 
             var reg = await _db.LecturerSubjects

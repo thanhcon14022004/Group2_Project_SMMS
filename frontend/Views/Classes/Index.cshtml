@@ -741,9 +741,13 @@
                             : '<span class="text-muted small">Chưa xếp</span>';
 
                         // Chỉ list ra các giảng viên có đăng ký dạy môn này
-                        const qualified = lecturers.filter(l => 
-                            l.registeredSubjectIds && l.registeredSubjectIds.includes(s.subjectId)
-                        );
+                        const secSubjectId = s.subjectId ?? s.SubjectId;
+                        const curLecturerId = s.lecturerId ?? s.LecturerId;
+
+                        const qualified = lecturers.filter(l => {
+                            const regIds = l.registeredSubjectIds ?? l.RegisteredSubjectIds ?? [];
+                            return regIds.includes(secSubjectId);
+                        });
 
                         let optionsHtml = '';
                         let warningBadge = '';
@@ -751,14 +755,23 @@
                         if (qualified.length > 0) {
                             optionsHtml = '<option value="">-- Chưa phân công --</option>';
                             qualified.forEach(l => {
-                                const sel = (s.lecturerId === l.id) ? 'selected' : '';
-                                const matchNote = l.isPreferred ? '⭐ ' : '';
-                                optionsHtml += `<option value="${l.id}" data-preferred="${l.isPreferred}" ${sel}>${matchNote}${l.academicTitle}. ${l.fullName} (${l.lecturerCode} - ${l.department})</option>`;
+                                const lId = l.id ?? l.Id;
+                                const lTitle = (l.academicTitle || l.AcademicTitle) ? `${l.academicTitle || l.AcademicTitle}. ` : '';
+                                const lName = l.fullName ?? l.FullName ?? '';
+                                const lCode = l.lecturerCode ?? l.LecturerCode ?? '';
+                                const lDept = (l.department || l.Department) ? ` - ${l.department || l.Department}` : '';
+                                const isPref = l.isPreferred ?? l.IsPreferred ?? false;
+                                const sel = (curLecturerId === lId) ? 'selected' : '';
+                                const matchNote = isPref ? '⭐ ' : '';
+                                optionsHtml += `<option value="${lId}" data-preferred="${isPref}" ${sel}>${matchNote}${lTitle}${lName} (${lCode}${lDept})</option>`;
                             });
                         } else {
-                            const currentAssigned = lecturers.find(l => l.id === s.lecturerId);
+                            const currentAssigned = lecturers.find(l => (l.id ?? l.Id) === curLecturerId);
                             if (currentAssigned) {
-                                optionsHtml = `<option value="${currentAssigned.id}" selected>${currentAssigned.academicTitle}. ${currentAssigned.fullName} (${currentAssigned.lecturerCode})</option>`;
+                                const cTitle = (currentAssigned.academicTitle || currentAssigned.AcademicTitle) ? `${currentAssigned.academicTitle || currentAssigned.AcademicTitle}. ` : '';
+                                const cName = currentAssigned.fullName ?? currentAssigned.FullName ?? '';
+                                const cCode = currentAssigned.lecturerCode ?? currentAssigned.LecturerCode ?? '';
+                                optionsHtml = `<option value="${currentAssigned.id ?? currentAssigned.Id}" selected>${cTitle}${cName} (${cCode})</option>`;
                                 optionsHtml += '<option value="" disabled class="text-danger">⚠️ Môn này chưa có thêm GV đăng ký</option>';
                             } else {
                                 optionsHtml = '<option value="" disabled selected class="text-danger">⚠️ Chưa có GV đăng ký dạy môn này</option>';
