@@ -12,26 +12,16 @@
         </h5>
         <small class="text-muted">Phân loại môn cơ sở ngành & chuyên ngành hẹp, cấu hình đầu điểm (chuẩn 100%) và môn tiên quyết</small>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 align-items-center">
+        <span id="filterCountBadge" class="badge bg-white text-dark border shadow-sm px-3 py-2">Hiển thị @Model.Count môn học</span>
         <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddSubject">
             <i class="fa-solid fa-plus me-1"></i> Thêm Môn Học Mới
         </button>
     </div>
 </div>
 
-<!-- Thanh Bộ Lọc OData Nâng Cao -->
+<!-- Thanh Bộ Lọc -->
 <div class="card shadow-sm border-0 rounded-3 mb-3 bg-white">
-    <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
-                <i class="fa-solid fa-filter me-1"></i>Bộ Lọc OData
-            </span>
-            <small class="text-muted">Truy vấn linh hoạt với <code>$filter</code>, <code>$orderby</code>, <code>$select</code> theo chuẩn OData v4</small>
-        </div>
-        <div>
-            <span id="filterCountBadge" class="badge bg-light text-dark border">Hiển thị @Model.Count môn học</span>
-        </div>
-    </div>
     <div class="card-body p-3">
         <form method="get" asp-action="Index" id="odataFilterForm">
             <div class="row g-2 align-items-center">
@@ -106,18 +96,7 @@
                 </div>
             </div>
 
-            <!-- Preview OData Query String -->
-            <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="text-secondary fw-semibold"><i class="fa-solid fa-code text-primary me-1"></i>OData Query URL:</span>
-                    <code id="odataQueryPreview" class="text-primary bg-light px-2 py-1 rounded border">/api/subjects@(string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery) ? "" : "?" + ViewBag.CurrentODataQuery)</code>
-                </div>
-                <div class="d-flex gap-2">
-                    <span class="badge bg-success-subtle text-success border border-success">
-                        <i class="fa-solid fa-check me-1"></i>OData v4 Supported
-                    </span>
-                </div>
-            </div>
+            <code id="odataQueryPreview" class="d-none"></code>
         </form>
     </div>
 </div>
@@ -304,6 +283,18 @@
                         </div>
                     </div>
 
+                    <div class="card border border-danger-subtle bg-danger-subtle rounded-3 p-3 mb-3">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" name="isAdminOnlySubject" value="true" id="addSubjectAdminOnly" />
+                            <label class="form-check-label fw-bold text-danger" for="addSubjectAdminOnly">
+                                <i class="fa-solid fa-shield-halved me-1"></i> Môn học chỉ dành riêng cho Admin nhập điểm
+                            </label>
+                            <div class="form-text small text-dark mt-1">
+                                Tích chọn nếu môn này là Đồ án tốt nghiệp, Thực tập OJT, Khóa luận... mà chỉ Admin mới có quyền nhập điểm (hệ thống sẽ tự động cấu hình đầu điểm 100% Chỉ Admin).
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Mô tả tóm tắt</label>
                         <textarea name="description" class="form-control" rows="2" placeholder="Nội dung tóm tắt môn học..."></textarea>
@@ -420,6 +411,9 @@
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0" onclick="applyPreset('theory')">
                             Môn Lý thuyết (Chuyên cần 10% + Assignment 20% + PT 30% + Final 40%)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill py-0" onclick="applyPreset('admin')">
+                            <i class="fa-solid fa-shield-halved me-1"></i>Môn Chỉ Admin nhập (Bảo vệ / OJT / Đồ án 100% Admin)
                         </button>
                     </div>
 
@@ -682,6 +676,8 @@
             addComponentRow('Assignment / Report', 20, 10, false, 0);
             addComponentRow('Midterm Exam', 30, 10, false, 0);
             addComponentRow('Final Exam (FE)', 40, 10, true, 0);
+        } else if (type === 'admin') {
+            addComponentRow('Đánh giá & Bảo vệ tốt nghiệp (Admin / Hội đồng)', 100, 10, true, 0);
         }
         calcTotalWeight();
     }

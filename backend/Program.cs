@@ -16,8 +16,10 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Database Context
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MyCNN") 
-        ?? builder.Configuration.GetConnectionString("DefaultConnection"));
+    var connStr = builder.Configuration.GetConnectionString("MyCNN") 
+               ?? builder.Configuration.GetConnectionString("Mycnn")
+               ?? builder.Configuration.GetConnectionString("DefaultConnection");
+    options.UseSqlServer(connStr);
 });
 
 // 2. Authentication & JWT
@@ -44,15 +46,62 @@ builder.Services.AddAuthentication(options =>
     };
     options.Events = new JwtBearerEvents
     {
+        OnMessageReceived = context =>
+        {
+            var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(authHeader))
+            {
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Token = authHeader.Substring("Bearer ".Length).Trim();
+                }
+                else
+                {
+                    // Chấp nhận cả trường hợp người dùng dán trực tiếp token không có chữ Bearer
+                    context.Token = authHeader.Trim();
+                }
+            }
+            return Task.CompletedTask;
+        },
         OnAuthenticationFailed = context =>
         {
             Console.WriteLine("JWT Auth Failed: " + context.Exception.Message);
             return Task.CompletedTask;
         },
-        OnChallenge = context =>
+        OnChallenge = async context =>
         {
-            Console.WriteLine($"JWT Challenge: Error={context.Error}, Desc={context.ErrorDescription}");
-            return Task.CompletedTask;
+            // Ngăn chặn trả về response rỗng hoặc redirect
+            context.HandleResponse();
+
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+
+            var responseObj = new
+            {
+                success = false,
+                statusCode = 401,
+                message = "Yêu cầu xác thực. Vui lòng cung cấp JWT Bearer Token hợp lệ.",
+                error = "Unauthorized"
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(responseObj);
+            await context.Response.WriteAsync(json);
+        },
+        OnForbidden = async context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+
+            var responseObj = new
+            {
+                success = false,
+                statusCode = 403,
+                message = "Bạn không có quyền truy cập vào tài nguyên này.",
+                error = "Forbidden"
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(responseObj);
+            await context.Response.WriteAsync(json);
         }
     };
 });
@@ -124,11 +173,12 @@ builder.Services.AddSwaggerGen(c =>
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Ví dụ: 'Bearer {token}'",
+        Description = "Nhập trực tiếp chuỗi JWT Token (Swagger sẽ tự động gắn tiền tố Bearer)",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement

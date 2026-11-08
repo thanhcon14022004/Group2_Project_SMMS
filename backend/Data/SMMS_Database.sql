@@ -178,7 +178,7 @@ IF NOT EXISTS (
 BEGIN
     CREATE TABLE [Specializations] (
         [Id] int NOT NULL IDENTITY,
-        [MajorId] int NOT NULL,
+        [MajorId] int NULL,
         [Code] nvarchar(450) NOT NULL,
         [Name] nvarchar(max) NOT NULL,
         [Description] nvarchar(max) NULL,
@@ -251,7 +251,7 @@ BEGIN
         [Id] int NOT NULL IDENTITY,
         [Code] nvarchar(450) NOT NULL,
         [Name] nvarchar(max) NOT NULL,
-        [MajorId] int NOT NULL,
+        [MajorId] int NULL,
         [Cohort] int NOT NULL,
         [AcademicYear] nvarchar(max) NOT NULL,
         [SpecializationId] int NULL,
@@ -272,7 +272,7 @@ BEGIN
     CREATE TABLE [CurriculumConfigs] (
         [Id] int NOT NULL IDENTITY,
         [Version] nvarchar(max) NOT NULL,
-        [MajorId] int NOT NULL,
+        [MajorId] int NULL,
         [SemesterNumber] int NOT NULL,
         [SpecializationId] int NULL,
         [Name] nvarchar(max) NOT NULL,
@@ -298,6 +298,7 @@ BEGIN
         [SubjectId] int NOT NULL,
         [SemesterId] int NOT NULL,
         [LecturerId] int NULL,
+        [AdministrativeClassId] int NULL,
         [MaxCapacity] int NOT NULL,
         [IsGradeLocked] bit NOT NULL,
         [GradeLockedAt] datetime2 NULL,
@@ -306,6 +307,7 @@ BEGIN
         [CreatedAt] datetime2 NOT NULL,
         CONSTRAINT [PK_CourseSections] PRIMARY KEY ([Id]),
         CONSTRAINT [FK_CourseSections_Lecturers_LecturerId] FOREIGN KEY ([LecturerId]) REFERENCES [Lecturers] ([Id]) ON DELETE SET NULL,
+        CONSTRAINT [FK_CourseSections_AdministrativeClasses_AdministrativeClassId] FOREIGN KEY ([AdministrativeClassId]) REFERENCES [AdministrativeClasses] ([Id]) ON DELETE SET NULL,
         CONSTRAINT [FK_CourseSections_Semesters_SemesterId] FOREIGN KEY ([SemesterId]) REFERENCES [Semesters] ([Id]) ON DELETE NO ACTION,
         CONSTRAINT [FK_CourseSections_Subjects_SubjectId] FOREIGN KEY ([SubjectId]) REFERENCES [Subjects] ([Id]) ON DELETE NO ACTION
     );
@@ -321,7 +323,7 @@ BEGIN
         [Id] int NOT NULL IDENTITY,
         [StudentCode] nvarchar(450) NOT NULL,
         [UserId] int NOT NULL,
-        [MajorId] int NOT NULL,
+        [MajorId] int NULL,
         [SpecializationId] int NULL,
         [AdministrativeClassId] int NULL,
         [Cohort] int NOT NULL,

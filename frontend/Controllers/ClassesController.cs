@@ -339,7 +339,7 @@ namespace project_PRN232.Frontend.Controllers
         [HttpGet]
         public async Task<IActionResult> Transfers()
         {
-            var authCheck = CheckAuth();
+            var authCheck = CheckAuth("Student");
             if (authCheck != null) return authCheck;
 
             var requests = await ApiClient.GetAsync<List<ClassTransferViewModel>>("classtransfers/requests") ?? new List<ClassTransferViewModel>();
