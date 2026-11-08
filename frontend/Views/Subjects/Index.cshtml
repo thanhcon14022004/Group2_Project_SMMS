@@ -12,26 +12,16 @@
         </h5>
         <small class="text-muted">Phân loại môn cơ sở ngành & chuyên ngành hẹp, cấu hình đầu điểm (chuẩn 100%) và môn tiên quyết</small>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 align-items-center">
+        <span id="filterCountBadge" class="badge bg-white text-dark border shadow-sm px-3 py-2">Hiển thị @Model.Count môn học</span>
         <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddSubject">
             <i class="fa-solid fa-plus me-1"></i> Thêm Môn Học Mới
         </button>
     </div>
 </div>
 
-<!-- Thanh Bộ Lọc OData Nâng Cao -->
+<!-- Thanh Bộ Lọc -->
 <div class="card shadow-sm border-0 rounded-3 mb-3 bg-white">
-    <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
-                <i class="fa-solid fa-filter me-1"></i>Bộ Lọc OData
-            </span>
-            <small class="text-muted">Truy vấn linh hoạt với <code>$filter</code>, <code>$orderby</code>, <code>$select</code> theo chuẩn OData v4</small>
-        </div>
-        <div>
-            <span id="filterCountBadge" class="badge bg-light text-dark border">Hiển thị @Model.Count môn học</span>
-        </div>
-    </div>
     <div class="card-body p-3">
         <form method="get" asp-action="Index" id="odataFilterForm">
             <div class="row g-2 align-items-center">
@@ -106,18 +96,7 @@
                 </div>
             </div>
 
-            <!-- Preview OData Query String -->
-            <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="text-secondary fw-semibold"><i class="fa-solid fa-code text-primary me-1"></i>OData Query URL:</span>
-                    <code id="odataQueryPreview" class="text-primary bg-light px-2 py-1 rounded border">/api/subjects@(string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery) ? "" : "?" + ViewBag.CurrentODataQuery)</code>
-                </div>
-                <div class="d-flex gap-2">
-                    <span class="badge bg-success-subtle text-success border border-success">
-                        <i class="fa-solid fa-check me-1"></i>OData v4 Supported
-                    </span>
-                </div>
-            </div>
+            <code id="odataQueryPreview" class="d-none"></code>
         </form>
     </div>
 </div>
