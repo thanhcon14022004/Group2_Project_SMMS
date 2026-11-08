@@ -160,6 +160,27 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> AddBatchLecturerSubjects([FromBody] BatchLecturerSubjectInputModel model)
+        {
+            var authCheck = CheckAuth("Admin");
+            if (authCheck != null) return Json(new { success = false, message = "Chưa đăng nhập." });
+
+            if (model == null || model.LecturerId <= 0 || model.SubjectIds == null || model.SubjectIds.Count == 0)
+            {
+                return Json(new { success = false, message = "Vui lòng chọn ít nhất một môn học để đăng ký." });
+            }
+
+            var (success, msg, data) = await ApiClient.PostAsync<object>($"lecturers/{model.LecturerId}/batch-subjects", new
+            {
+                majorId = model.MajorId,
+                subjectIds = model.SubjectIds,
+                notes = model.Notes
+            });
+
+            return Json(new { success, message = msg, data });
+        }
+
+        [HttpPost]
         public async Task<IActionResult> AddLecturerSubject([FromBody] AddLecturerSubjectInputModel model)
         {
             var authCheck = CheckAuth("Admin");

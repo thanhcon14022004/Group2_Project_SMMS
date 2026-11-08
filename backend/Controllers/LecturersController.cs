@@ -301,6 +301,56 @@ namespace project_PRN232.Controllers
             return Ok(ApiResponse<LecturerSubjectDto>.Ok(dto, "Thêm môn đăng ký thành công."));
         }
 
+        [HttpPost("{id}/batch-subjects")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AddBatchLecturerSubjects(int id, [FromBody] BatchCreateLecturerSubjectsRequest request)
+        {
+            if (request == null || request.SubjectIds == null || request.SubjectIds.Count == 0)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Vui lòng tick chọn ít nhất một môn học để đăng ký."));
+            }
+
+            var lecturer = await FindLecturerByIdOrUserIdAsync(id);
+            if (lecturer == null) return NotFound(ApiResponse.ErrorResult("Không tìm thấy giảng viên."));
+
+            var existingSubIds = await _db.LecturerSubjects
+                .Where(ls => ls.LecturerId == lecturer.Id)
+                .Select(ls => ls.SubjectId)
+                .ToListAsync();
+
+            var validSubjects = await _db.Subjects
+                .Where(s => request.SubjectIds.Contains(s.Id))
+                .ToListAsync();
+
+            var toAdd = validSubjects.Where(s => !existingSubIds.Contains(s.Id)).ToList();
+            if (toAdd.Count == 0)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Tất cả các môn học đã chọn đều đã có trong danh sách đăng ký của giảng viên này."));
+            }
+
+            var defaultMajorId = request.MajorId > 0 ? request.MajorId : 1;
+
+            var newRegs = toAdd.Select(sub => new LecturerSubject
+            {
+                LecturerId = lecturer.Id,
+                SubjectId = sub.Id,
+                MajorId = request.MajorId > 0 ? request.MajorId : (sub.MajorId ?? defaultMajorId),
+                SpecializationId = sub.SpecializationId,
+                RegisteredAt = DateTime.UtcNow,
+                Notes = request.Notes
+            }).ToList();
+
+            _db.LecturerSubjects.AddRange(newRegs);
+            await _db.SaveChangesAsync();
+
+            var performedBy = User.Identity?.Name ?? "Admin";
+            var codesStr = string.Join(", ", toAdd.Select(s => s.Code));
+            await _auditLog.LogAsync("LECTURER_SUBJECTS_BATCH_ADDED", "LecturerSubject", lecturer.Id.ToString(), performedBy,
+                $"Đăng ký hàng loạt {toAdd.Count} môn học ({codesStr}) cho giảng viên '{lecturer.LecturerCode}'.");
+
+            return Ok(ApiResponse.SuccessResult($"Đã đăng ký thành công {toAdd.Count} môn học ({codesStr}) cho giảng viên {lecturer.LecturerCode}."));
+        }
+
         [HttpPut("{id}/subjects/{subjectRegId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateLecturerSubject(int id, int subjectRegId, [FromBody] UpdateLecturerSubjectRequest request)
@@ -405,6 +455,13 @@ namespace project_PRN232.Controllers
         public string? PhoneNumber { get; set; }
         public string? Department { get; set; }
         public string? AcademicTitle { get; set; }
+    }
+
+    public class BatchCreateLecturerSubjectsRequest
+    {
+        public int MajorId { get; set; }
+        public List<int> SubjectIds { get; set; } = new();
+        public string? Notes { get; set; }
     }
 
     public class LecturerDetailDto

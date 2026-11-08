@@ -1,4 +1,4 @@
-﻿/*
+/*
 ========================================================================================
   HỆ THỐNG QUẢN LÝ ĐIỂM SINH VIÊN (SMMS - Student Mark Management System)
   MÔN HỌC: PRN232 (ASP.NET Core & C#)
@@ -1389,6 +1389,19 @@ END
 CLOSE curSub;
 DEALLOCATE curSub;
 DROP TABLE #TmpSubjects;
+
+-- Cập nhật MajorId cho các môn học theo ngành đào tạo
+UPDATE Subjects SET MajorId = 1 WHERE Code IN ('PRF192', 'PRO192', 'PRN211', 'PRN232', 'SWP391', 'CSD201', 'DBI202', 'PRJ301', 'SWE201c', 'SWT301', 'SWR302', 'SWD392', 'PRM392', 'NWC203c', 'OSG202', 'PRN444', 'MAE101', 'MAD101', 'MAS291', 'SSL101c', 'EXE101') AND (MajorId IS NULL OR MajorId = 1);
+UPDATE Subjects SET MajorId = 2 WHERE Code IN ('IAE201', 'IAS301', 'CRY301') AND MajorId IS NULL;
+UPDATE Subjects SET MajorId = 3 WHERE Code IN ('AIL302m') AND MajorId IS NULL;
+UPDATE Subjects SET MajorId = 4 WHERE Code IN ('DBS301', 'DVP301') AND MajorId IS NULL;
+UPDATE Subjects SET MajorId = 6 WHERE Code IN ('DES101', 'VFX201', 'UIX201') AND MajorId IS NULL;
+UPDATE Subjects SET MajorId = 7 WHERE Code IN ('MKT101', 'MKT201', 'MKT301') AND MajorId IS NULL;
+UPDATE Subjects SET MajorId = 8 WHERE Code IN ('IBI101', 'IBI201', 'IBI301', 'ECO111', 'OBE102', 'FIN301') AND MajorId IS NULL;
+UPDATE Subjects SET MajorId = 9 WHERE Code IN ('ENG201', 'ENW492') AND MajorId IS NULL;
+UPDATE Subjects SET MajorId = 10 WHERE Code IN ('JPD113', 'JPD123') AND MajorId IS NULL;
+UPDATE Subjects SET MajorId = 11 WHERE Code IN ('KRD113', 'KRD123') AND MajorId IS NULL;
+UPDATE Subjects SET MajorId = 12 WHERE Code IN ('MCM101', 'MCM201', 'MCM301', 'MMC101', 'PRS201') AND MajorId IS NULL;
 
 PRINT N'==> Đã cập nhật toàn bộ 40 môn học FPT và cấu hình đầu điểm 100%.';
 

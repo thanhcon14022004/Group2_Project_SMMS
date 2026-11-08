@@ -550,6 +550,14 @@ namespace project_PRN232.Frontend.Models
         public string? Notes { get; set; }
     }
 
+    public class BatchLecturerSubjectInputModel
+    {
+        public int LecturerId { get; set; }
+        public int MajorId { get; set; }
+        public List<int> SubjectIds { get; set; } = new();
+        public string? Notes { get; set; }
+    }
+
     public class UpdateLecturerSubjectInputModel
     {
         public int Id { get; set; }
