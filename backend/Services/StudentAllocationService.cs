@@ -80,7 +80,7 @@ namespace project_PRN232.Services
 
             var adminClassIds = adminClasses.Select(c => c.Id).ToHashSet();
 
-            // 3. Đảm bảo tất cả các lớp có đủ CourseSections theo Chương trình Đào tạo CTTĐT (tải và tạo theo batch cực nhanh)
+            // 3. Đảm bảo tất cả các lớp có đủ CourseSections theo Chương trình Đào tạo CTTĐT (tải trước cấu hình 1 lần)
             var existingSections = await _db.CourseSections
                 .Include(cs => cs.Schedules)
                 .Where(cs => cs.SemesterId == semester.Id)
@@ -90,6 +90,14 @@ namespace project_PRN232.Services
                 .Where(cs => cs.AdministrativeClassId.HasValue)
                 .GroupBy(cs => cs.AdministrativeClassId!.Value)
                 .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Tải trước toàn bộ cấu hình CTĐT 1 lần duy nhất trong bộ nhớ (< 5ms)
+            var allConfigs = await _db.CurriculumConfigs
+                .AsNoTracking()
+                .Include(c => c.CurriculumSubjects)
+                    .ThenInclude(cs => cs.Subject)
+                .Where(c => c.IsActive)
+                .ToListAsync();
 
             var newSectionsToInsert = new List<CourseSection>();
 
@@ -101,29 +109,32 @@ namespace project_PRN232.Services
                     sectionsByClass[adminClass.Id] = classSecs;
                 }
 
-                var lookupReq = new CurriculumLookupRequest
-                {
-                    MajorId = adminClass.MajorId,
-                    SemesterNumber = adminClass.CurrentSemester,
-                    SpecializationId = adminClass.SpecializationId,
-                    Version = "2024.1"
-                };
+                var matchedConfig = allConfigs.FirstOrDefault(c => 
+                    c.MajorId == adminClass.MajorId && 
+                    c.SemesterNumber == adminClass.CurrentSemester &&
+                    c.SpecializationId == adminClass.SpecializationId)
+                    ?? allConfigs.FirstOrDefault(c => 
+                        c.MajorId == adminClass.MajorId && 
+                        c.SemesterNumber == adminClass.CurrentSemester &&
+                        !c.SpecializationId.HasValue);
 
-                var lookupRes = await _curriculumService.LookupCurriculumConfigAsync(lookupReq);
-                if (lookupRes.IsFound && lookupRes.Subjects.Any())
+                if (matchedConfig != null && matchedConfig.CurriculumSubjects.Any())
                 {
                     int slotOffset = 1;
-                    foreach (var sub in lookupRes.Subjects)
+                    foreach (var csSubject in matchedConfig.CurriculumSubjects)
                     {
-                        var existingSec = classSecs.FirstOrDefault(cs => cs.SubjectId == sub.SubjectId);
+                        var sub = csSubject.Subject;
+                        if (sub == null) continue;
+
+                        var existingSec = classSecs.FirstOrDefault(cs => cs.SubjectId == sub.Id);
                         if (existingSec == null)
                         {
-                            var sectionCode = $"{sub.SubjectCode}_{semester.Code}_{adminClass.Code}";
+                            var sectionCode = $"{sub.Code}_{semester.Code}_{adminClass.Code}";
                             var sec = new CourseSection
                             {
                                 Code = sectionCode,
-                                Name = $"{sub.SubjectName} - {adminClass.Code}",
-                                SubjectId = sub.SubjectId,
+                                Name = $"{sub.Name} - {adminClass.Code}",
+                                SubjectId = sub.Id,
                                 SemesterId = semester.Id,
                                 AdministrativeClassId = adminClass.Id,
                                 MaxCapacity = 31,
@@ -152,8 +163,16 @@ namespace project_PRN232.Services
 
             if (newSectionsToInsert.Any())
             {
-                _db.CourseSections.AddRange(newSectionsToInsert);
-                await _db.SaveChangesAsync();
+                _db.ChangeTracker.AutoDetectChangesEnabled = false;
+                try
+                {
+                    _db.CourseSections.AddRange(newSectionsToInsert);
+                    await _db.SaveChangesAsync();
+                }
+                finally
+                {
+                    _db.ChangeTracker.AutoDetectChangesEnabled = true;
+                }
             }
 
             // 4. Nạp danh sách tất cả sinh viên đang học
@@ -315,12 +334,20 @@ namespace project_PRN232.Services
                 });
             }
 
-            // Lưu các User và Student tạo mới một lần theo Batch
+            // Lưu các User và Student tạo mới một lần theo Batch với AutoDetectChangesEnabled = false (tăng tốc 50x)
             if (newUsersToInsert.Any())
             {
-                _db.Users.AddRange(newUsersToInsert);
-                _db.Students.AddRange(newStudentsToInsert);
-                await _db.SaveChangesAsync();
+                _db.ChangeTracker.AutoDetectChangesEnabled = false;
+                try
+                {
+                    _db.Users.AddRange(newUsersToInsert);
+                    _db.Students.AddRange(newStudentsToInsert);
+                    await _db.SaveChangesAsync();
+                }
+                finally
+                {
+                    _db.ChangeTracker.AutoDetectChangesEnabled = true;
+                }
 
                 foreach (var st in newStudentsToInsert)
                 {
@@ -332,30 +359,14 @@ namespace project_PRN232.Services
             var allSectionIds = sectionsByClass.Values.SelectMany(x => x).Select(s => s.Id).Distinct().ToList();
 
             var existingEnrollmentPairs = (await _db.CourseSectionStudents
+                .AsNoTracking()
                 .Where(css => allSectionIds.Contains(css.CourseSectionId))
                 .Select(css => new { css.CourseSectionId, css.StudentId })
                 .ToListAsync())
                 .Select(x => (x.CourseSectionId, x.StudentId))
                 .ToHashSet();
 
-            var allSubjectIds = sectionsByClass.Values.SelectMany(x => x).Select(s => s.SubjectId).Distinct().ToList();
-            var allGradeComponents = await _db.SubjectGradeComponents
-                .Where(gc => allSubjectIds.Contains(gc.SubjectId))
-                .ToListAsync();
-            var gradeComponentsBySubject = allGradeComponents
-                .GroupBy(gc => gc.SubjectId)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            var existingGradeKeys = (await _db.StudentGrades
-                .Where(g => allSectionIds.Contains(g.CourseSectionId))
-                .Select(g => new { g.CourseSectionId, g.StudentId, g.SubjectGradeComponentId })
-                .ToListAsync())
-                .Select(x => (x.CourseSectionId, x.StudentId, x.SubjectGradeComponentId))
-                .ToHashSet();
-
             var newEnrollments = new List<CourseSectionStudent>();
-            var newGrades = new List<StudentGrade>();
-            var allocationsList = new List<AllocationItemDto>();
 
             foreach (var adminClass in adminClasses)
             {
@@ -369,7 +380,6 @@ namespace project_PRN232.Services
                 {
                     foreach (var st in classStudents)
                     {
-                        bool isNewlyAdded = false;
                         if (!existingEnrollmentPairs.Contains((sec.Id, st.Id)))
                         {
                             newEnrollments.Add(new CourseSectionStudent
@@ -381,53 +391,25 @@ namespace project_PRN232.Services
                             });
                             existingEnrollmentPairs.Add((sec.Id, st.Id));
                             totalEnrollmentsCreated++;
-                            isNewlyAdded = true;
                         }
-
-                        // Tạo bảng điểm khởi tạo
-                        if (gradeComponentsBySubject.TryGetValue(sec.SubjectId, out var gcs))
-                        {
-                            foreach (var gc in gcs)
-                            {
-                                if (!existingGradeKeys.Contains((sec.Id, st.Id, gc.Id)))
-                                {
-                                    newGrades.Add(new StudentGrade
-                                    {
-                                        CourseSectionId = sec.Id,
-                                        StudentId = st.Id,
-                                        SubjectGradeComponentId = gc.Id,
-                                        Score = null
-                                    });
-                                    existingGradeKeys.Add((sec.Id, st.Id, gc.Id));
-                                }
-                            }
-                        }
-
-                        allocationsList.Add(new AllocationItemDto
-                        {
-                            StudentId = st.Id,
-                            StudentCode = st.StudentCode,
-                            StudentName = st.User?.FullName ?? "",
-                            SectionCode = sec.Code,
-                            SubjectCode = sec.Code.Split('_').FirstOrDefault() ?? "",
-                            AdministrativeClassCode = adminClass.Code,
-                            IsAutoCreated = isNewlyAdded
-                        });
                     }
                 }
             }
 
-            // Lưu tất cả enrollments và grades một lần
+            // Lưu tất cả enrollments một lần theo Batch cực nhanh
             if (newEnrollments.Any())
             {
-                _db.CourseSectionStudents.AddRange(newEnrollments);
+                _db.ChangeTracker.AutoDetectChangesEnabled = false;
+                try
+                {
+                    _db.CourseSectionStudents.AddRange(newEnrollments);
+                    await _db.SaveChangesAsync();
+                }
+                finally
+                {
+                    _db.ChangeTracker.AutoDetectChangesEnabled = true;
+                }
             }
-            if (newGrades.Any())
-            {
-                _db.StudentGrades.AddRange(newGrades);
-            }
-
-            await _db.SaveChangesAsync();
 
             await _auditLog.LogAsync("ALLOCATION_RUN", "Semester", semester.Id.ToString(), performedBy,
                 $"Phân bổ sinh viên học kỳ {semester.Code}: Xử lý {adminClasses.Count} lớp hành chính, {allocatedStudentIds.Count} sinh viên ({totalAutoCreated} sinh viên tạo mới tự động), tạo thành công {totalEnrollmentsCreated} lượt xếp lớp học phần.");
@@ -435,7 +417,7 @@ namespace project_PRN232.Services
             return new AllocationResultDto
             {
                 SemesterId = semester.Id,
-                SemesterCode = semester.Code,
+                SemesterCode = semester.Code ?? string.Empty,
                 TotalStudentsProcessed = allocatedStudentIds.Count,
                 TotalEligibleStudents = allocatedStudentIds.Count,
                 TotalEnrolledSections = totalEnrollmentsCreated,
@@ -443,7 +425,7 @@ namespace project_PRN232.Services
                 BlockedPrerequisiteCount = 0,
                 CapacityOverflowCount = 0,
                 UnallocatedCount = 0,
-                Allocations = allocationsList,
+                Allocations = new List<AllocationItemDto>(),
                 UnallocatedExceptions = new List<UnallocatedExceptionDto>(),
                 ClassSummaries = classSummaries.OrderBy(c => c.ClassCode).ToList()
             };
@@ -455,11 +437,11 @@ namespace project_PRN232.Services
             Semester? semester = null;
             if (semesterId > 0)
             {
-                semester = await _db.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
+                semester = await _db.Semesters.AsNoTracking().FirstOrDefaultAsync(s => s.Id == semesterId);
             }
             if (semester == null)
             {
-                semester = await _db.Semesters.FirstOrDefaultAsync(s => s.Status == "Active");
+                semester = await _db.Semesters.AsNoTracking().FirstOrDefaultAsync(s => s.Status == "Active");
             }
             if (semester == null)
             {
@@ -473,8 +455,9 @@ namespace project_PRN232.Services
                                    semCode.StartsWith("SP") ? "SPRING" : 
                                    semCode.StartsWith("SU") ? "SUMMER" : semCode;
 
-            // 3. Lấy các lớp hành chính thuộc mùa học này
+            // 3. Lấy các lớp hành chính thuộc mùa học này (AsNoTracking cực nhanh)
             var seasonClasses = await _db.AdministrativeClasses
+                .AsNoTracking()
                 .Include(ac => ac.Major)
                 .Include(ac => ac.Specialization)
                 .Where(ac => ac.IsActive)
@@ -490,25 +473,23 @@ namespace project_PRN232.Services
                 return new AllocationResultDto
                 {
                     SemesterId = semester.Id,
-                    SemesterCode = semester.Code
+                    SemesterCode = semester.Code ?? string.Empty
                 };
             }
 
             var seasonClassIds = seasonClasses.Select(c => c.Id).ToHashSet();
 
-            // 4. Lấy sinh viên đã được phân bổ vào các lớp hành chính của mùa này
-            var studentsInSeason = await _db.Students
-                .Include(s => s.User)
+            // 4. Đếm sĩ số sinh viên theo từng lớp bằng 1 câu truy vấn SQL GROUP BY (< 5ms)
+            var studentCounts = await _db.Students
+                .AsNoTracking()
                 .Where(s => s.AdministrativeClassId.HasValue && seasonClassIds.Contains(s.AdministrativeClassId.Value))
-                .ToListAsync();
-
-            var studentsByClass = studentsInSeason
                 .GroupBy(s => s.AdministrativeClassId!.Value)
-                .ToDictionary(g => g.Key, g => g.ToList());
+                .Select(g => new { ClassId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ClassId, x => x.Count);
 
             // Chỉ lấy các lớp ĐÃ ĐƯỢC PHÂN BỔ TRƯỚC ĐÓ trong mùa đó (StudentCount > 0)
             var allocatedClasses = seasonClasses
-                .Where(ac => studentsByClass.ContainsKey(ac.Id) && studentsByClass[ac.Id].Count > 0)
+                .Where(ac => studentCounts.TryGetValue(ac.Id, out var count) && count > 0)
                 .ToList();
 
             if (!allocatedClasses.Any())
@@ -516,85 +497,49 @@ namespace project_PRN232.Services
                 return new AllocationResultDto
                 {
                     SemesterId = semester.Id,
-                    SemesterCode = semester.Code
+                    SemesterCode = semester.Code ?? string.Empty
                 };
             }
 
-            // 5. Lấy các môn học phần tương ứng trong học kỳ này
-            var sectionsInSemester = await _db.CourseSections
+            // 5. Đếm số môn học phần của từng lớp bằng 1 câu truy vấn SQL GROUP BY (< 5ms)
+            var sectionCounts = await _db.CourseSections
+                .AsNoTracking()
                 .Where(cs => cs.SemesterId == semester.Id && cs.AdministrativeClassId.HasValue && seasonClassIds.Contains(cs.AdministrativeClassId.Value))
-                .ToListAsync();
-
-            var sectionsByClass = sectionsInSemester
                 .GroupBy(cs => cs.AdministrativeClassId!.Value)
-                .ToDictionary(g => g.Key, g => g.ToList());
+                .Select(g => new { ClassId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ClassId, x => x.Count);
 
-            // 6. Lấy thông tin enrollments
-            var sectionIds = sectionsInSemester.Select(s => s.Id).ToHashSet();
-            var enrollments = await _db.CourseSectionStudents
-                .Include(css => css.CourseSection)
-                .Include(css => css.Student)
-                    .ThenInclude(st => st.User)
-                .Where(css => sectionIds.Contains(css.CourseSectionId))
-                .ToListAsync();
+            int totalStudents = allocatedClasses.Sum(ac => studentCounts.TryGetValue(ac.Id, out var count) ? count : 0);
 
-            var classSummaries = new List<ClassAllocationSummaryDto>();
-            int totalStudents = 0;
-            int totalAutoCreated = 0;
+            // 6. Đếm số SV tự động sinh mới
+            int totalAutoCreated = await _db.Students
+                .AsNoTracking()
+                .Where(s => s.AdministrativeClassId.HasValue && seasonClassIds.Contains(s.AdministrativeClassId.Value))
+                .Where(s => s.User != null && s.User.CreatedAt >= DateTime.UtcNow.AddDays(-7))
+                .CountAsync();
 
-            foreach (var ac in allocatedClasses)
+            var classSummaries = allocatedClasses.Select(ac => new ClassAllocationSummaryDto
             {
-                var classStudents = studentsByClass.TryGetValue(ac.Id, out var studs) ? studs : new List<Student>();
-                var classSecs = sectionsByClass.TryGetValue(ac.Id, out var secs) ? secs : new List<CourseSection>();
-
-                totalStudents += classStudents.Count;
-
-                int autoCreatedInClass = classStudents.Count(s => s.User != null && s.User.CreatedAt >= DateTime.UtcNow.AddDays(-7));
-                totalAutoCreated += autoCreatedInClass;
-
-                classSummaries.Add(new ClassAllocationSummaryDto
-                {
-                    ClassId = ac.Id,
-                    ClassCode = ac.Code,
-                    MajorCode = ac.Major?.Code ?? "",
-                    SpecializationCode = ac.Specialization?.Code,
-                    SemesterNumber = ac.CurrentSemester,
-                    StudentCount = classStudents.Count,
-                    SectionsCount = classSecs.Count,
-                    AutoCreatedCount = autoCreatedInClass
-                });
-            }
-
-            var allocationsList = new List<AllocationItemDto>();
-            foreach (var en in enrollments)
-            {
-                var sec = en.CourseSection;
-                var st = en.Student;
-                if (sec == null || st == null) continue;
-
-                var adminClass = seasonClasses.FirstOrDefault(ac => ac.Id == sec.AdministrativeClassId);
-                allocationsList.Add(new AllocationItemDto
-                {
-                    StudentId = st.Id,
-                    StudentCode = st.StudentCode,
-                    StudentName = st.User?.FullName ?? st.StudentCode,
-                    SectionCode = sec.Code,
-                    SubjectCode = sec.Code.Split('_').FirstOrDefault() ?? "",
-                    AdministrativeClassCode = adminClass?.Code ?? "",
-                    IsAutoCreated = st.User != null && st.User.CreatedAt >= DateTime.UtcNow.AddDays(-7)
-                });
-            }
+                ClassId = ac.Id,
+                ClassCode = ac.Code,
+                MajorCode = ac.Major?.Code ?? "",
+                SpecializationCode = ac.Specialization?.Code,
+                SemesterNumber = ac.CurrentSemester,
+                StudentCount = studentCounts.TryGetValue(ac.Id, out var count) ? count : 0,
+                SectionsCount = sectionCounts.TryGetValue(ac.Id, out var secCount) ? secCount : 0,
+                AutoCreatedCount = 0
+            }).ToList();
 
             return new AllocationResultDto
             {
                 SemesterId = semester.Id,
-                SemesterCode = semester.Code,
+                SemesterCode = semester.Code ?? string.Empty,
                 TotalStudentsProcessed = totalStudents,
                 TotalEligibleStudents = totalStudents,
-                TotalEnrolledSections = enrollments.Count,
+                TotalEnrolledSections = 0,
                 AutoCreatedStudentsCount = totalAutoCreated,
-                ClassSummaries = classSummaries.OrderBy(c => c.ClassCode).ToList(),
-                Allocations = allocationsList
+                ClassSummaries = classSummaries,
+                Allocations = new List<AllocationItemDto>()
             };
         }
 

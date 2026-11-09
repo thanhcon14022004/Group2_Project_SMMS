@@ -179,39 +179,81 @@ namespace project_PRN232.Controllers
 
             if (c == null) return NotFound(new { message = "Không tìm thấy lớp hành chính." });
 
-            var sections = await _db.CourseSections
-                .Include(cs => cs.Subject)
-                .Include(cs => cs.Semester)
-                .Include(cs => cs.Lecturer).ThenInclude(l => l!.User)
-                .Include(cs => cs.Schedules)
-                .Include(cs => cs.Enrollments)
-                .Where(cs => cs.AdministrativeClassId == id || cs.Code.EndsWith("_" + c.Code) || cs.Name.EndsWith("- " + c.Code))
-                .OrderBy(cs => cs.Subject != null ? cs.Subject.Code : cs.Code)
+            var classCode = c.Code;
+            var codeSuffix = "_" + classCode;
+            var nameSuffix = "- " + classCode;
+
+            var rawSections = await _db.CourseSections
+                .AsNoTracking()
+                .Where(cs => cs.AdministrativeClassId == id || cs.Code.EndsWith(codeSuffix) || cs.Name.EndsWith(nameSuffix))
                 .Select(cs => new
                 {
                     cs.Id,
                     cs.Code,
                     cs.Name,
-                    SubjectId = cs.SubjectId,
+                    cs.SubjectId,
                     SubjectCode = cs.Subject != null ? cs.Subject.Code : "",
                     SubjectName = cs.Subject != null ? cs.Subject.Name : "",
                     Credits = cs.Subject != null ? cs.Subject.Credits : 3,
-                    SemesterId = cs.SemesterId,
+                    cs.SemesterId,
                     SemesterCode = cs.Semester != null ? cs.Semester.Code : "",
                     SemesterName = cs.Semester != null ? cs.Semester.Name : "",
                     LecturerName = cs.Lecturer != null && cs.Lecturer.User != null ? cs.Lecturer.User.FullName : "Chưa phân công",
                     cs.MaxCapacity,
-                    EnrolledCount = cs.Enrollments.Count,
                     cs.Status,
-                    Schedules = cs.Schedules.Select(s => new
-                    {
-                        s.DayOfWeek,
-                        DayOfWeekStr = s.DayOfWeek.ToString(),
-                        s.Slot,
-                        s.Room
-                    }).ToList()
+                    cs.IsGradeLocked
+                })
+                .OrderBy(cs => cs.SubjectCode)
+                .ToListAsync();
+
+            var secIds = rawSections.Select(s => s.Id).ToList();
+
+            var enrollCounts = await _db.CourseSectionStudents
+                .AsNoTracking()
+                .Where(e => secIds.Contains(e.CourseSectionId) && e.Status == "Enrolled")
+                .GroupBy(e => e.CourseSectionId)
+                .Select(g => new { SectionId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.SectionId, x => x.Count);
+
+            var schedules = await _db.CourseSectionSchedules
+                .AsNoTracking()
+                .Where(s => secIds.Contains(s.CourseSectionId))
+                .Select(s => new
+                {
+                    s.CourseSectionId,
+                    s.DayOfWeek,
+                    DayOfWeekStr = s.DayOfWeek.ToString(),
+                    s.Slot,
+                    s.Room
                 })
                 .ToListAsync();
+            var scheduleLookup = schedules.ToLookup(s => s.CourseSectionId);
+
+            var sections = rawSections.Select(cs => new
+            {
+                cs.Id,
+                cs.Code,
+                cs.Name,
+                cs.SubjectId,
+                cs.SubjectCode,
+                cs.SubjectName,
+                cs.Credits,
+                cs.SemesterId,
+                cs.SemesterCode,
+                cs.SemesterName,
+                cs.LecturerName,
+                cs.MaxCapacity,
+                EnrolledCount = enrollCounts.TryGetValue(cs.Id, out var cnt) ? cnt : 0,
+                cs.Status,
+                cs.IsGradeLocked,
+                Schedules = scheduleLookup[cs.Id].Select(s => new
+                {
+                    s.DayOfWeek,
+                    s.DayOfWeekStr,
+                    s.Slot,
+                    s.Room
+                }).ToList()
+            }).ToList();
 
             return Ok(new
             {

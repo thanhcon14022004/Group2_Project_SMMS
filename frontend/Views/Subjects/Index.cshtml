@@ -283,6 +283,18 @@
                         </div>
                     </div>
 
+                    <div class="card border border-danger-subtle bg-danger-subtle rounded-3 p-3 mb-3">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" name="isAdminOnlySubject" value="true" id="addSubjectAdminOnly" />
+                            <label class="form-check-label fw-bold text-danger" for="addSubjectAdminOnly">
+                                <i class="fa-solid fa-shield-halved me-1"></i> Môn học chỉ dành riêng cho Admin nhập điểm
+                            </label>
+                            <div class="form-text small text-dark mt-1">
+                                Tích chọn nếu môn này là Đồ án tốt nghiệp, Thực tập OJT, Khóa luận... mà chỉ Admin mới có quyền nhập điểm (hệ thống sẽ tự động cấu hình đầu điểm 100% Chỉ Admin).
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Mô tả tóm tắt</label>
                         <textarea name="description" class="form-control" rows="2" placeholder="Nội dung tóm tắt môn học..."></textarea>
@@ -399,6 +411,9 @@
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0" onclick="applyPreset('theory')">
                             Môn Lý thuyết (Chuyên cần 10% + Assignment 20% + PT 30% + Final 40%)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill py-0" onclick="applyPreset('admin')">
+                            <i class="fa-solid fa-shield-halved me-1"></i>Môn Chỉ Admin nhập (Bảo vệ / OJT / Đồ án 100% Admin)
                         </button>
                     </div>
 
@@ -661,6 +676,8 @@
             addComponentRow('Assignment / Report', 20, 10, false, 0);
             addComponentRow('Midterm Exam', 30, 10, false, 0);
             addComponentRow('Final Exam (FE)', 40, 10, true, 0);
+        } else if (type === 'admin') {
+            addComponentRow('Đánh giá & Bảo vệ tốt nghiệp (Admin / Hội đồng)', 100, 10, true, 0);
         }
         calcTotalWeight();
     }

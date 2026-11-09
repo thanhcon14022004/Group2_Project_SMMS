@@ -13,7 +13,7 @@ namespace project_PRN232.Frontend.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(int? sectionId, int? majorId, int? classId)
         {
-            var authCheck = CheckAuth("Admin", "Lecturer");
+            var authCheck = CheckAuth("Lecturer");
             if (authCheck != null) return authCheck;
 
             var role = CurrentUser?.Role ?? "Admin";
@@ -68,7 +68,7 @@ namespace project_PRN232.Frontend.Controllers
         [HttpGet]
         public async Task<IActionResult> ExportGpaCsv(int? majorId, int? classId)
         {
-            var authCheck = CheckAuth("Admin", "Lecturer");
+            var authCheck = CheckAuth("Lecturer");
             if (authCheck != null) return authCheck;
 
             string endpoint = "reports/export/gpa-csv";
@@ -91,6 +91,31 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> ExportGpaWord(int? majorId, int? classId)
+        {
+            var authCheck = CheckAuth("Admin", "Lecturer");
+            if (authCheck != null) return authCheck;
+
+            string endpoint = "reports/export/gpa-word";
+            if (majorId.HasValue || classId.HasValue)
+            {
+                var q = new List<string>();
+                if (majorId.HasValue) q.Add($"majorId={majorId}");
+                if (classId.HasValue) q.Add($"administrativeClassId={classId}");
+                endpoint += "?" + string.Join("&", q);
+            }
+
+            var bytes = await ApiClient.GetByteArrayAsync(endpoint);
+            if (bytes == null)
+            {
+                SetAlert("Không thể xuất file báo cáo Word.", "danger");
+                return RedirectToAction(nameof(Index));
+            }
+
+            return File(bytes, "application/msword", $"SMMS_BaoCao_GPA_{DateTime.UtcNow:yyyyMMdd_HHmm}.doc");
+        }
+
+        [HttpGet]
         public async Task<IActionResult> ExportSectionGradesCsv(int sectionId)
         {
             var authCheck = CheckAuth("Admin", "Lecturer");
@@ -104,6 +129,22 @@ namespace project_PRN232.Frontend.Controllers
             }
 
             return File(bytes, "text/csv", $"SMMS_DiemLopHocPhan_{sectionId}_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportSectionGradesWord(int sectionId)
+        {
+            var authCheck = CheckAuth("Admin", "Lecturer");
+            if (authCheck != null) return authCheck;
+
+            var bytes = await ApiClient.GetByteArrayAsync($"reports/export/section-grades-word/{sectionId}");
+            if (bytes == null)
+            {
+                SetAlert("Không thể xuất file bảng điểm Word.", "danger");
+                return RedirectToAction("Index", "Grades", new { sectionId });
+            }
+
+            return File(bytes, "application/msword", $"SMMS_DiemLopHocPhan_{sectionId}_{DateTime.UtcNow:yyyyMMdd_HHmm}.doc");
         }
     }
 }

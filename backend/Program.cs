@@ -17,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Mycnn")
+        ?? builder.Configuration.GetConnectionString("MyCNN")
         ?? builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Server=(localdb)\\mssqllocaldb;Database=SMMS_PRN232;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
 

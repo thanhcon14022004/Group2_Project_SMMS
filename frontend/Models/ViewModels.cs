@@ -213,6 +213,7 @@ namespace project_PRN232.Frontend.Models
         public int MaxCapacity { get; set; } = 30;
         public int EnrolledCount { get; set; }
         public string Status { get; set; } = "Open";
+        public bool IsGradeLocked { get; set; }
         public List<ClassSectionScheduleViewModel> Schedules { get; set; } = new();
     }
 
@@ -430,7 +431,11 @@ namespace project_PRN232.Frontend.Models
         public string CourseSectionName { get; set; } = string.Empty;
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
+        public int Credits { get; set; }
         public string? LecturerName { get; set; }
+        public int? AdministrativeClassId { get; set; }
+        public string? AdministrativeClassCode { get; set; }
+        public string? SemesterCode { get; set; }
         public bool IsGradeLocked { get; set; }
         public bool CanEdit { get; set; }
         public List<SubjectGradeComponentViewModel> Components { get; set; } = new();
@@ -463,6 +468,13 @@ namespace project_PRN232.Frontend.Models
         public List<TranscriptSubjectRecordViewModel> SubjectRecords { get; set; } = new();
     }
 
+    public class TranscriptComponentScoreViewModel
+    {
+        public string ComponentName { get; set; } = string.Empty;
+        public decimal Weight { get; set; }
+        public decimal? Score { get; set; }
+    }
+
     public class TranscriptSubjectRecordViewModel
     {
         public int CourseSectionId { get; set; }
@@ -470,8 +482,10 @@ namespace project_PRN232.Frontend.Models
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
         public int Credits { get; set; }
-        public decimal FinalScore { get; set; }
+        public List<TranscriptComponentScoreViewModel> Components { get; set; } = new();
+        public decimal? FinalScore { get; set; }
         public bool IsPassed { get; set; }
+        public bool IsLocked { get; set; }
     }
 
     public class SemesterViewModel

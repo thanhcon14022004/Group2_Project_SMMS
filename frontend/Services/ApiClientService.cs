@@ -83,19 +83,26 @@ namespace project_PRN232.Frontend.Services
             var json = await response.Content.ReadAsStringAsync();
             try
             {
-                // Thử giải mã nếu là wrapper ApiResponse<T>
                 using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("data", out var dataElem) &&
-                    doc.RootElement.TryGetProperty("success", out _))
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
                 {
-                    return JsonSerializer.Deserialize<T>(dataElem.GetRawText(), _jsonOptions);
-                }
+                    // Thử giải mã nếu là wrapper ApiResponse<T>
+                    if (doc.RootElement.TryGetProperty("data", out var dataElem) &&
+                        doc.RootElement.TryGetProperty("success", out _))
+                    {
+                        return JsonSerializer.Deserialize<T>(dataElem.GetRawText(), _jsonOptions);
+                    }
 
-                // Hỗ trợ định dạng OData chuẩn v4 (Envelope có chứa thuộc tính "value")
-                if (doc.RootElement.TryGetProperty("value", out var valElem))
-                {
-                    return JsonSerializer.Deserialize<T>(valElem.GetRawText(), _jsonOptions);
+                    // Hỗ trợ định dạng OData chuẩn v4 (Envelope có chứa thuộc tính "value")
+                    if (doc.RootElement.TryGetProperty("value", out var valElem))
+                    {
+                        return JsonSerializer.Deserialize<T>(valElem.GetRawText(), _jsonOptions);
+                    }
                 }
+            }
+            catch (JsonException)
+            {
+                throw;
             }
             catch { }
 

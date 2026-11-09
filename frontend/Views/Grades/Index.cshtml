@@ -3,36 +3,42 @@
 @{
     ViewData["Title"] = "Quản lý Bảng điểm Lớp Học phần";
     var role = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "";
+    var adminClasses = (List<project_PRN232.Frontend.Models.ClassViewModel>)ViewBag.AdministrativeClasses ?? new();
+    var allClasses = (List<project_PRN232.Frontend.Models.ClassViewModel>)ViewBag.AllClasses ?? adminClasses;
     var sections = (List<project_PRN232.Frontend.Models.CourseSectionViewModel>)ViewBag.Sections ?? new();
+    var selectedClass = ViewBag.SelectedClass as project_PRN232.Frontend.Models.ClassSectionsResponseViewModel;
+    int? selectedClassId = ViewBag.SelectedClassId as int?;
     int? selectedSectionId = ViewBag.SelectedSectionId as int?;
+    string classSearch = ViewBag.ClassSearch as string ?? "";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h5 class="fw-bold mb-0">Quản lý Bảng điểm Học phần</h5>
-        <small class="text-muted">Nhập điểm thành phần, tự động tính điểm tổng kết và khóa sổ điểm</small>
+        <h4 class="fw-bold mb-1"><i class="fa-solid fa-marker text-primary me-2"></i>Quản lý & Nhập điểm Học phần</h4>
+        <small class="text-muted">Tìm kiếm theo tên lớp hành chính để xem danh sách các môn học đang học và nhập điểm thành phần theo CTĐT.</small>
     </div>
-    @if (selectedSectionId.HasValue && selectedSectionId.Value > 0)
+    @if (Model != null && Model.CourseSectionId > 0)
     {
         <div class="d-flex gap-2">
-            <a asp-controller="Reports" asp-action="ExportSectionGradesCsv" asp-route-sectionId="@selectedSectionId" class="btn btn-outline-success btn-sm rounded-3">
-                <i class="fa-solid fa-file-excel me-1"></i> Xuất CSV Bảng điểm
+            <a asp-controller="Reports" asp-action="ExportSectionGradesWord" asp-route-sectionId="@Model.CourseSectionId" class="btn btn-outline-primary btn-sm rounded-3 shadow-sm">
+                <i class="fa-solid fa-file-word me-1 text-primary"></i> Xuất Báo cáo Word
             </a>
             @if (role == "Admin")
             {
                 <form asp-action="ToggleLock" method="post" class="d-inline">
-                    <input type="hidden" name="sectionId" value="@selectedSectionId" />
+                    <input type="hidden" name="sectionId" value="@Model.CourseSectionId" />
+                    <input type="hidden" name="classId" value="@(selectedClassId ?? Model.AdministrativeClassId)" />
                     <input type="hidden" name="isLocked" value="@(Model.IsGradeLocked ? "false" : "true")" />
                     @if (Model.IsGradeLocked)
                     {
-                        <button type="submit" class="btn btn-warning btn-sm rounded-3" onclick="return confirm('Bạn có chắc chắn muốn mở khóa bảng điểm này để giảng viên tiếp tục cập nhật?')">
+                        <button type="submit" class="btn btn-warning btn-sm rounded-3 shadow-sm" onclick="return confirm('Bạn có chắc chắn muốn mở khóa bảng điểm này để giảng viên tiếp tục cập nhật?')">
                             <i class="fa-solid fa-lock-open me-1"></i> Mở khóa Điểm
                         </button>
                     }
                     else
                     {
-                        <button type="submit" class="btn btn-danger btn-sm rounded-3" onclick="return confirm('Khóa bảng điểm sẽ ngăn giảng viên sửa điểm. Bạn có muốn khóa không?')">
-                            <i class="fa-solid fa-lock me-1"></i> Khóa Điểm
+                        <button type="submit" class="btn btn-danger btn-sm rounded-3 shadow-sm" onclick="return confirm('Khóa bảng điểm sẽ ngăn giảng viên sửa điểm. Bạn có muốn khóa không?')">
+                            <i class="fa-solid fa-lock me-1"></i> Khóa Bảng Điểm
                         </button>
                     }
                 </form>
@@ -41,53 +47,268 @@
     }
 </div>
 
-<!-- Section Selector Card -->
+<!-- Khung Tìm kiếm & Chọn Lớp Hành Chính -->
 <div class="card border-0 shadow-sm rounded-3 mb-4">
-    <div class="card-body py-3">
+    <div class="card-header bg-white py-3 border-0">
+        <h6 class="fw-bold text-dark mb-0">
+            <i class="fa-solid fa-magnifying-glass text-primary me-2"></i>Tìm kiếm & Chọn Lớp Hành Chính
+        </h6>
+    </div>
+    <div class="card-body pt-0 pb-3">
         <form method="get" asp-action="Index" class="row g-2 align-items-center">
-            <div class="col-md-2 fw-semibold text-muted">
-                <i class="fa-solid fa-chalkboard me-1 text-primary"></i> Chọn Lớp HP:
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 text-muted">
+                        <i class="fa-solid fa-school"></i>
+                    </span>
+                    <input type="text" name="classSearch" value="@classSearch" class="form-control border-start-0" 
+                           placeholder="Nhập tên/mã lớp (ví dụ: SE1701, SE1801, IA1701...)" />
+                </div>
             </div>
-            <div class="col-md-8">
-                <select name="sectionId" class="form-select" onchange="this.form.submit()">
-                    <option value="">-- Chọn lớp học phần để nhập điểm --</option>
-                    @foreach (var sec in sections)
+            <div class="col-md-4">
+                <select name="classId" class="form-select" onchange="this.form.submit()">
+                    <option value="">-- Hoặc chọn từ danh sách lớp (@allClasses.Count lớp) --</option>
+                    @foreach (var c in allClasses)
                     {
-                        <option value="@sec.Id" selected="@(selectedSectionId == sec.Id ? "selected" : null)">
-                            @sec.Code - @sec.SubjectCode (@sec.SubjectName) | GV: @(sec.LecturerName ?? "Chưa phân công") @(sec.IsGradeLocked ? "[ĐÃ KHÓA]" : "")
+                        <option value="@c.Id" selected="@(selectedClassId == c.Id ? "selected" : null)">
+                            @c.Code - @c.Name (@c.MajorCode, K@(c.Cohort) - Kỳ @c.CurrentSemester)
                         </option>
                     }
                 </select>
             </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100 rounded-3">
-                    <i class="fa-solid fa-magnifying-glass me-1"></i> Xem bảng điểm
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1 rounded-3">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i> Tìm môn học
                 </button>
+                @if (selectedClassId.HasValue || !string.IsNullOrWhiteSpace(classSearch))
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary rounded-3" title="Đặt lại bộ lọc">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </a>
+                }
             </div>
         </form>
+
+        @if (sections != null && sections.Any())
+        {
+            <!-- Tùy chọn chọn trực tiếp lớp học phần -->
+            <div class="mt-2 pt-2 border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        Gợi ý: Nhập tên lớp để xem ngay các môn học lớp đó đang học. Hoặc chọn trực tiếp lớp HP:
+                    </small>
+                    <div style="min-width: 320px;">
+                        <form method="get" asp-action="Index">
+                            <select name="sectionId" class="form-select form-select-sm" onchange="this.form.submit()">
+                                <option value="">-- Chọn trực tiếp theo Mã lớp HP --</option>
+                                @foreach (var sec in sections)
+                                {
+                                    <option value="@sec.Id" selected="@(selectedSectionId == sec.Id ? "selected" : null)">
+                                        @sec.Code - @sec.SubjectCode (@sec.SubjectName)
+                                    </option>
+                                }
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
-@if (Model != null && Model.CourseSectionId > 0)
+@if (selectedClass != null)
 {
+    <!-- 1. Danh sách các môn học của Lớp đã chọn -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
             <div>
-                <span class="badge bg-primary fs-6 me-2">@Model.CourseSectionCode</span>
-                <span class="fw-bold fs-6">@Model.SubjectName (@Model.SubjectCode)</span>
-                <span class="text-muted ms-3"><i class="fa-solid fa-user-tie me-1"></i>GV: <strong>@(Model.LecturerName ?? "Chưa phân công")</strong></span>
+                <span class="badge bg-white text-primary fs-6 fw-bold me-2 px-3 py-2">
+                    <i class="fa-solid fa-users-rectangle me-1"></i>@selectedClass.ClassCode
+                </span>
+                <span class="fw-bold fs-6">@selectedClass.ClassName</span>
+                <span class="badge bg-primary-subtle text-dark ms-2">Ngành @selectedClass.MajorCode</span>
+                <span class="badge bg-light text-dark ms-1">Kỳ @selectedClass.CurrentSemester</span>
+                <span class="badge bg-light text-dark ms-1">Năm học @selectedClass.AcademicYear</span>
             </div>
             <div>
-                @if (Model.IsGradeLocked)
+                <span class="badge bg-white text-dark py-2 px-3 shadow-sm">
+                    Tổng số: <strong class="text-primary">@selectedClass.SectionsCount</strong> môn học đang học
+                </span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (!selectedClass.Sections.Any())
+            {
+                <div class="p-5 text-center text-muted">
+                    <i class="fa-solid fa-book-open-reader fa-3x mb-3 text-secondary"></i>
+                    <h6 class="fw-bold">Lớp này hiện chưa có môn học / lớp học phần nào!</h6>
+                    <p class="small mb-0">Vui lòng kiểm tra lại cấu hình phân bổ hoặc đồng bộ môn học theo CTĐT cho lớp hành chính này.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;" class="text-center">STT</th>
+                                <th style="width: 120px;">Mã môn</th>
+                                <th>Tên môn học đang học</th>
+                                <th>Mã lớp học phần</th>
+                                <th style="width: 90px;" class="text-center">Tín chỉ</th>
+                                <th style="width: 100px;" class="text-center">Học kỳ</th>
+                                <th>Giảng viên</th>
+                                <th style="width: 130px;" class="text-center">Trạng thái điểm</th>
+                                <th style="width: 140px;" class="text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int secIdx = 0; }
+                            @foreach (var s in selectedClass.Sections)
+                            {
+                                bool isCurrent = (selectedSectionId == s.Id);
+                                <tr class="@(isCurrent ? "table-primary bg-primary-subtle" : "")">
+                                    <td class="text-center fw-semibold text-muted">@(secIdx + 1)</td>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary border fw-bold">@s.SubjectCode</span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">@s.SubjectName</div>
+                                    </td>
+                                    <td>
+                                        <code class="text-primary fw-semibold">@s.Code</code>
+                                    </td>
+                                    <td class="text-center fw-semibold">@s.Credits TC</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border">@s.SemesterCode</span>
+                                    </td>
+                                    <td>
+                                        <small><i class="fa-solid fa-user-tie me-1 text-muted"></i>@(s.LecturerName ?? "Chưa phân công")</small>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (s.IsGradeLocked)
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger border border-danger">
+                                                <i class="fa-solid fa-lock me-1"></i>Đã khóa
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success">
+                                                <i class="fa-solid fa-pen-to-square me-1"></i>Đang mở
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (isCurrent)
+                                        {
+                                            <a href="#gradeEntrySection" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
+                                                <i class="fa-solid fa-arrow-down me-1"></i> Đang chọn
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a asp-action="Index" asp-route-classId="@selectedClass.ClassId" asp-route-sectionId="@s.Id" 
+                                               class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                <i class="fa-solid fa-pen-to-square me-1"></i> Vào nhập điểm
+                                            </a>
+                                        }
+                                    </td>
+                                </tr>
+                                secIdx++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (Model == null || Model.CourseSectionId == 0)
+{
+    <!-- Hướng dẫn khi chưa chọn lớp -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4 text-center p-5 bg-white">
+        <div class="py-4">
+            <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex p-4 mb-3">
+                <i class="fa-solid fa-chalkboard-user fa-3x"></i>
+            </div>
+            <h5 class="fw-bold text-dark">Chọn hoặc Tìm kiếm Lớp Hành chính để Bắt đầu</h5>
+            <p class="text-muted mx-auto" style="max-width: 600px;">
+                Nhập mã hoặc tên lớp hành chính (ví dụ: <code>SE1701</code>, <code>SE1801</code>, <code>IA1701</code>...) vào ô tìm kiếm ở trên để xem tất cả các môn học mà lớp đó đang học, sau đó chọn từng môn để mở bảng nhập điểm theo các đầu điểm đã thiết lập.
+            </p>
+            <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
+                @foreach (var c in allClasses.Take(8))
                 {
-                    <span class="badge bg-danger px-3 py-2"><i class="fa-solid fa-lock me-1"></i>BẢNG ĐIỂM ĐÃ KHÓA</span>
-                }
-                else
-                {
-                    <span class="badge bg-success px-3 py-2"><i class="fa-solid fa-pen-to-square me-1"></i>ĐANG MỞ CHO PHÉP NHẬP</span>
+                    <a asp-action="Index" asp-route-classId="@c.Id" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                        <i class="fa-solid fa-users me-1"></i> Lớp @c.Code
+                    </a>
                 }
             </div>
         </div>
+    </div>
+}
+
+<!-- 2. Bảng Nhập Điểm Môn Học Đã Chọn -->
+@if (Model != null && Model.CourseSectionId > 0)
+{
+    <div class="card border-0 shadow-sm rounded-3 mb-4" id="gradeEntrySection">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-primary fs-6 px-3 py-2">@Model.SubjectCode</span>
+                    <h5 class="fw-bold text-dark mb-0">@Model.SubjectName</h5>
+                    @if (!string.IsNullOrEmpty(Model.AdministrativeClassCode))
+                    {
+                        <span class="badge bg-info-subtle text-info border border-info ms-2">
+                            Lớp: <strong>@Model.AdministrativeClassCode</strong>
+                        </span>
+                    }
+                </div>
+                <div class="text-muted small">
+                    <span class="me-3"><i class="fa-solid fa-barcode me-1 text-primary"></i>Mã lớp HP: <strong>@Model.CourseSectionCode</strong></span>
+                    <span class="me-3"><i class="fa-solid fa-award me-1 text-warning"></i>Số tín chỉ: <strong>@Model.Credits</strong></span>
+                    <span><i class="fa-solid fa-user-tie me-1 text-info"></i>Giảng viên: <strong>@(Model.LecturerName ?? "Chưa phân công")</strong></span>
+                </div>
+            </div>
+            <div class="text-end">
+                @if (Model.IsGradeLocked)
+                {
+                    <span class="badge bg-danger px-3 py-2 shadow-sm fs-6">
+                        <i class="fa-solid fa-lock me-1"></i>BẢNG ĐIỂM ĐÃ KHÓA
+                    </span>
+                }
+                else
+                {
+                    <span class="badge bg-success px-3 py-2 shadow-sm fs-6">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>ĐANG MỞ CHO PHÉP NHẬP
+                    </span>
+                }
+            </div>
+        </div>
+
+        <!-- Thanh Hiển thị Các Đầu Điểm Đã Cấu Hình / Đánh Dấu Tích Khi Tạo Điểm -->
+        <div class="card-body bg-light py-2 px-3 border-bottom">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <span class="fw-semibold small text-muted me-1">
+                    <i class="fa-solid fa-list-check text-primary me-1"></i>Các đầu điểm đã tích hợp của môn:
+                </span>
+                @foreach (var comp in Model.Components)
+                {
+                    <span class="badge bg-white text-dark border p-2 shadow-sm">
+                        <i class="fa-solid fa-circle-check text-success me-1"></i>
+                        <strong>@comp.Name</strong>: @(comp.Weight.ToString("0.#"))% (Thang @comp.Scale.ToString("0"))
+                        @if (comp.IsAdminOnly)
+                        {
+                            <span class="badge bg-danger ms-1" title="Chỉ Admin có quyền nhập/sửa đầu điểm này">
+                                <i class="fa-solid fa-shield-halved me-1"></i>Chỉ Admin
+                            </span>
+                        }
+                    </span>
+                }
+            </div>
+        </div>
+
         <div class="card-body p-0">
             @if (!Model.StudentRows.Any())
             {
@@ -100,6 +321,7 @@
             {
                 <form asp-action="Save" method="post">
                     <input type="hidden" name="courseSectionId" value="@Model.CourseSectionId" />
+                    <input type="hidden" name="classId" value="@(selectedClassId ?? Model.AdministrativeClassId)" />
 
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover align-middle mb-0">
@@ -107,19 +329,24 @@
                                 <tr>
                                     <th style="width: 50px;">STT</th>
                                     <th style="width: 120px;">MSSV</th>
-                                    <th class="text-start">Họ và tên</th>
+                                    <th class="text-start">Họ và tên sinh viên</th>
+                                    <th style="width: 110px;">Lớp HC</th>
                                     @foreach (var comp in Model.Components)
                                     {
-                                        <th style="width: 120px;">
+                                        <th style="width: 130px;">
                                             <div>@comp.Name</div>
-                                            <small class="badge bg-light text-dark border">@((comp.Weight * 100).ToString("0.#"))%</small>
+                                            <small class="badge bg-light text-dark border">@(comp.Weight.ToString("0.#"))%</small>
                                             @if (comp.IsAdminOnly)
                                             {
-                                                <small class="badge bg-danger-subtle text-danger border border-danger">Admin</small>
+                                                <div><small class="badge bg-danger text-white border border-danger"><i class="fa-solid fa-shield-halved me-1"></i>Chỉ Admin</small></div>
+                                            }
+                                            else
+                                            {
+                                                <div><small class="badge bg-primary-subtle text-primary border border-primary"><i class="fa-solid fa-chalkboard-user me-1"></i>Giảng viên</small></div>
                                             }
                                         </th>
                                     }
-                                    <th style="width: 110px;">Tổng kết</th>
+                                    <th style="width: 100px;">Tổng kết</th>
                                     <th style="width: 100px;">Kết quả</th>
                                 </tr>
                             </thead>
@@ -129,8 +356,15 @@
                                 {
                                     <tr>
                                         <td class="text-center text-muted">@(rowIdx + 1)</td>
-                                        <td class="fw-bold text-center">@s.StudentCode</td>
+                                        <td class="fw-bold text-center">
+                                            <code class="text-dark">@s.StudentCode</code>
+                                        </td>
                                         <td class="fw-semibold">@s.FullName</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark border">
+                                                @(string.IsNullOrEmpty(s.AdministrativeClassCode) ? (Model.AdministrativeClassCode ?? "Chưa có") : s.AdministrativeClassCode)
+                                            </span>
+                                        </td>
                                         
                                         @{ int compIdx = 0; }
                                         @foreach (var comp in Model.Components)
@@ -140,18 +374,65 @@
                                             {
                                                 scoreVal = s.ComponentScores[comp.Id];
                                             }
-                                            bool canEditComponent = !Model.IsGradeLocked && (role == "Admin" || !comp.IsAdminOnly);
+                                            
+                                            // Phân quyền chuẩn xác:
+                                            // - Admin CHỈ ĐƯỢC NHẬP những điểm có quyền nhập (comp.IsAdminOnly == true). Các điểm còn lại thì KHÔNG được nhập.
+                                            // - Giảng viên CHỈ ĐƯỢC NHẬP những điểm của GV (comp.IsAdminOnly == false). Các điểm Chỉ Admin thì KHÔNG được nhập.
+                                            bool canEditComponent = false;
+                                            if (!Model.IsGradeLocked)
+                                            {
+                                                if (role == "Admin")
+                                                {
+                                                    canEditComponent = comp.IsAdminOnly;
+                                                }
+                                                else if (role == "Lecturer")
+                                                {
+                                                    canEditComponent = !comp.IsAdminOnly;
+                                                }
+                                            }
                                             int flatIndex = rowIdx * Model.Components.Count + compIdx;
 
-                                            <td class="text-center p-1">
-                                                <input type="hidden" name="grades[@flatIndex].StudentId" value="@s.StudentId" />
-                                                <input type="hidden" name="grades[@flatIndex].ComponentId" value="@comp.Id" />
-                                                <input type="number" step="0.1" min="0" max="10" 
-                                                       name="grades[@flatIndex].Score" 
-                                                       value="@(scoreVal.HasValue ? scoreVal.Value.ToString("0.0") : "")"
-                                                       class="form-control form-control-sm text-center fw-semibold"
-                                                       placeholder="0.0"
-                                                       @(canEditComponent ? "" : "readonly disabled") />
+                                            string placeholderText = "0.0";
+                                            string tooltipText = $"Nhập điểm từ 0.0 đến {comp.Scale.ToString("0")}";
+                                            string cellClass = "";
+
+                                            if (!canEditComponent)
+                                            {
+                                                if (role == "Admin" && !comp.IsAdminOnly)
+                                                {
+                                                    placeholderText = "GV chấm";
+                                                    tooltipText = "Đầu điểm này do Giảng viên phụ trách chấm và nhập (Admin không nhập)";
+                                                    cellClass = "bg-light-subtle";
+                                                }
+                                                else if (role != "Admin" && comp.IsAdminOnly)
+                                                {
+                                                    placeholderText = "Chỉ Admin";
+                                                    tooltipText = "Đầu điểm này chỉ Admin / Hội đồng có quyền nhập";
+                                                    cellClass = "bg-danger-subtle";
+                                                }
+                                            }
+
+                                            <td class="text-center p-1 @cellClass">
+                                                @if (canEditComponent)
+                                                {
+                                                    <input type="hidden" name="grades[@flatIndex].StudentId" value="@s.StudentId" />
+                                                    <input type="hidden" name="grades[@flatIndex].ComponentId" value="@comp.Id" />
+                                                    <input type="number" step="0.1" min="0" max="@comp.Scale.ToString("0")" 
+                                                           name="grades[@flatIndex].Score" 
+                                                           value="@(scoreVal.HasValue ? scoreVal.Value.ToString("0.0") : "")"
+                                                           class="form-control form-control-sm text-center fw-semibold text-primary"
+                                                           placeholder="@placeholderText"
+                                                           title="@tooltipText" />
+                                                }
+                                                else
+                                                {
+                                                    <input type="text" 
+                                                           value="@(scoreVal.HasValue ? scoreVal.Value.ToString("0.0") : "")"
+                                                           class="form-control form-control-sm text-center bg-light text-muted fw-semibold"
+                                                           placeholder="@placeholderText"
+                                                           title="@tooltipText"
+                                                           readonly disabled />
+                                                }
                                             </td>
                                             compIdx++;
                                         }
@@ -173,7 +454,7 @@
                                             }
                                             else
                                             {
-                                                <span class="badge bg-light text-muted border">Chưa đủ điểm</span>
+                                                <span class="badge bg-light text-muted border">Chưa đủ</span>
                                             }
                                         </td>
                                     </tr>
@@ -183,18 +464,29 @@
                         </table>
                     </div>
 
-                    @if (!Model.IsGradeLocked)
-                    {
-                        <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
-                            <small class="text-muted"><i class="fa-solid fa-circle-info me-1"></i> Điểm lẻ từ 0.0 đến 10.0. Điểm tổng kết tự động làm tròn 1 chữ số thập phân (ví dụ: 7.85 -> 7.9). Điểm đạt >= 5.0.</small>
-                            <button type="submit" class="btn btn-primary rounded-3 px-4">
+                    <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted d-block">
+                                <i class="fa-solid fa-circle-info me-1"></i> Điểm lẻ từ 0.0 đến 10.0. Điểm tổng kết tự động tính theo tỷ trọng % các đầu điểm đã tích hợp. Điểm đạt &ge; 5.0.
+                            </small>
+                            @if (selectedClass != null)
+                            {
+                                <small class="text-primary mt-1 d-inline-block">
+                                    <a asp-action="Index" asp-route-classId="@selectedClass.ClassId" class="text-decoration-none">
+                                        <i class="fa-solid fa-arrow-left me-1"></i>Quay lại danh sách môn học của lớp @selectedClass.ClassCode
+                                    </a>
+                                </small>
+                            }
+                        </div>
+                        @if (!Model.IsGradeLocked)
+                        {
+                            <button type="submit" class="btn btn-primary rounded-3 px-4 shadow-sm">
                                 <i class="fa-solid fa-floppy-disk me-1"></i> Lưu Bảng Điểm
                             </button>
-                        </div>
-                    }
+                        }
+                    </div>
                 </form>
             }
         </div>
     </div>
 }
-

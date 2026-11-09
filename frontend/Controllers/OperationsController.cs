@@ -98,53 +98,27 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> AuditLogs(string? action)
+        public IActionResult AuditLogs()
         {
-            var authCheck = CheckAuth("Admin");
-            if (authCheck != null) return authCheck;
-
-            string endpoint = "auditlogs";
-            if (!string.IsNullOrWhiteSpace(action)) endpoint += $"?action={action}";
-
-            var logs = await ApiClient.GetAsync<List<AuditLogItemViewModel>>(endpoint) ?? new List<AuditLogItemViewModel>();
-            return View(logs);
+            return RedirectToAction(nameof(Users));
         }
 
         [HttpGet]
-        public async Task<IActionResult> Backups()
+        public IActionResult Backups()
         {
-            var authCheck = CheckAuth("Admin");
-            if (authCheck != null) return authCheck;
-
-            var backups = await ApiClient.GetAsync<List<BackupItemViewModel>>("backups") ?? new List<BackupItemViewModel>();
-            return View(backups);
+            return RedirectToAction(nameof(Users));
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateBackup(string? notes)
+        public IActionResult CreateBackup(string? notes)
         {
-            var authCheck = CheckAuth("Admin");
-            if (authCheck != null) return authCheck;
-
-            var (success, msg, _) = await ApiClient.PostAsync<object>("backups/create", new { notes });
-            SetAlert(msg, success ? "success" : "danger");
-            return RedirectToAction(nameof(Backups));
+            return RedirectToAction(nameof(Users));
         }
 
         [HttpPost]
-        public async Task<IActionResult> RestoreBackup(int backupId, string confirmationText)
+        public IActionResult RestoreBackup(int backupId, string confirmationText)
         {
-            var authCheck = CheckAuth("Admin");
-            if (authCheck != null) return authCheck;
-
-            var (success, msg, _) = await ApiClient.PostAsync<object>("backups/restore", new
-            {
-                backupId,
-                confirmationText
-            });
-
-            SetAlert(msg, success ? "success" : "danger");
-            return RedirectToAction(nameof(Backups));
+            return RedirectToAction(nameof(Users));
         }
 
         #region Môn đăng ký của Giảng viên (AJAX)

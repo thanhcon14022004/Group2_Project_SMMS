@@ -92,9 +92,6 @@ else
                     <a asp-controller="Curriculums" asp-action="Index" class="nav-item-btn @(currentCtrl == "Curriculums" && currentAct == "Index" ? "active" : "")">
                         <i class="fa-solid fa-scroll"></i> <span>Chương trình Đào tạo</span>
                     </a>
-                    <a asp-controller="Curriculums" asp-action="Lookup" class="nav-item-btn @(currentCtrl == "Curriculums" && currentAct == "Lookup" ? "active" : "")">
-                        <i class="fa-solid fa-magnifying-glass-arrow-right"></i> <span>Tra cứu môn tự động</span>
-                    </a>
                     <a asp-controller="Classes" asp-action="Index" class="nav-item-btn @(currentCtrl == "Classes" && currentAct == "Index" ? "active" : "")">
                         <i class="fa-solid fa-chalkboard"></i> <span>Lớp hành chính</span>
                     </a>
@@ -109,22 +106,10 @@ else
                     <a asp-controller="Grades" asp-action="Index" class="nav-item-btn @(currentCtrl == "Grades" && currentAct == "Index" ? "active" : "")">
                         <i class="fa-solid fa-pen-to-square"></i> <span>Nhập & Khóa điểm</span>
                     </a>
-                    <a asp-controller="Classes" asp-action="Transfers" class="nav-item-btn @(currentCtrl == "Classes" && currentAct == "Transfers" ? "active" : "")">
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i> <span>Chuyển lớp hành chính</span>
-                    </a>
 
-                    <div class="nav-section-title">BÁO CÁO & HỆ THỐNG</div>
-                    <a asp-controller="Reports" asp-action="Index" class="nav-item-btn @(currentCtrl == "Reports" ? "active" : "")">
-                        <i class="fa-solid fa-file-invoice"></i> <span>Báo cáo & Thống kê</span>
-                    </a>
+                    <div class="nav-section-title">HỆ THỐNG</div>
                     <a asp-controller="Operations" asp-action="Users" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "Users" ? "active" : "")">
                         <i class="fa-solid fa-users"></i> <span>Tài khoản người dùng</span>
-                    </a>
-                    <a asp-controller="Operations" asp-action="AuditLogs" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "AuditLogs" ? "active" : "")">
-                        <i class="fa-solid fa-clock-rotate-left"></i> <span>Nhật ký thao tác</span>
-                    </a>
-                    <a asp-controller="Operations" asp-action="Backups" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "Backups" ? "active" : "")">
-                        <i class="fa-solid fa-database"></i> <span>Sao lưu & Khôi phục</span>
                     </a>
                 }
                 else if (role == "Lecturer")
@@ -170,12 +155,6 @@ else
                     <span class="fs-5 fw-bold text-primary">@ViewData["Title"]</span>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    @if (!string.IsNullOrEmpty(token))
-                    {
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#jwtTokenModal" title="Xem chuỗi JWT Token">
-                            <i class="fa-solid fa-key me-1 text-warning"></i> <span>Xem JWT Token</span>
-                        </button>
-                    }
                     <div class="text-end">
                         <div class="fw-semibold text-dark">@fullName</div>
                         <span class="badge @(role == "Admin" ? "bg-danger" : role == "Lecturer" ? "bg-primary" : "bg-success")">
@@ -195,46 +174,6 @@ else
         </div>
     </div>
 
-    <!-- MODAL HIỂN THỊ JWT TOKEN -->
-    @if (!string.IsNullOrEmpty(token))
-    {
-        <div class="modal fade" id="jwtTokenModal" tabindex="-1" aria-labelledby="jwtTokenModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content border-0 shadow-lg rounded-4">
-                    <div class="modal-header bg-primary text-white rounded-top-4">
-                        <h5 class="modal-title fw-bold" id="jwtTokenModalLabel">
-                            <i class="fa-solid fa-shield-halved me-2 text-warning"></i> JWT Bearer Token Đang Hoạt Động
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-4">
-                        <div class="alert alert-info py-2 small mb-3">
-                            <i class="fa-solid fa-circle-info me-1"></i> Chuỗi JWT Token này được Backend API cấp sau khi xác thực danh tính. Token cũng đã được tự động lưu vào <strong>Cookie (SMMS_JWT_TOKEN)</strong> và <strong>Session Server</strong>.
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small text-muted">CHUỖI TOKEN NGUYÊN BẢN (RAW JWT):</label>
-                            <div class="position-relative">
-                                <textarea id="jwtRawToken" class="form-control font-monospace small bg-light" rows="5" readonly style="word-break: break-all; resize: none;">@token</textarea>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
-                                <i class="fa-solid fa-circle-check me-1"></i> Trạng thái: Hợp lệ (HMAC-SHA256)
-                            </span>
-                            <button type="button" class="btn btn-primary btn-sm px-3" onclick="navigator.clipboard.writeText(document.getElementById('jwtRawToken').value); alert('Đã sao chép chuỗi JWT Token thành công!');">
-                                <i class="fa-solid fa-copy me-1"></i> Sao chép Token
-                            </button>
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light rounded-bottom-4">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
 }
 
 <!-- Bootstrap 5 JS Bundle -->

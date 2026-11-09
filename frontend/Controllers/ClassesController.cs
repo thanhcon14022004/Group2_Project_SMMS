@@ -238,11 +238,20 @@ namespace project_PRN232.Frontend.Controllers
 
             if (model == null)
             {
-                model = new AllocationViewModel { SemesterId = selectedSemesterId };
+                model = new AllocationViewModel 
+                { 
+                    SemesterId = selectedSemesterId,
+                    ClassSummaries = new List<ClassAllocationSummaryViewModel>(),
+                    Allocations = new List<AllocationItemViewModel>(),
+                    Exceptions = new List<UnallocatedExceptionViewModel>()
+                };
             }
             else
             {
                 model.SemesterId = selectedSemesterId;
+                model.ClassSummaries ??= new List<ClassAllocationSummaryViewModel>();
+                model.Allocations ??= new List<AllocationItemViewModel>();
+                model.Exceptions ??= new List<UnallocatedExceptionViewModel>();
             }
 
             return View(model);
@@ -268,12 +277,21 @@ namespace project_PRN232.Frontend.Controllers
 
             if (success && data != null)
             {
+                data.ClassSummaries ??= new List<ClassAllocationSummaryViewModel>();
+                data.Allocations ??= new List<AllocationItemViewModel>();
+                data.Exceptions ??= new List<UnallocatedExceptionViewModel>();
                 SetAlert($"Đã phân bổ thành công {data.TotalEligibleStudents} sinh viên vào các lớp hành chính ({data.AutoCreatedStudentsCount} sinh viên tự động tạo mới vào CSDL để đạt chuẩn 28-31 SV/lớp)!", "success");
                 return View("Allocations", data);
             }
 
-            SetAlert(msg, "danger");
-            return View("Allocations", new AllocationViewModel { SemesterId = semesterId });
+            SetAlert(string.IsNullOrWhiteSpace(msg) ? "Phân bổ sinh viên thất bại. Vui lòng kiểm tra lại cấu hình học kỳ và lớp hành chính." : msg, "danger");
+            return View("Allocations", new AllocationViewModel 
+            { 
+                SemesterId = semesterId,
+                ClassSummaries = new List<ClassAllocationSummaryViewModel>(),
+                Allocations = new List<AllocationItemViewModel>(),
+                Exceptions = new List<UnallocatedExceptionViewModel>()
+            });
         }
 
         [HttpPost]
@@ -321,7 +339,7 @@ namespace project_PRN232.Frontend.Controllers
         [HttpGet]
         public async Task<IActionResult> Transfers()
         {
-            var authCheck = CheckAuth();
+            var authCheck = CheckAuth("Student");
             if (authCheck != null) return authCheck;
 
             var requests = await ApiClient.GetAsync<List<ClassTransferViewModel>>("classtransfers/requests") ?? new List<ClassTransferViewModel>();

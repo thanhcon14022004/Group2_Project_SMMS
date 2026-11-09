@@ -87,47 +87,9 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Lookup(int? majorId, int? semesterNumber, int? specializationId)
+        public IActionResult Lookup()
         {
-            var authCheck = CheckAuth("Admin");
-            if (authCheck != null) return authCheck;
-
-            ViewBag.Majors = await ApiClient.GetAsync<List<MajorViewModel>>("majors") ?? new List<MajorViewModel>();
-            ViewBag.Specializations = await ApiClient.GetAsync<List<SpecializationViewModel>>("specializations") ?? new List<SpecializationViewModel>();
-
-            var vm = new CurriculumLookupViewModel
-            {
-                MajorId = majorId ?? 1,
-                SemesterNumber = semesterNumber ?? 1,
-                SpecializationId = specializationId
-            };
-
-            if (majorId.HasValue)
-            {
-                var (success, msg, data) = await ApiClient.PostAsync<CurriculumLookupViewModel>("curriculums/lookup", new
-                {
-                    majorId = vm.MajorId,
-                    semesterNumber = vm.SemesterNumber,
-                    specializationId = vm.SpecializationId
-                });
-
-                if (data != null)
-                {
-                    vm.IsFound = data.IsFound;
-                    vm.ConfigName = data.ConfigName;
-                    vm.Version = data.Version;
-                    vm.MajorCode = data.MajorCode;
-                    vm.SpecializationCode = data.SpecializationCode;
-                    vm.Message = data.Message;
-                    vm.Subjects = data.Subjects;
-                }
-                else
-                {
-                    vm.Message = msg;
-                }
-            }
-
-            return View(vm);
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]

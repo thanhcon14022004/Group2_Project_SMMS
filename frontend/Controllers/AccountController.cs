@@ -51,7 +51,7 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> QuickLogin(string username, string password)
+        public async Task<IActionResult> QuickLogin(string username, string password = "Admin@123")
         {
             try
             {
