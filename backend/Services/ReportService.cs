@@ -113,41 +113,65 @@ namespace project_PRN232.Services
 
             if (lecturer == null) return null;
 
-            var activeSemester = await _db.Semesters
-                .Where(s => s.Status == "Active")
-                .OrderByDescending(s => s.StartDate)
-                .FirstOrDefaultAsync() ?? await _db.Semesters.OrderByDescending(s => s.StartDate).FirstOrDefaultAsync();
-
-            var query = _db.CourseSections
+            // Lấy các lớp học phần giảng viên HIỆN ĐANG GIẢNG DẠY
+            // Điều kiện: Thuộc học kỳ chưa kết thúc (Status != "Ended" && Status != "Closed") và Lớp chưa đóng (Status != "Completed")
+            var activeSections = await _db.CourseSections
+                .Include(cs => cs.Semester)
                 .Include(cs => cs.Subject)
                 .Include(cs => cs.Schedules)
                 .Include(cs => cs.Enrollments)
-                .Where(cs => cs.LecturerId == lecturer.Id);
+                .Where(cs => cs.LecturerId == lecturer.Id 
+                             && cs.Semester != null 
+                             && cs.Semester.Status != "Ended" 
+                             && cs.Semester.Status != "Closed" 
+                             && cs.Status != "Completed")
+                .OrderByDescending(cs => cs.Semester!.StartDate)
+                .ThenBy(cs => cs.Code)
+                .ToListAsync();
 
-            if (activeSemester != null)
-            {
-                query = query.Where(cs => cs.SemesterId == activeSemester.Id);
-            }
+            var activeSectionIds = activeSections.Select(cs => cs.Id).ToList();
 
-            var sections = await query.OrderBy(cs => cs.Code).ToListAsync();
+            // Sĩ số sinh viên thực tế mà GV đang trực tiếp giảng dạy
+            var totalStudents = activeSections.SelectMany(cs => cs.Enrollments).Select(e => e.StudentId).Distinct().Count();
 
-            var sectionIds = sections.Select(cs => cs.Id).ToList();
+            // Tiến độ nhập điểm của các lớp đang dạy
+            var lockedCount = activeSections.Count(cs => cs.IsGradeLocked);
+            var pendingCount = activeSections.Count(cs => !cs.IsGradeLocked);
 
-            // Sĩ số sinh viên mà GV đang dạy (tính unique SV theo các lớp học phần kỳ này)
-            var totalStudents = sections.SelectMany(cs => cs.Enrollments).Select(e => e.StudentId).Distinct().Count();
-
-            // Tiến độ nhập điểm
-            var lockedCount = sections.Count(cs => cs.IsGradeLocked);
-            var pendingCount = sections.Count(cs => !cs.IsGradeLocked);
-
-            // Tổng số môn GV đã đăng ký
+            // Tổng số môn GV đã đăng ký giảng dạy
             var registeredSubjectsCount = await _db.LecturerSubjects.CountAsync(ls => ls.LecturerId == lecturer.Id);
 
-            // Format thông tin các lớp học phần
-            var assignedSections = sections.Select(cs => new LecturerSectionSummaryDto
+            // Tên kỳ học hiện tại (lấy từ các lớp đang dạy hoặc kỳ gần nhất)
+            var activeSemesterNames = activeSections
+                .Select(cs => cs.Semester?.Name)
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Distinct()
+                .ToList();
+
+            string semesterDisplayName;
+            if (activeSemesterNames.Any())
+            {
+                semesterDisplayName = string.Join(", ", activeSemesterNames);
+            }
+            else
+            {
+                var latestSemester = await _db.Semesters
+                    .Where(s => s.Status != "Ended" && s.Status != "Closed")
+                    .OrderByDescending(s => s.StartDate)
+                    .FirstOrDefaultAsync() ?? await _db.Semesters.OrderByDescending(s => s.StartDate).FirstOrDefaultAsync();
+                semesterDisplayName = latestSemester?.Name ?? "Chưa có";
+            }
+
+            // Hạn nhập điểm của kỳ gần nhất
+            var latestActiveSem = activeSections.Select(cs => cs.Semester).FirstOrDefault()
+                ?? await _db.Semesters.OrderByDescending(s => s.StartDate).FirstOrDefaultAsync();
+
+            // Format thông tin các lớp học phần đang dạy
+            var assignedSections = activeSections.Select(cs => new LecturerSectionSummaryDto
             {
                 Id = cs.Id,
                 Code = cs.Code,
+                SemesterName = cs.Semester?.Name ?? "",
                 SubjectCode = cs.Subject?.Code ?? "",
                 SubjectName = cs.Subject?.Name ?? "",
                 Credits = cs.Subject?.Credits ?? 0,
@@ -160,7 +184,7 @@ namespace project_PRN232.Services
 
             // Phổ điểm của sinh viên các lớp do giảng viên này phụ trách
             var teachingScores = await _db.StudentGrades
-                .Where(g => sectionIds.Contains(g.CourseSectionId) && g.Score.HasValue)
+                .Where(g => activeSectionIds.Contains(g.CourseSectionId) && g.Score.HasValue)
                 .GroupBy(g => g.StudentId)
                 .Select(g => new
                 {
@@ -171,7 +195,7 @@ namespace project_PRN232.Services
 
             if (!teachingScores.Any())
             {
-                // Fallback: nếu kỳ này chưa có điểm nào thì lấy điểm các lớp GV từng dạy để biểu đồ trực quan
+                // Fallback: nếu các lớp hiện tại chưa nhập điểm thì lấy điểm tất cả các lớp GV từng dạy để biểu đồ trực quan
                 teachingScores = await _db.StudentGrades
                     .Where(g => _db.CourseSections.Where(cs => cs.LecturerId == lecturer.Id).Select(cs => cs.Id).Contains(g.CourseSectionId) && g.Score.HasValue)
                     .GroupBy(g => g.StudentId)
@@ -217,10 +241,10 @@ namespace project_PRN232.Services
                 FullName = lecturer.User?.FullName ?? "",
                 AcademicTitle = lecturer.AcademicTitle,
                 Department = lecturer.Department,
-                ActiveSemesterId = activeSemester?.Id ?? 0,
-                ActiveSemesterName = activeSemester?.Name ?? "Chưa có",
-                GradeEntryDeadline = activeSemester?.GradeEntryDeadline,
-                TotalAssignedSections = sections.Count,
+                ActiveSemesterId = latestActiveSem?.Id ?? 0,
+                ActiveSemesterName = semesterDisplayName,
+                GradeEntryDeadline = latestActiveSem?.GradeEntryDeadline,
+                TotalAssignedSections = activeSections.Count,
                 TotalStudentsTeaching = totalStudents,
                 SectionsLockedCount = lockedCount,
                 SectionsPendingGradeCount = pendingCount,

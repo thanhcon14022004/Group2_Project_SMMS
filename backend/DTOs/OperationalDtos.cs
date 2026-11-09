@@ -157,6 +157,7 @@ namespace project_PRN232.DTOs
     {
         public int Id { get; set; }
         public string Code { get; set; } = string.Empty;
+        public string SemesterName { get; set; } = string.Empty;
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
         public int Credits { get; set; }
