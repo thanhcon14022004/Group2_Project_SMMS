@@ -1,14 +1,21 @@
-@model List<project_PRN232.Frontend.Models.UserItemViewModel>
+@model project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.UserItemViewModel>
+@inject IHttpContextAccessor HttpContextAccessor
 @{
     ViewData["Title"] = "Quản lý Người dùng & Tài khoản";
+    var currentUsername = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_USERNAME") ?? "";
+    var currentUserIdStr = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ID") ?? "";
+    int.TryParse(currentUserIdStr, out var currentUserId);
+
+    var majors = ViewBag.Majors as List<project_PRN232.Frontend.Models.MajorViewModel> ?? new();
+    var classes = ViewBag.Classes as List<project_PRN232.Frontend.Models.ClassViewModel> ?? new();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
-        <h5 class="fw-bold mb-0">Quản lý Tài khoản Người dùng</h5>
-        <small class="text-muted">Quản lý tài khoản Admin, Giảng viên và Sinh viên trong toàn hệ thống</small>
+        <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-users-gear text-primary me-2"></i>Quản lý Tài khoản Người dùng</h5>
+        <small class="text-muted">Quản trị danh sách tài khoản Admin, Giảng viên và Sinh viên toàn hệ thống SMMS</small>
     </div>
-    <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalAddUser">
+    <button class="btn btn-primary btn-sm rounded-3 shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAddUser">
         <i class="fa-solid fa-user-plus me-1"></i> Thêm Tài khoản Mới
     </button>
 </div>
@@ -17,126 +24,198 @@
 <div class="card border-0 shadow-sm rounded-3 mb-4">
     <div class="card-body py-3">
         <form method="get" asp-action="Users" class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Tìm kiếm</label>
-                <input type="text" name="search" class="form-control" placeholder="Tên đăng nhập, họ tên..." value="@Context.Request.Query["search"]" />
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold text-secondary">Tìm kiếm theo tên / mã</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light text-muted border-end-0"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" name="search" class="form-control form-control-sm border-start-0" placeholder="Tên đăng nhập, họ tên, email..." value="@Context.Request.Query["search"]" />
+                </div>
             </div>
             <div class="col-md-4">
-                <label class="form-label fw-semibold">Vai trò (Role)</label>
-                <select name="role" class="form-select">
+                <label class="form-label small fw-semibold text-secondary">Vai trò (Role)</label>
+                <select name="role" class="form-select form-select-sm">
                     <option value="">-- Tất cả vai trò --</option>
-                    <option value="Admin" selected="@(Context.Request.Query["role"] == "Admin" ? "selected" : null)">Admin</option>
+                    <option value="Admin" selected="@(Context.Request.Query["role"] == "Admin" ? "selected" : null)">Admin (Quản trị viên)</option>
                     <option value="Lecturer" selected="@(Context.Request.Query["role"] == "Lecturer" ? "selected" : null)">Lecturer (Giảng viên)</option>
                     <option value="Student" selected="@(Context.Request.Query["role"] == "Student" ? "selected" : null)">Student (Sinh viên)</option>
                 </select>
             </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-primary w-100 rounded-3">
-                    <i class="fa-solid fa-magnifying-glass me-1"></i> Tìm kiếm
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm rounded-3 flex-grow-1 fw-semibold shadow-sm">
+                    <i class="fa-solid fa-filter me-1"></i> Lọc dữ liệu
                 </button>
+                @if (!string.IsNullOrEmpty(Context.Request.Query["search"]) || !string.IsNullOrEmpty(Context.Request.Query["role"]))
+                {
+                    <a asp-action="Users" class="btn btn-outline-secondary btn-sm rounded-3 px-3" title="Đặt lại bộ lọc">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </a>
+                }
             </div>
         </form>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm rounded-3">
+<div class="card border-0 shadow-sm rounded-3 overflow-hidden">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 50px;">ID</th>
-                        <th>Tài khoản</th>
-                        <th>Họ và tên</th>
-                        <th>Email</th>
-                        <th>Số điện thoại</th>
-                        <th>Vai trò</th>
-                        <th>Trạng thái</th>
-                        <th class="text-center" style="width: 140px;">Môn dạy</th>
-                        <th class="text-end" style="width: 180px;">Thao tác</th>
+                        <th style="width: 45px;" class="text-center">#</th>
+                        <th style="min-width: 140px;">Tài khoản & Mã</th>
+                        <th style="min-width: 180px;">Họ và tên</th>
+                        <th style="min-width: 220px;">Hồ sơ & Đào tạo</th>
+                        <th style="min-width: 180px;">Liên hệ (Email/SĐT)</th>
+                        <th style="width: 110px;" class="text-center">Vai trò</th>
+                        <th style="width: 110px;" class="text-center">Trạng thái</th>
+                        <th style="width: 150px;" class="text-end pe-3">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model == null || !Model.Any())
+                    @if (Model == null || Model.Items == null || !Model.Items.Any())
                     {
                         <tr>
-                            <td colspan="9" class="text-center py-4 text-muted">Không tìm thấy tài khoản nào.</td>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-users-slash fa-2x mb-2 text-muted"></i>
+                                <div>Không tìm thấy tài khoản người dùng nào phù hợp.</div>
+                            </td>
                         </tr>
                     }
                     else
                     {
-                        foreach (var u in Model)
+                        foreach (var u in Model.Items)
                         {
-                            <tr>
-                                <td class="text-muted">@u.Id</td>
-                                <td class="fw-bold">@u.Username</td>
-                                <td>@u.FullName</td>
-                                <td>@u.Email</td>
-                                <td>@(string.IsNullOrWhiteSpace(u.PhoneNumber) ? "-" : u.PhoneNumber)</td>
+                            bool isSelf = (string.Equals(u.Username, currentUsername, StringComparison.OrdinalIgnoreCase)) || (currentUserId > 0 && u.Id == currentUserId);
+
+                            <tr class="@(isSelf ? "table-primary bg-primary-subtle bg-opacity-25" : "")">
+                                <td class="text-center text-muted fw-semibold">@u.Id</td>
                                 <td>
-                                    @if (u.Role == "Admin")
+                                    <div class="fw-bold font-monospace text-primary">@u.Username</div>
+                                    @if (u.Role == "Student" && !string.IsNullOrWhiteSpace(u.StudentCode))
                                     {
-                                        <span class="badge bg-danger-subtle text-danger border border-danger">Admin</span>
+                                        <span class="badge bg-light text-primary border font-monospace mt-1" style="font-size: 0.75rem;">
+                                            MSSV: @u.StudentCode
+                                        </span>
+                                    }
+                                    else if (u.Role == "Lecturer" && !string.IsNullOrWhiteSpace(u.LecturerCode))
+                                    {
+                                        <span class="badge bg-light text-success border font-monospace mt-1" style="font-size: 0.75rem;">
+                                            Mã GV: @u.LecturerCode
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">
+                                        @u.FullName
+                                        @if (isSelf)
+                                        {
+                                            <span class="badge bg-primary text-white ms-1 shadow-sm rounded-pill" style="font-size: 0.72rem;">
+                                                <i class="fa-solid fa-circle-user me-1"></i>Bạn (Đang đăng nhập)
+                                            </span>
+                                        }
+                                    </div>
+                                    <small class="text-muted">Tham gia: @u.CreatedAt.ToString("dd/MM/yyyy")</small>
+                                </td>
+                                <td>
+                                    @if (u.Role == "Student")
+                                    {
+                                        <div><i class="fa-solid fa-chalkboard me-1 text-primary"></i>Lớp: <strong>@(u.AdministrativeClassName ?? "Chưa xếp lớp")</strong></div>
+                                        <small class="text-muted"><i class="fa-solid fa-graduation-cap me-1"></i>Ngành: @(u.MajorName ?? "Chưa xác định")</small>
                                     }
                                     else if (u.Role == "Lecturer")
                                     {
-                                        <span class="badge bg-warning-subtle text-warning border border-warning">Lecturer</span>
+                                        <div><i class="fa-solid fa-building me-1 text-secondary"></i>@(u.Department ?? "Software Engineering") <span class="badge bg-info-subtle text-info border">@(u.AcademicTitle ?? "Master")</span></div>
+                                        <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0 mt-1" 
+                                                onclick="openLecturerSubjectsModal(@(u.LecturerId ?? 0), @u.Id, '@u.FullName', '@u.Username')"
+                                                title="Quản lý danh sách môn đăng ký giảng dạy">
+                                            <i class="fa-solid fa-book-open-reader me-1"></i>Môn dạy
+                                        </button>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-primary-subtle text-primary border border-primary">Student</span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger">
+                                            <i class="fa-solid fa-shield-halved me-1"></i>Quản trị toàn quyền
+                                        </span>
                                     }
                                 </td>
                                 <td>
-                                    @if (u.IsActive)
+                                    <div class="small text-truncate" style="max-width: 220px;" title="@u.Email">
+                                        <i class="fa-regular fa-envelope me-1 text-muted"></i>@u.Email
+                                    </div>
+                                    <div class="small text-muted">
+                                        <i class="fa-solid fa-phone me-1"></i>@(string.IsNullOrWhiteSpace(u.PhoneNumber) ? "-" : u.PhoneNumber)
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    @if (u.Role == "Admin")
                                     {
-                                        <span class="badge bg-success-subtle text-success border border-success">Hoạt động</span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">Admin</span>
+                                    }
+                                    else if (u.Role == "Lecturer")
+                                    {
+                                        <span class="badge bg-info-subtle text-info border border-info px-2 py-1">Lecturer</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary">Đã khóa</span>
+                                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1">Student</span>
                                     }
                                 </td>
                                 <td class="text-center">
-                                    @if (u.Role == "Lecturer")
+                                    @if (u.IsActive)
                                     {
-                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm" 
-                                                onclick="openLecturerSubjectsModal(@(u.LecturerId ?? 0), @u.Id, '@u.FullName', '@u.Username')"
-                                                title="Quản lý môn giảng viên đăng ký dạy">
-                                            <i class="fa-solid fa-book-open-reader me-1"></i>Chi tiết
+                                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                            <i class="fa-solid fa-circle-check me-1"></i>Hoạt động
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary px-2 py-1">
+                                            <i class="fa-solid fa-lock me-1"></i>Đã khóa
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    <!-- Nút Sửa: Luôn khả dụng để cập nhật thông tin -->
+                                    <button class="btn btn-outline-warning btn-sm rounded-3 me-1" onclick="openEditUserModal(@u.Id, '@u.Username', '@u.FullName', '@u.Email', '@(u.PhoneNumber ?? "")')" title="Sửa thông tin tài khoản">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+
+                                    <!-- Nút Khóa / Mở khóa: BẢO VỆ CHÍNH MÌNH (Disabled nếu là current user) -->
+                                    @if (isSelf)
+                                    {
+                                        <button type="button" class="btn btn-light btn-sm rounded-3 me-1 border text-muted" disabled title="Tài khoản hiện tại của bạn (Không thể tự khóa)">
+                                            <i class="fa-solid fa-user-shield text-primary"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-light btn-sm rounded-3 border text-muted" disabled title="Tài khoản hiện tại của bạn (Không thể tự xóa)">
+                                            <i class="fa-solid fa-ban text-muted"></i>
                                         </button>
                                     }
                                     else
                                     {
-                                        <span class="text-muted">-</span>
+                                        <form asp-action="ToggleUserStatus" method="post" class="d-inline">
+                                            <input type="hidden" name="id" value="@u.Id" />
+                                            <input type="hidden" name="isActive" value="@(u.IsActive ? "false" : "true")" />
+                                            @if (u.IsActive)
+                                            {
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm rounded-3 me-1" title="Khóa tài khoản" onclick="return confirm('Bạn có chắc muốn khóa tài khoản @u.Username?')">
+                                                    <i class="fa-solid fa-user-lock"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="submit" class="btn btn-outline-success btn-sm rounded-3 me-1" title="Kích hoạt tài khoản">
+                                                    <i class="fa-solid fa-user-check"></i>
+                                                </button>
+                                            }
+                                        </form>
+
+                                        <form asp-action="DeleteUser" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài khoản @u.Username? Nếu tài khoản đã có dữ liệu liên kết, hệ thống sẽ chuyển sang Inactive.');">
+                                            <input type="hidden" name="id" value="@u.Id" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-3" title="Xóa tài khoản">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
                                     }
-                                </td>
-                                <td class="text-end">
-                                    <button class="btn btn-outline-warning btn-sm rounded-3 me-1" onclick="openEditUserModal(@u.Id, '@u.Username', '@u.FullName', '@u.Email', '@(u.PhoneNumber ?? "")')" title="Sửa thông tin">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <form asp-action="ToggleUserStatus" method="post" class="d-inline">
-                                        <input type="hidden" name="id" value="@u.Id" />
-                                        <input type="hidden" name="isActive" value="@(u.IsActive ? "false" : "true")" />
-                                        @if (u.IsActive)
-                                        {
-                                            <button type="submit" class="btn btn-outline-secondary btn-sm rounded-3 me-1" title="Khóa tài khoản" onclick="return confirm('Bạn có chắc muốn khóa tài khoản @u.Username?')">
-                                                <i class="fa-solid fa-user-lock"></i>
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <button type="submit" class="btn btn-outline-success btn-sm rounded-3 me-1" title="Kích hoạt tài khoản">
-                                                <i class="fa-solid fa-user-check"></i>
-                                            </button>
-                                        }
-                                    </form>
-                                    <form asp-action="DeleteUser" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài khoản @u.Username? Nếu tài khoản có dữ liệu liên kết, hệ thống sẽ chuyển sang Inactive.');">
-                                        <input type="hidden" name="id" value="@u.Id" />
-                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-3" title="Xóa tài khoản">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </form>
                                 </td>
                             </tr>
                         }
@@ -144,55 +223,187 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Phân trang (Pagination) -->
+        @if (Model != null && Model.TotalPages > 0)
+        {
+            var curRole = Context.Request.Query["role"].ToString();
+            var curSearch = Context.Request.Query["search"].ToString();
+            var startItem = (Model.PageIndex - 1) * Model.PageSize + 1;
+            var endItem = Math.Min(Model.PageIndex * Model.PageSize, Model.TotalCount);
+
+            <div class="card-footer bg-white border-top py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="text-muted small">
+                    Hiển thị <strong>@startItem</strong> - <strong>@endItem</strong> trong tổng số <strong>@Model.TotalCount</strong> người dùng
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Dropdown chọn số dòng/trang -->
+                    <div class="d-flex align-items-center gap-1 me-2">
+                        <span class="small text-muted">Hiển thị:</span>
+                        <select class="form-select form-select-sm" style="width: 75px;" onchange="changePageSize(this.value)">
+                            <option value="10" selected="@(Model.PageSize == 10 ? "selected" : null)">10</option>
+                            <option value="20" selected="@(Model.PageSize == 20 ? "selected" : null)">20</option>
+                            <option value="50" selected="@(Model.PageSize == 50 ? "selected" : null)">50</option>
+                            <option value="100" selected="@(Model.PageSize == 100 ? "selected" : null)">100</option>
+                        </select>
+                    </div>
+
+                    <!-- Nút phân trang -->
+                    <nav aria-label="Users pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <!-- Nút Đầu -->
+                            <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")">
+                                <a class="page-link" asp-action="Users" asp-route-page="1" asp-route-pageSize="@Model.PageSize" asp-route-role="@curRole" asp-route-search="@curSearch" title="Trang đầu">
+                                    <i class="fa-solid fa-angles-left"></i>
+                                </a>
+                            </li>
+                            <!-- Nút Trước -->
+                            <li class="page-item @(!Model.HasPreviousPage ? "disabled" : "")">
+                                <a class="page-link" asp-action="Users" asp-route-page="@(Model.PageIndex - 1)" asp-route-pageSize="@Model.PageSize" asp-route-role="@curRole" asp-route-search="@curSearch" title="Trang trước">
+                                    <i class="fa-solid fa-angle-left"></i>
+                                </a>
+                            </li>
+
+                            <!-- Các trang số lân cận -->
+                            @{
+                                var startPage = Math.Max(1, Model.PageIndex - 2);
+                                var endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
+                            }
+                            @for (int p = startPage; p <= endPage; p++)
+                            {
+                                <li class="page-item @(p == Model.PageIndex ? "active" : "")">
+                                    <a class="page-link fw-semibold" asp-action="Users" asp-route-page="@p" asp-route-pageSize="@Model.PageSize" asp-route-role="@curRole" asp-route-search="@curSearch">
+                                        @p
+                                    </a>
+                                </li>
+                            }
+
+                            <!-- Nút Sau -->
+                            <li class="page-item @(!Model.HasNextPage ? "disabled" : "")">
+                                <a class="page-link" asp-action="Users" asp-route-page="@(Model.PageIndex + 1)" asp-route-pageSize="@Model.PageSize" asp-route-role="@curRole" asp-route-search="@curSearch" title="Trang sau">
+                                    <i class="fa-solid fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <!-- Nút Cuối -->
+                            <li class="page-item @(!Model.HasNextPage ? "disabled" : "")">
+                                <a class="page-link" asp-action="Users" asp-route-page="@Model.TotalPages" asp-route-pageSize="@Model.PageSize" asp-route-role="@curRole" asp-route-search="@curSearch" title="Trang cuối">
+                                    <i class="fa-solid fa-angles-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
-<!-- Modal Thêm Tài Khoản Mới -->
+<!-- Modal Thêm Tài Khoản Mới (Hỗ trợ nhập đủ trường theo vai trò) -->
 <div class="modal fade" id="modalAddUser" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
             <form asp-action="CreateUser" method="post">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-plus text-primary me-2"></i>Thêm Tài Khoản Mới</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-plus me-2"></i>Thêm Tài Khoản Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label small fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
-                            <input type="text" name="username" class="form-control" placeholder="VD: lecturer03" required />
+                            <input type="text" name="username" class="form-control" placeholder="VD: minhtq17, gv_hungnv..." required />
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-semibold">Mật khẩu <span class="text-danger">*</span></label>
-                            <input type="password" name="password" class="form-control" placeholder="Tối thiểu 6 ký tự" required />
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Mật khẩu khởi tạo <span class="text-danger">*</span></label>
+                            <input type="password" name="password" class="form-control" placeholder="Tối thiểu 6 ký tự..." required />
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Họ và tên đầy đủ <span class="text-danger">*</span></label>
-                        <input type="text" name="fullName" class="form-control" placeholder="VD: Nguyễn Văn A" required />
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Họ và tên đầy đủ <span class="text-danger">*</span></label>
+                            <input type="text" name="fullName" class="form-control" placeholder="VD: Nguyễn Văn A" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Vai trò phân quyền (Role) <span class="text-danger">*</span></label>
+                            <select name="role" id="newUserRoleSelect" class="form-select fw-semibold text-primary" onchange="toggleRoleSpecificFields(this.value)" required>
+                                <option value="Student" selected>Student (Sinh viên)</option>
+                                <option value="Lecturer">Lecturer (Giảng viên)</option>
+                                <option value="Admin">Admin (Quản trị hệ thống)</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-semibold">Email <span class="text-danger">*</span></label>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Email liên hệ <span class="text-danger">*</span></label>
                             <input type="email" name="email" class="form-control" placeholder="a@fpt.edu.vn" required />
                         </div>
-                        <div class="col-6">
+                        <div class="col-md-6">
                             <label class="form-label small fw-semibold">Số điện thoại</label>
                             <input type="text" name="phoneNumber" class="form-control" placeholder="09xxxxxxxx" />
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Vai trò phân quyền (Role) <span class="text-danger">*</span></label>
-                        <select name="role" class="form-select" required>
-                            <option value="Admin">Admin (Quản trị hệ thống)</option>
-                            <option value="Lecturer" selected>Lecturer (Giảng viên)</option>
-                            <option value="Student">Student (Sinh viên)</option>
-                        </select>
+
+                    <!-- Trường đặc thù dành cho SINH VIÊN -->
+                    <div id="studentFieldsCard" class="card border border-primary border-opacity-25 bg-light p-3 mb-3">
+                        <h6 class="fw-bold text-primary mb-3 small"><i class="fa-solid fa-graduation-cap me-1"></i>Thông tin hồ sơ Sinh viên</h6>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Mã sinh viên (MSSV)</label>
+                                <input type="text" name="code" class="form-control form-control-sm" placeholder="VD: HE170001 (để trống tự sinh)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Ngành đào tạo</label>
+                                <select name="majorId" class="form-select form-select-sm">
+                                    @foreach (var m in majors)
+                                    {
+                                        <option value="@m.Id">@m.Code - @m.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Lớp hành chính</label>
+                                <select name="administrativeClassId" class="form-select form-select-sm">
+                                    <option value="">-- Chưa xếp lớp --</option>
+                                    @foreach (var c in classes)
+                                    {
+                                        <option value="@c.Id">@c.Code (@c.Name)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trường đặc thù dành cho GIẢNG VIÊN -->
+                    <div id="lecturerFieldsCard" class="card border border-success border-opacity-25 bg-light p-3 mb-3" style="display: none;">
+                        <h6 class="fw-bold text-success mb-3 small"><i class="fa-solid fa-chalkboard-user me-1"></i>Thông tin hồ sơ Giảng viên</h6>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Mã giảng viên</label>
+                                <input type="text" name="code" class="form-control form-control-sm" placeholder="VD: GV001 (để trống tự sinh)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Học vị / Học hàm</label>
+                                <select name="academicTitle" class="form-select form-select-sm">
+                                    <option value="ThS" selected>Thạc sĩ (ThS)</option>
+                                    <option value="TS">Tiến sĩ (TS)</option>
+                                    <option value="PGS.TS">Phó Giáo sư (PGS.TS)</option>
+                                    <option value="GS.TS">Giáo sư (GS.TS)</option>
+                                    <option value="Cử nhân">Cử nhân / Kỹ sư</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Bộ môn phụ trách</label>
+                                <input type="text" name="department" class="form-control form-control-sm" value="Software Engineering" />
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Tạo Tài Khoản</button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm">
+                        <i class="fa-solid fa-check me-1"></i>Tạo Tài Khoản
+                    </button>
                 </div>
             </form>
         </div>
@@ -404,6 +615,30 @@
     let registeredSubjectsList = [];
     let selectedSubjectIds = new Set();
     let currentMajorSubjects = [];
+
+    function changePageSize(size) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('pageSize', size);
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+    }
+
+    function toggleRoleSpecificFields(role) {
+        const studentCard = document.getElementById('studentFieldsCard');
+        const lecturerCard = document.getElementById('lecturerFieldsCard');
+        if (!studentCard || !lecturerCard) return;
+
+        if (role === 'Student') {
+            studentCard.style.display = 'block';
+            lecturerCard.style.display = 'none';
+        } else if (role === 'Lecturer') {
+            studentCard.style.display = 'none';
+            lecturerCard.style.display = 'block';
+        } else {
+            studentCard.style.display = 'none';
+            lecturerCard.style.display = 'none';
+        }
+    }
 
     function openEditUserModal(id, username, fullName, email, phone) {
         document.getElementById('editUserId').value = id;

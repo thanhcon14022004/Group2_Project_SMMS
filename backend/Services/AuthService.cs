@@ -13,8 +13,9 @@ namespace project_PRN232.Services
     {
         Task<LoginResponse?> LoginAsync(LoginRequest request);
         Task<UserDto> CreateUserAsync(CreateUserRequest request, string performedBy);
-        Task<bool> ToggleUserStatusAsync(int userId, bool isActive, string performedBy);
+        Task<(bool Success, string Message)> ToggleUserStatusAsync(int userId, bool isActive, string performedBy);
         Task<List<UserDto>> GetUsersAsync(string? role = null, string? search = null);
+        Task<PagedResult<UserDto>> GetUsersPagedAsync(string? role = null, string? search = null, int page = 1, int pageSize = 10);
         Task<UserDto?> GetUserByIdAsync(int id);
         Task<UserDto?> UpdateUserAsync(int id, project_PRN232.Controllers.UpdateUserRequest request, string performedBy);
         Task<(bool Success, string Message)> DeleteUserAsync(int userId, string performedBy);
@@ -185,10 +186,24 @@ namespace project_PRN232.Services
             };
         }
 
-        public async Task<bool> ToggleUserStatusAsync(int userId, bool isActive, string performedBy)
+        public async Task<(bool Success, string Message)> ToggleUserStatusAsync(int userId, bool isActive, string performedBy)
         {
             var user = await _db.Users.FindAsync(userId);
-            if (user == null) return false;
+            if (user == null) return (false, "Không tìm thấy người dùng.");
+
+            if (user.Username.Equals(performedBy, StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "Bạn không thể tự khóa tài khoản của chính mình đang đăng nhập.");
+            }
+
+            if (!isActive && user.Role == "Admin")
+            {
+                var activeAdminCount = await _db.Users.CountAsync(u => u.Role == "Admin" && u.IsActive && u.Id != userId);
+                if (activeAdminCount == 0)
+                {
+                    return (false, "Không thể khóa tài khoản Quản trị viên (Admin) hoạt động duy nhất trong hệ thống.");
+                }
+            }
 
             user.IsActive = isActive;
             await _db.SaveChangesAsync();
@@ -201,13 +216,27 @@ namespace project_PRN232.Services
                 $"Cập nhật trạng thái tài khoản {user.Username}: Active={isActive}"
             );
 
-            return true;
+            return (true, $"Đã {(isActive ? "kích hoạt" : "vô hiệu hóa")} tài khoản {user.Username} thành công.");
         }
 
         public async Task<(bool Success, string Message)> DeleteUserAsync(int userId, string performedBy)
         {
             var user = await _db.Users.FindAsync(userId);
             if (user == null) return (false, "Không tìm thấy người dùng.");
+
+            if (user.Username.Equals(performedBy, StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "Bạn không thể tự xóa tài khoản của chính mình đang đăng nhập.");
+            }
+
+            if (user.Role == "Admin")
+            {
+                var adminCount = await _db.Users.CountAsync(u => u.Role == "Admin" && u.Id != userId);
+                if (adminCount == 0)
+                {
+                    return (false, "Không thể xóa tài khoản Quản trị viên (Admin) duy nhất trong hệ thống.");
+                }
+            }
 
             var hasStudent = await _db.Students.AnyAsync(s => s.UserId == userId);
             var hasLecturer = await _db.Lecturers.AnyAsync(l => l.UserId == userId);
@@ -248,10 +277,72 @@ namespace project_PRN232.Services
                 PhoneNumber = u.PhoneNumber,
                 Role = u.Role,
                 LecturerId = _db.Lecturers.Where(l => l.UserId == u.Id).Select(l => (int?)l.Id).FirstOrDefault(),
+                LecturerCode = _db.Lecturers.Where(l => l.UserId == u.Id).Select(l => l.LecturerCode).FirstOrDefault(),
+                Department = _db.Lecturers.Where(l => l.UserId == u.Id).Select(l => l.Department).FirstOrDefault(),
+                AcademicTitle = _db.Lecturers.Where(l => l.UserId == u.Id).Select(l => l.AcademicTitle).FirstOrDefault(),
+                StudentId = _db.Students.Where(s => s.UserId == u.Id).Select(s => (int?)s.Id).FirstOrDefault(),
+                StudentCode = _db.Students.Where(s => s.UserId == u.Id).Select(s => s.StudentCode).FirstOrDefault(),
+                MajorName = _db.Students.Where(s => s.UserId == u.Id).Select(s => s.Major != null ? s.Major.Name : null).FirstOrDefault(),
+                AdministrativeClassName = _db.Students.Where(s => s.UserId == u.Id).Select(s => s.AdministrativeClass != null ? s.AdministrativeClass.Name : null).FirstOrDefault(),
                 IsActive = u.IsActive,
                 CreatedAt = u.CreatedAt,
                 LastLoginAt = u.LastLoginAt
             }).ToListAsync();
+        }
+
+        public async Task<PagedResult<UserDto>> GetUsersPagedAsync(string? role = null, string? search = null, int page = 1, int pageSize = 10)
+        {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+
+            var query = _db.Users.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                query = query.Where(u => u.Role == role);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                query = query.Where(u => u.Username.Contains(term) || u.FullName.Contains(term) || u.Email.Contains(term));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var itemsQuery = query
+                .OrderBy(u => u.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize);
+
+            var items = await itemsQuery.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                FullName = u.FullName,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                Role = u.Role,
+                LecturerId = _db.Lecturers.Where(l => l.UserId == u.Id).Select(l => (int?)l.Id).FirstOrDefault(),
+                LecturerCode = _db.Lecturers.Where(l => l.UserId == u.Id).Select(l => l.LecturerCode).FirstOrDefault(),
+                Department = _db.Lecturers.Where(l => l.UserId == u.Id).Select(l => l.Department).FirstOrDefault(),
+                AcademicTitle = _db.Lecturers.Where(l => l.UserId == u.Id).Select(l => l.AcademicTitle).FirstOrDefault(),
+                StudentId = _db.Students.Where(s => s.UserId == u.Id).Select(s => (int?)s.Id).FirstOrDefault(),
+                StudentCode = _db.Students.Where(s => s.UserId == u.Id).Select(s => s.StudentCode).FirstOrDefault(),
+                MajorName = _db.Students.Where(s => s.UserId == u.Id).Select(s => s.Major != null ? s.Major.Name : null).FirstOrDefault(),
+                AdministrativeClassName = _db.Students.Where(s => s.UserId == u.Id).Select(s => s.AdministrativeClass != null ? s.AdministrativeClass.Name : null).FirstOrDefault(),
+                IsActive = u.IsActive,
+                CreatedAt = u.CreatedAt,
+                LastLoginAt = u.LastLoginAt
+            }).ToListAsync();
+
+            return new PagedResult<UserDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageIndex = page,
+                PageSize = pageSize
+            };
         }
 
         public async Task<UserDto?> GetUserByIdAsync(int id)
@@ -268,6 +359,13 @@ namespace project_PRN232.Services
                 PhoneNumber = user.PhoneNumber,
                 Role = user.Role,
                 LecturerId = await _db.Lecturers.Where(l => l.UserId == user.Id).Select(l => (int?)l.Id).FirstOrDefaultAsync(),
+                LecturerCode = await _db.Lecturers.Where(l => l.UserId == user.Id).Select(l => l.LecturerCode).FirstOrDefaultAsync(),
+                Department = await _db.Lecturers.Where(l => l.UserId == user.Id).Select(l => l.Department).FirstOrDefaultAsync(),
+                AcademicTitle = await _db.Lecturers.Where(l => l.UserId == user.Id).Select(l => l.AcademicTitle).FirstOrDefaultAsync(),
+                StudentId = await _db.Students.Where(s => s.UserId == user.Id).Select(s => (int?)s.Id).FirstOrDefaultAsync(),
+                StudentCode = await _db.Students.Where(s => s.UserId == user.Id).Select(s => s.StudentCode).FirstOrDefaultAsync(),
+                MajorName = await _db.Students.Where(s => s.UserId == user.Id).Select(s => s.Major != null ? s.Major.Name : null).FirstOrDefaultAsync(),
+                AdministrativeClassName = await _db.Students.Where(s => s.UserId == user.Id).Select(s => s.AdministrativeClass != null ? s.AdministrativeClass.Name : null).FirstOrDefaultAsync(),
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 LastLoginAt = user.LastLoginAt

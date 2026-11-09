@@ -388,17 +388,17 @@ else
                     <input type="hidden" name="classId" value="@(selectedClassId ?? Model.AdministrativeClassId)" />
 
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle mb-0">
+                        <table class="table table-bordered table-hover align-middle mb-0 grade-table">
                             <thead class="table-light text-center">
                                 <tr>
-                                    <th style="width: 50px;">STT</th>
-                                    <th style="width: 120px;">MSSV</th>
-                                    <th class="text-start">Họ và tên sinh viên</th>
-                                    <th style="width: 110px;">Lớp HC</th>
+                                    <th style="width: 45px;">STT</th>
+                                    <th style="min-width: 110px;">MSSV</th>
+                                    <th class="text-start" style="min-width: 180px;">Họ và tên sinh viên</th>
+                                    <th style="min-width: 100px;">Lớp HC</th>
                                     @foreach (var comp in Model.Components)
                                     {
-                                        <th style="width: 130px;">
-                                            <div>@comp.Name</div>
+                                        <th style="min-width: 125px;">
+                                            <div class="fw-bold">@comp.Name</div>
                                             <small class="badge bg-light text-dark border">@(comp.Weight.ToString("0.#"))%</small>
                                             @if (comp.IsAdminOnly)
                                             {
@@ -410,8 +410,8 @@ else
                                             }
                                         </th>
                                     }
-                                    <th style="width: 110px;">Tổng kết</th>
-                                    <th style="width: 120px;">Kết quả</th>
+                                    <th style="min-width: 95px;">Tổng kết</th>
+                                    <th style="min-width: 115px;">Kết quả</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -484,7 +484,7 @@ else
                                                     <input type="number" step="0.1" min="0" max="@comp.Scale.ToString("0")" 
                                                            name="grades[@flatIndex].Score" 
                                                            value="@(scoreVal.HasValue ? scoreVal.Value.ToString("0.0") : "")"
-                                                           class="form-control form-control-sm text-center fw-semibold text-primary"
+                                                           class="form-control form-control-sm text-center fw-semibold text-primary grade-input"
                                                            placeholder="@placeholderText"
                                                            title="@tooltipText" />
                                                 }
@@ -492,7 +492,7 @@ else
                                                 {
                                                     <input type="text" 
                                                            value="@(scoreVal.HasValue ? scoreVal.Value.ToString("0.0") : "")"
-                                                           class="form-control form-control-sm text-center bg-light text-muted fw-semibold"
+                                                           class="form-control form-control-sm text-center bg-light text-muted fw-semibold grade-input"
                                                            placeholder="@placeholderText"
                                                            title="@tooltipText"
                                                            readonly disabled />

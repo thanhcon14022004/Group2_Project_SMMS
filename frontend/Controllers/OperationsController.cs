@@ -11,30 +11,43 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Users(string? role, string? search)
+        public async Task<IActionResult> Users(string? role, string? search, int page = 1, int pageSize = 10)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
 
-            string endpoint = "users";
-            var q = new List<string>();
-            if (!string.IsNullOrWhiteSpace(role)) q.Add($"role={role}");
-            if (!string.IsNullOrWhiteSpace(search)) q.Add($"search={search}");
-            if (q.Count > 0) endpoint += "?" + string.Join("&", q);
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
 
-            var usersTask = ApiClient.GetAsync<List<UserItemViewModel>>(endpoint);
+            string endpoint = $"users?page={page}&pageSize={pageSize}";
+            if (!string.IsNullOrWhiteSpace(role)) endpoint += $"&role={role}";
+            if (!string.IsNullOrWhiteSpace(search)) endpoint += $"&search={Uri.EscapeDataString(search.Trim())}";
+
+            var usersTask = ApiClient.GetAsync<PagedResult<UserItemViewModel>>(endpoint);
             var majorsTask = ApiClient.GetAsync<List<MajorViewModel>>("majors");
             var specsTask = ApiClient.GetAsync<List<SpecializationViewModel>>("specializations");
             var subjectsTask = ApiClient.GetAsync<List<SubjectViewModel>>("subjects");
+            var classesTask = ApiClient.GetAsync<List<ClassViewModel>>("administrativeclasses");
 
-            await Task.WhenAll(usersTask, majorsTask, specsTask, subjectsTask);
+            await Task.WhenAll(usersTask, majorsTask, specsTask, subjectsTask, classesTask);
 
             ViewBag.Majors = (await majorsTask) ?? new List<MajorViewModel>();
             ViewBag.Specializations = (await specsTask) ?? new List<SpecializationViewModel>();
             ViewBag.Subjects = (await subjectsTask) ?? new List<SubjectViewModel>();
+            ViewBag.Classes = (await classesTask) ?? new List<ClassViewModel>();
 
-            var users = (await usersTask) ?? new List<UserItemViewModel>();
-            return View(users);
+            ViewBag.CurrentRole = role ?? "";
+            ViewBag.CurrentSearch = search ?? "";
+
+            var pagedUsers = (await usersTask) ?? new PagedResult<UserItemViewModel>
+            {
+                Items = new List<UserItemViewModel>(),
+                TotalCount = 0,
+                PageIndex = page,
+                PageSize = pageSize
+            };
+
+            return View(pagedUsers);
         }
 
         [HttpPost]
@@ -43,13 +56,20 @@ namespace project_PRN232.Frontend.Controllers
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
 
+            var currentUserIdStr = HttpContext.Session.GetString("SMMS_USER_ID");
+            if (int.TryParse(currentUserIdStr, out var currentUserId) && currentUserId == id)
+            {
+                SetAlert("Bạn không thể tự khóa tài khoản của chính mình đang đăng nhập!", "danger");
+                return RedirectToAction(nameof(Users));
+            }
+
             var (success, msg) = await ApiClient.PatchAsync($"users/{id}/status", new { isActive });
             SetAlert(msg, success ? "success" : "danger");
             return RedirectToAction(nameof(Users));
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateUser(string username, string password, string fullName, string email, string? phoneNumber, string role)
+        public async Task<IActionResult> CreateUser(string username, string password, string fullName, string email, string? phoneNumber, string role, string? code, int? majorId, int? administrativeClassId, int? cohort, string? department, string? academicTitle)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
@@ -61,7 +81,13 @@ namespace project_PRN232.Frontend.Controllers
                 fullName = fullName.Trim(),
                 email = email.Trim(),
                 phoneNumber,
-                role
+                role,
+                code = !string.IsNullOrWhiteSpace(code) ? code.Trim() : null,
+                majorId,
+                administrativeClassId,
+                cohort,
+                department = !string.IsNullOrWhiteSpace(department) ? department.Trim() : null,
+                academicTitle = !string.IsNullOrWhiteSpace(academicTitle) ? academicTitle.Trim() : null
             });
 
             SetAlert(msg, success ? "success" : "danger");
@@ -91,6 +117,13 @@ namespace project_PRN232.Frontend.Controllers
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
+
+            var currentUserIdStr = HttpContext.Session.GetString("SMMS_USER_ID");
+            if (int.TryParse(currentUserIdStr, out var currentUserId) && currentUserId == id)
+            {
+                SetAlert("Bạn không thể tự xóa tài khoản của chính mình đang đăng nhập!", "danger");
+                return RedirectToAction(nameof(Users));
+            }
 
             var (success, msg) = await ApiClient.DeleteAsync($"users/{id}");
             SetAlert(msg, success ? "success" : "danger");
