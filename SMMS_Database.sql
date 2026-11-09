@@ -1,4 +1,4 @@
-/*
+﻿/*
 ========================================================================================
   HỆ THỐNG QUẢN LÝ ĐIỂM SINH VIÊN (SMMS - Student Mark Management System)
   MÔN HỌC: PRN232 (ASP.NET Core & C#)
