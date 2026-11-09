@@ -16,16 +16,10 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Database Context
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("Mycnn")
-        ?? builder.Configuration.GetConnectionString("MyCNN")
+    var connectionString = builder.Configuration.GetConnectionString("MyCNN")
+        ?? builder.Configuration.GetConnectionString("Mycnn")
         ?? builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? "Server=(localdb)\\mssqllocaldb;Database=SMMS_PRN232;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
-
-    // Tự động fallback về LocalDB nếu connection string đang trỏ vào máy của thành viên khác
-    if (connectionString.Contains("DESKTOP-RNCOH10") && Environment.MachineName != "DESKTOP-RNCOH10")
-    {
-        connectionString = "Server=(localdb)\\mssqllocaldb;Database=SMMS_PRN232;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True";
-    }
+        ?? throw new InvalidOperationException("Không tìm thấy chuỗi kết nối 'MyCNN' trong appsettings.json.");
 
     options.UseSqlServer(connectionString, sqlOptions =>
     {
