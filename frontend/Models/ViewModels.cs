@@ -398,6 +398,7 @@ namespace project_PRN232.Frontend.Models
         public int StudentId { get; set; }
         public string StudentCode { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
+        public string? AdministrativeClassCode { get; set; }
         public Dictionary<int, decimal?> ComponentScores { get; set; } = new();
         public decimal? FinalScore { get; set; }
         public bool IsPassed { get; set; }

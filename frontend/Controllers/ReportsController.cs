@@ -11,11 +11,38 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int? majorId, int? classId)
+        public async Task<IActionResult> Index(int? sectionId, int? majorId, int? classId)
         {
             var authCheck = CheckAuth("Admin", "Lecturer");
             if (authCheck != null) return authCheck;
 
+            var role = CurrentUser?.Role ?? "Admin";
+            ViewBag.UserRole = role;
+
+            if (role == "Lecturer")
+            {
+                // Giảng viên: Báo cáo bảng điểm và phổ điểm các Lớp học phần do mình phụ trách
+                var sections = await ApiClient.GetAsync<List<CourseSectionViewModel>>("course-sections") ?? new List<CourseSectionViewModel>();
+                ViewBag.Sections = sections;
+
+                if (!sectionId.HasValue && sections.Count > 0)
+                {
+                    sectionId = sections[0].Id;
+                }
+
+                ViewBag.SelectedSectionId = sectionId;
+
+                GradeSheetViewModel? gradeSheet = null;
+                if (sectionId.HasValue && sectionId.Value > 0)
+                {
+                    gradeSheet = await ApiClient.GetAsync<GradeSheetViewModel>($"grades/section/{sectionId.Value}");
+                }
+
+                ViewBag.GradeSheet = gradeSheet;
+                return View(new List<TranscriptViewModel>());
+            }
+
+            // Quản trị viên (Admin): Báo cáo kết quả học tập & GPA toàn trường
             string endpoint = "reports/gpa";
             if (majorId.HasValue || classId.HasValue)
             {
