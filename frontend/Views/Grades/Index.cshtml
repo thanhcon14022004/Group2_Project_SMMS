@@ -15,7 +15,7 @@
     string classSearch = ViewBag.ClassSearch as string ?? "";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom flex-wrap gap-2">
     <div>
         @if (isLecturer)
         {
@@ -24,14 +24,14 @@
         }
         else
         {
-            <h4 class="fw-bold mb-1"><i class="fa-solid fa-marker text-primary me-2"></i>Quản lý & Nhập điểm Học phần</h4>
+            <h4 class="fw-bold mb-1 text-dark"><i class="fa-solid fa-marker text-primary me-2"></i>Quản lý & Nhập điểm Học phần</h4>
             <small class="text-muted">Tìm kiếm theo tên lớp hành chính để xem danh sách các môn học đang học và nhập điểm thành phần theo CTĐT.</small>
         }
     </div>
     @if (Model != null && Model.CourseSectionId > 0)
     {
         <div class="d-flex gap-2">
-            <a asp-controller="Reports" asp-action="ExportSectionGradesWord" asp-route-sectionId="@Model.CourseSectionId" class="btn btn-outline-primary btn-sm rounded-3 shadow-sm">
+            <a asp-controller="Reports" asp-action="ExportSectionGradesWord" asp-route-sectionId="@Model.CourseSectionId" class="btn btn-outline-primary btn-sm rounded-3 shadow-sm px-3 py-2">
                 <i class="fa-solid fa-file-word me-1 text-primary"></i> Xuất Báo cáo Word
             </a>
             @if (role == "Admin")
@@ -42,13 +42,13 @@
                     <input type="hidden" name="isLocked" value="@(Model.IsGradeLocked ? "false" : "true")" />
                     @if (Model.IsGradeLocked)
                     {
-                        <button type="submit" class="btn btn-warning btn-sm rounded-3 shadow-sm" onclick="return confirm('Bạn có chắc chắn muốn mở khóa bảng điểm này để giảng viên tiếp tục cập nhật?')">
+                        <button type="submit" class="btn btn-warning btn-sm rounded-3 shadow-sm px-3 py-2 fw-semibold" onclick="return confirm('Bạn có chắc chắn muốn mở khóa bảng điểm này để giảng viên tiếp tục cập nhật?')">
                             <i class="fa-solid fa-lock-open me-1"></i> Mở khóa Điểm
                         </button>
                     }
                     else
                     {
-                        <button type="submit" class="btn btn-danger btn-sm rounded-3 shadow-sm" onclick="return confirm('Khóa bảng điểm sẽ ngăn giảng viên sửa điểm. Bạn có muốn khóa không?')">
+                        <button type="submit" class="btn btn-danger btn-sm rounded-3 shadow-sm px-3 py-2 fw-semibold" onclick="return confirm('Khóa bảng điểm sẽ ngăn giảng viên sửa điểm. Bạn có muốn khóa không?')">
                             <i class="fa-solid fa-lock me-1"></i> Khóa Bảng Điểm
                         </button>
                     }
@@ -63,14 +63,14 @@
     <!-- ============================================================== -->
     <!-- GIAO DIỆN CHỌN LỚP HỌC PHẦN DÀNH CHO GIẢNG VIÊN -->
     <!-- ============================================================== -->
-    <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-body py-3">
-            <form method="get" asp-action="Index" class="row g-2 align-items-center">
+    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+        <div class="card-body p-4">
+            <form method="get" asp-action="Index" class="row g-3 align-items-center">
                 <div class="col-md-3 col-lg-2 fw-semibold text-secondary">
                     <i class="fa-solid fa-chalkboard-user me-1 text-primary"></i> Lớp học phần:
                 </div>
                 <div class="col-md-7 col-lg-8">
-                    <select name="sectionId" class="form-select" onchange="this.form.submit()">
+                    <select name="sectionId" class="form-select py-2" onchange="this.form.submit()">
                         @if (!lecturerSections.Any())
                         {
                             <option value="">-- Bạn hiện chưa được phân công lớp học phần nào --</option>
@@ -87,7 +87,7 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100 rounded-3 shadow-sm">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3 shadow-sm py-2 fw-semibold">
                         <i class="fa-solid fa-folder-open me-1"></i> Mở sổ điểm
                     </button>
                 </div>
@@ -97,10 +97,10 @@
 
     @if (!lecturerSections.Any())
     {
-        <div class="alert alert-info border-0 shadow-sm rounded-3 py-4 text-center">
-            <i class="fa-solid fa-circle-info fa-2x text-primary mb-2"></i>
-            <h6 class="fw-bold">Bạn chưa được phân công phụ trách lớp học phần nào</h6>
-            <p class="text-muted mb-0 small">Vui lòng liên hệ Phòng Đào tạo (Admin) để được phân công giảng dạy các lớp học phần trong kỳ.</p>
+        <div class="alert alert-info border-0 shadow-sm rounded-4 p-5 text-center">
+            <i class="fa-solid fa-circle-info fa-3x text-primary mb-3"></i>
+            <h5 class="fw-bold">Bạn chưa được phân công phụ trách lớp học phần nào</h5>
+            <p class="text-muted mb-0">Vui lòng liên hệ Phòng Đào tạo (Admin) để được phân công giảng dạy các lớp học phần trong kỳ.</p>
         </div>
     }
 }
@@ -109,25 +109,25 @@ else
     <!-- ============================================================== -->
     <!-- GIAO DIỆN TÌM KIẾM THEO LỚP HÀNH CHÍNH DÀNH CHO ADMIN -->
     <!-- ============================================================== -->
-    <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-header bg-white py-3 border-0">
+    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+        <div class="card-header bg-white px-4 py-3 border-bottom border-light">
             <h6 class="fw-bold text-dark mb-0">
                 <i class="fa-solid fa-magnifying-glass text-primary me-2"></i>Tìm kiếm & Chọn Lớp Hành Chính
             </h6>
         </div>
-        <div class="card-body pt-0 pb-3">
-            <form method="get" asp-action="Index" class="row g-2 align-items-center">
+        <div class="card-body p-4">
+            <form method="get" asp-action="Index" class="row g-3 align-items-center">
                 <div class="col-md-5">
                     <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0 text-muted">
+                        <span class="input-group-text bg-light border-end-0 text-muted px-3">
                             <i class="fa-solid fa-school"></i>
                         </span>
-                        <input type="text" name="classSearch" value="@classSearch" class="form-control border-start-0" 
+                        <input type="text" name="classSearch" value="@classSearch" class="form-control border-start-0 py-2" 
                                placeholder="Nhập tên/mã lớp (ví dụ: SE1701, SE1801, IA1701...)" />
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <select name="classId" class="form-select" onchange="this.form.submit()">
+                    <select name="classId" class="form-select py-2" onchange="this.form.submit()">
                         <option value="">-- Hoặc chọn từ danh sách lớp (@allClasses.Count lớp) --</option>
                         @foreach (var c in allClasses)
                         {
@@ -138,12 +138,12 @@ else
                     </select>
                 </div>
                 <div class="col-md-3 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary flex-grow-1 rounded-3">
+                    <button type="submit" class="btn btn-primary flex-grow-1 rounded-3 py-2 fw-semibold">
                         <i class="fa-solid fa-magnifying-glass me-1"></i> Tìm môn học
                     </button>
                     @if (selectedClassId.HasValue || !string.IsNullOrWhiteSpace(classSearch))
                     {
-                        <a asp-action="Index" class="btn btn-outline-secondary rounded-3" title="Đặt lại bộ lọc">
+                        <a asp-action="Index" class="btn btn-outline-secondary rounded-3 py-2 px-3" title="Đặt lại bộ lọc">
                             <i class="fa-solid fa-rotate-left"></i>
                         </a>
                     }
@@ -153,10 +153,10 @@ else
             @if (sections != null && sections.Any())
             {
                 <!-- Tùy chọn chọn trực tiếp lớp học phần -->
-                <div class="mt-2 pt-2 border-top">
-                    <div class="d-flex justify-content-between align-items-center">
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <small class="text-muted">
-                            <i class="fa-solid fa-circle-info me-1"></i>
+                            <i class="fa-solid fa-circle-info me-1 text-primary"></i>
                             Gợi ý: Nhập tên lớp để xem ngay các môn học lớp đó đang học. Hoặc chọn trực tiếp lớp HP:
                         </small>
                         <div style="min-width: 320px;">
@@ -181,19 +181,19 @@ else
     @if (selectedClass != null)
     {
         <!-- Danh sách các môn học của Lớp đã chọn -->
-        <div class="card border-0 shadow-sm rounded-3 mb-4">
-            <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+        <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+            <div class="card-header bg-primary text-white p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div>
-                    <span class="badge bg-white text-primary fs-6 fw-bold me-2 px-3 py-2">
+                    <span class="badge bg-white text-primary fs-6 fw-bold me-2 px-3 py-2 shadow-sm">
                         <i class="fa-solid fa-users-rectangle me-1"></i>@selectedClass.ClassCode
                     </span>
-                    <span class="fw-bold fs-6">@selectedClass.ClassName</span>
-                    <span class="badge bg-primary-subtle text-dark ms-2">Ngành @selectedClass.MajorCode</span>
-                    <span class="badge bg-light text-dark ms-1">Kỳ @selectedClass.CurrentSemester</span>
-                    <span class="badge bg-light text-dark ms-1">Năm học @selectedClass.AcademicYear</span>
+                    <span class="fw-bold fs-5">@selectedClass.ClassName</span>
+                    <span class="badge bg-primary-subtle text-dark ms-2 py-2 px-3">Ngành @selectedClass.MajorCode</span>
+                    <span class="badge bg-light text-dark ms-1 py-2 px-3">Kỳ @selectedClass.CurrentSemester</span>
+                    <span class="badge bg-light text-dark ms-1 py-2 px-3">Năm học @selectedClass.AcademicYear</span>
                 </div>
                 <div>
-                    <span class="badge bg-white text-dark py-2 px-3 shadow-sm">
+                    <span class="badge bg-white text-dark py-2 px-3 shadow-sm fs-6">
                         Tổng số: <strong class="text-primary">@selectedClass.SectionsCount</strong> môn học đang học
                     </span>
                 </div>
@@ -232,7 +232,7 @@ else
                                     <tr class="@(isCurrent ? "table-primary bg-primary-subtle" : "")">
                                         <td class="text-center fw-semibold text-muted">@(secIdx + 1)</td>
                                         <td>
-                                            <span class="badge bg-secondary-subtle text-secondary border fw-bold">@s.SubjectCode</span>
+                                            <span class="badge bg-secondary-subtle text-secondary border fw-bold px-2 py-1">@s.SubjectCode</span>
                                         </td>
                                         <td>
                                             <div class="fw-bold text-dark">@s.SubjectName</div>
@@ -250,13 +250,13 @@ else
                                         <td class="text-center">
                                             @if (s.IsGradeLocked)
                                             {
-                                                <span class="badge bg-danger-subtle text-danger border border-danger">
+                                                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
                                                     <i class="fa-solid fa-lock me-1"></i>Đã khóa
                                                 </span>
                                             }
                                             else
-                                             {
-                                                <span class="badge bg-success-subtle text-success border border-success">
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
                                                     <i class="fa-solid fa-pen-to-square me-1"></i>Đang mở
                                                 </span>
                                             }
@@ -264,14 +264,14 @@ else
                                         <td class="text-center">
                                             @if (isCurrent)
                                             {
-                                                <a href="#gradeEntrySection" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
+                                                <a href="#gradeEntrySection" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm fw-semibold">
                                                     <i class="fa-solid fa-arrow-down me-1"></i> Đang chọn
                                                 </a>
                                             }
                                             else
                                             {
                                                 <a asp-action="Index" asp-route-classId="@selectedClass.ClassId" asp-route-sectionId="@s.Id" 
-                                                   class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                   class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
                                                     <i class="fa-solid fa-pen-to-square me-1"></i> Vào nhập điểm
                                                 </a>
                                             }
@@ -289,7 +289,7 @@ else
     else if (Model == null || Model.CourseSectionId == 0)
     {
         <!-- Hướng dẫn khi chưa chọn lớp -->
-        <div class="card border-0 shadow-sm rounded-3 mb-4 text-center p-5 bg-white">
+        <div class="card border-0 shadow-sm rounded-4 mb-4 text-center p-5 bg-white">
             <div class="py-4">
                 <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex p-4 mb-3">
                     <i class="fa-solid fa-chalkboard-user fa-3x"></i>
@@ -301,7 +301,7 @@ else
                 <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
                     @foreach (var c in allClasses.Take(8))
                     {
-                        <a asp-action="Index" asp-route-classId="@c.Id" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                        <a asp-action="Index" asp-route-classId="@c.Id" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold">
                             <i class="fa-solid fa-users me-1"></i> Lớp @c.Code
                         </a>
                     }
@@ -316,50 +316,50 @@ else
 <!-- ============================================================== -->
 @if (Model != null && Model.CourseSectionId > 0)
 {
-    <div class="card border-0 shadow-sm rounded-3 mb-4" id="gradeEntrySection">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" id="gradeEntrySection">
+        <div class="card-header bg-white p-4 d-flex justify-content-between align-items-center border-bottom flex-wrap gap-3">
             <div>
-                <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="badge bg-primary fs-6 px-3 py-2">@Model.SubjectCode</span>
-                    <h5 class="fw-bold text-dark mb-0">@Model.SubjectName</h5>
+                <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                    <span class="badge bg-primary fs-6 px-3 py-2 shadow-sm">@Model.SubjectCode</span>
+                    <h4 class="fw-bold text-dark mb-0">@Model.SubjectName</h4>
                     @if (!string.IsNullOrEmpty(Model.AdministrativeClassCode))
                     {
-                        <span class="badge bg-info-subtle text-info border border-info ms-2">
-                            Lớp: <strong>@Model.AdministrativeClassCode</strong>
+                        <span class="badge bg-info-subtle text-info border border-info ms-2 px-3 py-2">
+                            Lớp HC: <strong>@Model.AdministrativeClassCode</strong>
                         </span>
                     }
                 </div>
-                <div class="text-muted small">
-                    <span class="me-3"><i class="fa-solid fa-barcode me-1 text-primary"></i>Mã lớp HP: <strong>@Model.CourseSectionCode</strong></span>
-                    <span class="me-3"><i class="fa-solid fa-award me-1 text-warning"></i>Số tín chỉ: <strong>@Model.Credits</strong></span>
-                    <span><i class="fa-solid fa-user-tie me-1 text-info"></i>Giảng viên: <strong>@(Model.LecturerName ?? "Chưa phân công")</strong></span>
+                <div class="text-muted small d-flex gap-3 flex-wrap">
+                    <span><i class="fa-solid fa-barcode me-1 text-primary"></i>Mã lớp HP: <strong class="text-dark">@Model.CourseSectionCode</strong></span>
+                    <span><i class="fa-solid fa-award me-1 text-warning"></i>Số tín chỉ: <strong class="text-dark">@Model.Credits TC</strong></span>
+                    <span><i class="fa-solid fa-user-tie me-1 text-info"></i>Giảng viên: <strong class="text-dark">@(Model.LecturerName ?? "Chưa phân công")</strong></span>
                 </div>
             </div>
             <div class="text-end">
                 @if (Model.IsGradeLocked)
                 {
-                    <span class="badge bg-danger px-3 py-2 shadow-sm fs-6">
+                    <span class="badge bg-danger px-3 py-2 shadow-sm fs-6 rounded-pill">
                         <i class="fa-solid fa-lock me-1"></i>BẢNG ĐIỂM ĐÃ KHÓA
                     </span>
                 }
                 else
                 {
-                    <span class="badge bg-success px-3 py-2 shadow-sm fs-6">
+                    <span class="badge bg-success px-3 py-2 shadow-sm fs-6 rounded-pill">
                         <i class="fa-solid fa-pen-to-square me-1"></i>ĐANG MỞ CHO PHÉP NHẬP
                     </span>
                 }
             </div>
         </div>
 
-        <!-- Thanh Hiển thị Các Đầu Điểm Đã Cấu Hình -->
-        <div class="card-body bg-light py-2 px-3 border-bottom">
-            <div class="d-flex align-items-center flex-wrap gap-2">
-                <span class="fw-semibold small text-muted me-1">
+        <!-- Thanh Hiển thị Các Đầu Điểm Đã Cấu Hình / Đánh Dấu Tích Khi Tạo Điểm -->
+        <div class="card-body bg-light py-3 px-4 border-bottom">
+            <div class="d-flex align-items-center flex-wrap gap-3">
+                <span class="fw-semibold small text-muted me-2">
                     <i class="fa-solid fa-list-check text-primary me-1"></i>Các đầu điểm đã tích hợp của môn:
                 </span>
                 @foreach (var comp in Model.Components)
                 {
-                    <span class="badge bg-white text-dark border p-2 shadow-sm">
+                    <span class="badge bg-white text-dark border p-2 shadow-sm rounded-3">
                         <i class="fa-solid fa-circle-check text-success me-1"></i>
                         <strong>@comp.Name</strong>: @(comp.Weight.ToString("0.#"))% (Thang @comp.Scale.ToString("0"))
                         @if (comp.IsAdminOnly)
@@ -410,8 +410,8 @@ else
                                             }
                                         </th>
                                     }
-                                    <th style="width: 100px;">Tổng kết</th>
-                                    <th style="width: 100px;">Kết quả</th>
+                                    <th style="width: 110px;">Tổng kết</th>
+                                    <th style="width: 120px;">Kết quả</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -503,22 +503,32 @@ else
 
                                         <td class="text-center fw-bold fs-6 @(s.FinalScore.HasValue ? (s.IsPassed ? "text-success" : "text-danger") : "text-muted")">
                                             @(s.FinalScore.HasValue ? s.FinalScore.Value.ToString("0.0") : "-")
+                                            @if (!s.IsCompleted && s.FinalScore.HasValue)
+                                            {
+                                                <div class="text-muted small" style="font-size: 0.72rem; font-weight: normal;">(Tạm tính)</div>
+                                            }
                                         </td>
-                                        <td class="text-center">
-                                            @if (s.FinalScore.HasValue)
+                                        <td class="text-center py-3 px-2">
+                                            @if (s.IsCompleted && s.FinalScore.HasValue)
                                             {
                                                 if (s.IsPassed)
                                                 {
-                                                    <span class="badge bg-success-subtle text-success border border-success">ĐẠT</span>
+                                                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1 rounded-pill fw-semibold">
+                                                        <i class="fa-solid fa-circle-check me-1"></i>ĐẠT
+                                                    </span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-danger-subtle text-danger border border-danger">HỎNG</span>
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1 rounded-pill fw-semibold">
+                                                        <i class="fa-solid fa-circle-xmark me-1"></i>HỎNG
+                                                    </span>
                                                 }
                                             }
                                             else
                                             {
-                                                <span class="badge bg-light text-muted border">Chưa đủ</span>
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1 rounded-pill fw-semibold" title="Chưa nhập đủ tất cả các đầu điểm">
+                                                    <i class="fa-solid fa-clock-rotate-left me-1"></i>Chưa đủ điểm
+                                                </span>
                                             }
                                         </td>
                                     </tr>
@@ -528,15 +538,15 @@ else
                         </table>
                     </div>
 
-                    <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
+                    <div class="card-footer bg-white p-4 border-top d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div>
                             <small class="text-muted d-block">
-                                <i class="fa-solid fa-circle-info me-1"></i> Điểm lẻ từ 0.0 đến 10.0. Điểm tổng kết tự động tính theo tỷ trọng % các đầu điểm đã tích hợp. Điểm đạt &ge; 5.0.
+                                <i class="fa-solid fa-circle-info me-1 text-primary"></i> Điểm lẻ từ 0.0 đến 10.0. Điểm tổng kết tự động tính theo tỷ trọng % các đầu điểm đã tích hợp. Điểm đạt &ge; 5.0.
                             </small>
                             @if (!isLecturer && selectedClass != null)
                             {
-                                <small class="text-primary mt-1 d-inline-block">
-                                    <a asp-action="Index" asp-route-classId="@selectedClass.ClassId" class="text-decoration-none">
+                                <small class="text-primary mt-2 d-inline-block">
+                                    <a asp-action="Index" asp-route-classId="@selectedClass.ClassId" class="text-decoration-none fw-semibold">
                                         <i class="fa-solid fa-arrow-left me-1"></i>Quay lại danh sách môn học của lớp @selectedClass.ClassCode
                                     </a>
                                 </small>
@@ -544,7 +554,7 @@ else
                         </div>
                         @if (!Model.IsGradeLocked)
                         {
-                            <button type="submit" class="btn btn-primary rounded-3 px-4 shadow-sm">
+                            <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 shadow-sm fw-semibold">
                                 <i class="fa-solid fa-floppy-disk me-1"></i> Lưu Bảng Điểm
                             </button>
                         }

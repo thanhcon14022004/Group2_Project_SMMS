@@ -91,7 +91,7 @@ namespace project_PRN232.Services
 
             var gradeLookup = grades
                 .GroupBy(g => (g.StudentId, g.SubjectGradeComponentId))
-                .ToDictionary(g => g.Key, g => g.First().Score);
+                .ToDictionary(g => g.Key, g => (decimal?)g.First().Score);
 
             var studentRows = new List<StudentGradeRowDto>();
 
@@ -101,13 +101,22 @@ namespace project_PRN232.Services
 
                 foreach (var c in components)
                 {
-                    gradeLookup.TryGetValue((en.StudentId, c.Id), out var score);
-                    compScores[c.Id] = score;
+                    if (gradeLookup.TryGetValue((en.StudentId, c.Id), out var score))
+                    {
+                        compScores[c.Id] = score;
+                    }
+                    else
+                    {
+                        compScores[c.Id] = null;
+                    }
                 }
+
+                // Kiểm tra xem sinh viên đã có đủ tất cả các đầu điểm thành phần chưa
+                bool isCompleted = components.Count > 0 && components.All(c => compScores.TryGetValue(c.Id, out var sc) && sc.HasValue);
 
                 // Tính điểm tổng kết
                 decimal? finalScore = ComputeFinalScore(compScores, components);
-                bool isPassed = finalScore.HasValue && finalScore.Value >= 5.0m;
+                bool isPassed = isCompleted && finalScore.HasValue && finalScore.Value >= 5.0m;
 
                 studentRows.Add(new StudentGradeRowDto
                 {
@@ -117,7 +126,8 @@ namespace project_PRN232.Services
                     AdministrativeClassCode = !string.IsNullOrEmpty(en.AdminClassCode) ? en.AdminClassCode : (section.AdministrativeClass?.Code ?? "Chưa có lớp"),
                     ComponentScores = compScores,
                     FinalScore = finalScore,
-                    IsPassed = isPassed
+                    IsPassed = isPassed,
+                    IsCompleted = isCompleted
                 });
             }
 

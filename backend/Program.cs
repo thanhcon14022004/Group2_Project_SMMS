@@ -13,6 +13,9 @@ using project_PRN232.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Hỗ trợ cấu hình riêng cho từng máy developer (không bị đẩy lên git)
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 // 1. Database Context
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
