@@ -225,12 +225,28 @@ namespace project_PRN232.Controllers
             return File(bytes, "text/csv", $"SMMS_BaoCao_GPA_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
         }
 
+        [HttpGet("export/gpa-word")]
+        [Authorize(Roles = "Admin,Lecturer")]
+        public async Task<IActionResult> ExportGpaWord([FromQuery] int? majorId, [FromQuery] int? administrativeClassId)
+        {
+            var bytes = await _reportService.ExportGpaReportWordAsync(majorId, administrativeClassId);
+            return File(bytes, "application/msword", $"SMMS_BaoCao_GPA_{DateTime.UtcNow:yyyyMMdd_HHmm}.doc");
+        }
+
         [HttpGet("export/section-grades-csv/{courseSectionId}")]
         [Authorize(Roles = "Admin,Lecturer")]
         public async Task<IActionResult> ExportSectionGradesCsv(int courseSectionId)
         {
             var bytes = await _reportService.ExportSectionGradesCsvAsync(courseSectionId);
             return File(bytes, "text/csv", $"SMMS_DiemLopHocPhan_{courseSectionId}_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
+        }
+
+        [HttpGet("export/section-grades-word/{courseSectionId}")]
+        [Authorize(Roles = "Admin,Lecturer")]
+        public async Task<IActionResult> ExportSectionGradesWord(int courseSectionId)
+        {
+            var bytes = await _reportService.ExportSectionGradesWordAsync(courseSectionId);
+            return File(bytes, "application/msword", $"SMMS_DiemLopHocPhan_{courseSectionId}_{DateTime.UtcNow:yyyyMMdd_HHmm}.doc");
         }
     }
 }

@@ -146,11 +146,15 @@
                                     <td class="fw-bold">@rec.SubjectCode</td>
                                     <td>@rec.SubjectName</td>
                                     <td class="text-center fw-semibold">@rec.Credits</td>
-                                    <td class="text-center fw-bold fs-6 @(rec.IsPassed ? "text-success" : "text-danger")">
-                                        @rec.FinalScore.ToString("0.0")
+                                    <td class="text-center fw-bold fs-6 @(rec.FinalScore.HasValue ? (rec.IsPassed ? "text-success" : "text-danger") : "text-muted")">
+                                        @(rec.FinalScore.HasValue ? rec.FinalScore.Value.ToString("0.0") : "--")
                                     </td>
                                     <td class="text-center">
-                                        @if (rec.IsPassed)
+                                        @if (!rec.FinalScore.HasValue)
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1">ĐANG HỌC</span>
+                                        }
+                                        else if (rec.IsPassed)
                                         {
                                             <span class="badge bg-success-subtle text-success border border-success px-3 py-1">ĐẠT</span>
                                         }

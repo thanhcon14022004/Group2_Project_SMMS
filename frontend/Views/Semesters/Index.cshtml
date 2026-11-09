@@ -15,14 +15,13 @@
     </button>
 </div>
 
-<!-- Thanh Bộ Lọc OData Nâng Cao -->
+<!-- Thanh Bộ Lọc Tìm Kiếm -->
 <div class="card shadow-sm border-0 rounded-3 mb-3 bg-white">
     <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
-                <i class="fa-solid fa-filter me-1"></i>Bộ Lọc OData Mùa Học
+            <span class="fw-semibold text-dark">
+                <i class="fa-solid fa-filter me-1 text-primary"></i>Bộ lọc tìm kiếm
             </span>
-            <small class="text-muted">Lọc mùa học với <code>$filter</code>, <code>$orderby</code> theo chuẩn OData v4</small>
         </div>
         <div>
             <span class="badge bg-light text-dark border">Tổng cộng @Model.Count mùa học</span>
@@ -64,14 +63,14 @@
                 </div>
                 <div class="col-md-2">
                     <select name="orderby" id="semFilterOrderBy" class="form-select form-select-sm" onchange="updateSemesterODataPreview()">
-                        <option value="">-- Sắp xếp ($orderby) --</option>
+                        <option value="">-- Sắp xếp --</option>
                         <!option value="StartDate desc" @(ViewBag.CurrentOrderBy == "StartDate desc" ? "selected" : "")>Mới nhất trước</!option>
                         <!option value="StartDate asc" @(ViewBag.CurrentOrderBy == "StartDate asc" ? "selected" : "")>Cũ nhất trước</!option>
                         <!option value="Code asc" @(ViewBag.CurrentOrderBy == "Code asc" ? "selected" : "")>Mã mùa học A - Z</!option>
                     </select>
                 </div>
                 <div class="col-md-1 d-flex gap-1">
-                    <button type="submit" class="btn btn-primary btn-sm w-100 shadow-sm" title="Áp dụng bộ lọc OData lên Server">
+                    <button type="submit" class="btn btn-primary btn-sm w-100 shadow-sm" title="Áp dụng bộ lọc">
                         <i class="fa-solid fa-play"></i> Lọc
                     </button>
                     @if (!string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery))
@@ -80,19 +79,6 @@
                             <i class="fa-solid fa-rotate-left"></i>
                         </a>
                     }
-                </div>
-            </div>
-
-            <!-- Preview OData Query String -->
-            <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="text-secondary fw-semibold"><i class="fa-solid fa-code text-primary me-1"></i>OData Query URL:</span>
-                    <code id="semesterODataPreview" class="text-primary bg-light px-2 py-1 rounded border">/api/semesters@(string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery) ? "" : "?" + ViewBag.CurrentODataQuery)</code>
-                </div>
-                <div class="d-flex gap-2">
-                    <span class="badge bg-success-subtle text-success border border-success">
-                        <i class="fa-solid fa-check me-1"></i>OData v4 Supported
-                    </span>
                 </div>
             </div>
         </form>

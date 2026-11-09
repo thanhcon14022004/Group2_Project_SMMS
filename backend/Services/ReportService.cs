@@ -10,7 +10,9 @@ namespace project_PRN232.Services
         Task<DashboardSummaryDto> GetDashboardSummaryAsync();
         Task<List<StudentSemesterTranscriptDto>> GetStudentsGpaReportAsync(int? majorId = null, int? administrativeClassId = null);
         Task<byte[]> ExportGpaReportCsvAsync(int? majorId = null, int? administrativeClassId = null);
+        Task<byte[]> ExportGpaReportWordAsync(int? majorId = null, int? administrativeClassId = null);
         Task<byte[]> ExportSectionGradesCsvAsync(int courseSectionId);
+        Task<byte[]> ExportSectionGradesWordAsync(int courseSectionId);
     }
 
     public class ReportService : IReportService
@@ -141,6 +143,70 @@ namespace project_PRN232.Services
             return Encoding.UTF8.GetBytes(sb.ToString());
         }
 
+        public async Task<byte[]> ExportGpaReportWordAsync(int? majorId = null, int? administrativeClassId = null)
+        {
+            var reports = await GetStudentsGpaReportAsync(majorId, administrativeClassId);
+
+            var sb = new StringBuilder();
+            sb.Append('\uFEFF');
+            sb.AppendLine("<!DOCTYPE html>");
+            sb.AppendLine("<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>");
+            sb.AppendLine("<head><meta charset='utf-8'>");
+            sb.AppendLine("<title>Báo cáo GPA</title>");
+            sb.AppendLine("<style>");
+            sb.AppendLine("body { font-family: 'Times New Roman', serif; font-size: 11pt; margin: 20px; }");
+            sb.AppendLine(".header-title { text-align: center; font-size: 14pt; font-weight: bold; color: #0d6efd; text-transform: uppercase; margin-bottom: 4px; }");
+            sb.AppendLine(".header-sub { text-align: center; font-size: 11pt; font-style: italic; color: #555555; margin-top: 0; margin-bottom: 20px; }");
+            sb.AppendLine("table { border-collapse: collapse; width: 100%; border: 1.5px solid #000000; }");
+            sb.AppendLine("th, td { border: 1px solid #000000; padding: 6px 8px; font-size: 10pt; vertical-align: middle; }");
+            sb.AppendLine("th { background-color: #e9ecef; font-weight: bold; text-align: center; }");
+            sb.AppendLine(".center { text-align: center; }");
+            sb.AppendLine(".right { text-align: right; }");
+            sb.AppendLine(".bold { font-weight: bold; }");
+            sb.AppendLine("</style></head><body>");
+
+            sb.AppendLine("<div class='header-title'>BÁO CÁO TỔNG HỢP KẾT QUẢ HỌC TẬP & ĐIỂM GPA</div>");
+            sb.AppendLine($"<div class='header-sub'>Hệ thống Quản lý Điểm SMMS &bull; Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm} &bull; Tổng số: {reports.Count} sinh viên</div>");
+
+            sb.AppendLine("<table>");
+            sb.AppendLine("<thead><tr>");
+            sb.AppendLine("<th style='width: 35px;'>STT</th>");
+            sb.AppendLine("<th style='width: 80px;'>Mã SV</th>");
+            sb.AppendLine("<th>Họ và tên</th>");
+            sb.AppendLine("<th>Ngành đào tạo</th>");
+            sb.AppendLine("<th>Chuyên ngành hẹp</th>");
+            sb.AppendLine("<th style='width: 45px;'>Kỳ</th>");
+            sb.AppendLine("<th style='width: 55px;'>TC Đạt</th>");
+            sb.AppendLine("<th style='width: 55px;'>TC ĐK</th>");
+            sb.AppendLine("<th style='width: 55px;'>GPA</th>");
+            sb.AppendLine("<th style='width: 85px;'>Xếp loại</th>");
+            sb.AppendLine("</tr></thead>");
+            sb.AppendLine("<tbody>");
+
+            int stt = 1;
+            foreach (var r in reports)
+            {
+                var spec = string.IsNullOrEmpty(r.SpecializationName) ? "--" : r.SpecializationName;
+                sb.AppendLine("<tr>");
+                sb.AppendLine($"<td class='center'>{stt++}</td>");
+                sb.AppendLine($"<td class='center bold'>{r.StudentCode}</td>");
+                sb.AppendLine($"<td>{r.FullName}</td>");
+                sb.AppendLine($"<td>{r.MajorName}</td>");
+                sb.AppendLine($"<td>{spec}</td>");
+                sb.AppendLine($"<td class='center'>{r.CurrentSemester}</td>");
+                sb.AppendLine($"<td class='center bold' style='color: green;'>{r.TotalPassedCredits}</td>");
+                sb.AppendLine($"<td class='center'>{r.TotalEnrolledCredits}</td>");
+                sb.AppendLine($"<td class='center bold' style='color: #0d6efd;'>{r.CumulativeGpa:0.00}</td>");
+                sb.AppendLine($"<td class='center'>{r.AcademicStanding}</td>");
+                sb.AppendLine("</tr>");
+            }
+
+            sb.AppendLine("</tbody></table>");
+            sb.AppendLine("</body></html>");
+
+            return Encoding.UTF8.GetBytes(sb.ToString());
+        }
+
         public async Task<byte[]> ExportSectionGradesCsvAsync(int courseSectionId)
         {
             var sheet = await _gradeService.GetSectionGradeSheetAsync(courseSectionId, null, "Admin");
@@ -183,6 +249,88 @@ namespace project_PRN232.Services
 
                 sb.AppendLine(string.Join(",", cells));
             }
+
+            return Encoding.UTF8.GetBytes(sb.ToString());
+        }
+
+        public async Task<byte[]> ExportSectionGradesWordAsync(int courseSectionId)
+        {
+            var sheet = await _gradeService.GetSectionGradeSheetAsync(courseSectionId, null, "Admin");
+
+            var sb = new StringBuilder();
+            sb.Append('\uFEFF');
+            sb.AppendLine("<!DOCTYPE html>");
+            sb.AppendLine("<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>");
+            sb.AppendLine("<head><meta charset='utf-8'>");
+            sb.AppendLine("<title>Bảng điểm lớp học phần</title>");
+            sb.AppendLine("<style>");
+            sb.AppendLine("body { font-family: 'Times New Roman', serif; font-size: 11pt; margin: 20px; }");
+            sb.AppendLine(".header-title { text-align: center; font-size: 14pt; font-weight: bold; color: #0d6efd; text-transform: uppercase; margin-bottom: 4px; }");
+            sb.AppendLine(".header-sub { text-align: center; font-size: 11pt; font-style: italic; color: #555555; margin-top: 0; margin-bottom: 20px; }");
+            sb.AppendLine("table { border-collapse: collapse; width: 100%; border: 1.5px solid #000000; }");
+            sb.AppendLine("th, td { border: 1px solid #000000; padding: 6px 8px; font-size: 10pt; vertical-align: middle; }");
+            sb.AppendLine("th { background-color: #e9ecef; font-weight: bold; text-align: center; }");
+            sb.AppendLine(".center { text-align: center; }");
+            sb.AppendLine(".bold { font-weight: bold; }");
+            sb.AppendLine(".passed { color: #198754; font-weight: bold; }");
+            sb.AppendLine(".failed { color: #dc3545; font-weight: bold; }");
+            sb.AppendLine("</style></head><body>");
+
+            sb.AppendLine($"<div class='header-title'>BẢNG ĐIỂM LỚP HỌC PHẦN: {sheet.CourseSectionCode}</div>");
+            sb.AppendLine($"<div class='header-sub'>Môn học: <strong>{sheet.SubjectCode} - {sheet.SubjectName}</strong> ({sheet.Credits} tín chỉ) &bull; Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}</div>");
+
+            sb.AppendLine("<table>");
+            sb.AppendLine("<thead><tr>");
+            sb.AppendLine("<th style='width: 35px;'>STT</th>");
+            sb.AppendLine("<th style='width: 85px;'>MSSV</th>");
+            sb.AppendLine("<th>Họ và tên</th>");
+            sb.AppendLine("<th style='width: 90px;'>Lớp HC</th>");
+
+            foreach (var comp in sheet.Components)
+            {
+                sb.AppendLine($"<th style='width: 75px;'>{comp.Name}<br/><span style='font-size: 8pt; font-weight: normal;'>({comp.Weight:0.#}%)</span></th>");
+            }
+
+            sb.AppendLine("<th style='width: 70px;'>Tổng kết</th>");
+            sb.AppendLine("<th style='width: 80px;'>Kết quả</th>");
+            sb.AppendLine("</tr></thead>");
+            sb.AppendLine("<tbody>");
+
+            int stt = 1;
+            foreach (var row in sheet.StudentRows)
+            {
+                sb.AppendLine("<tr>");
+                sb.AppendLine($"<td class='center'>{stt++}</td>");
+                sb.AppendLine($"<td class='center bold'>{row.StudentCode}</td>");
+                sb.AppendLine($"<td>{row.FullName}</td>");
+                sb.AppendLine($"<td class='center'>{row.AdministrativeClassCode}</td>");
+
+                foreach (var comp in sheet.Components)
+                {
+                    row.ComponentScores.TryGetValue(comp.Id, out var score);
+                    var scoreText = score.HasValue ? score.Value.ToString("0.0") : "-";
+                    sb.AppendLine($"<td class='center'>{scoreText}</td>");
+                }
+
+                var finalScoreText = row.FinalScore.HasValue ? row.FinalScore.Value.ToString("0.0") : "--";
+                sb.AppendLine($"<td class='center bold' style='color: #0d6efd;'>{finalScoreText}</td>");
+
+                if (row.FinalScore.HasValue)
+                {
+                    var resClass = row.IsPassed ? "passed" : "failed";
+                    var resText = row.IsPassed ? "ĐẠT" : "HỎNG";
+                    sb.AppendLine($"<td class='center {resClass}'>{resText}</td>");
+                }
+                else
+                {
+                    sb.AppendLine("<td class='center' style='color: #6c757d;'>Đang học</td>");
+                }
+
+                sb.AppendLine("</tr>");
+            }
+
+            sb.AppendLine("</tbody></table>");
+            sb.AppendLine("</body></html>");
 
             return Encoding.UTF8.GetBytes(sb.ToString());
         }
