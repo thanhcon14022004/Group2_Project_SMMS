@@ -574,6 +574,17 @@ namespace project_PRN232.Frontend.Models
         public List<string> BlockingReasons { get; set; } = new();
     }
 
+    public class PagedResult<T>
+    {
+        public List<T> Items { get; set; } = new();
+        public int TotalCount { get; set; }
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+        public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 0;
+        public bool HasPreviousPage => PageIndex > 1;
+        public bool HasNextPage => PageIndex < TotalPages;
+    }
+
     public class UserItemViewModel
     {
         public int Id { get; set; }
@@ -583,6 +594,13 @@ namespace project_PRN232.Frontend.Models
         public string? PhoneNumber { get; set; }
         public string Role { get; set; } = string.Empty;
         public int? LecturerId { get; set; }
+        public string? LecturerCode { get; set; }
+        public string? Department { get; set; }
+        public string? AcademicTitle { get; set; }
+        public int? StudentId { get; set; }
+        public string? StudentCode { get; set; }
+        public string? MajorName { get; set; }
+        public string? AdministrativeClassName { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
     }

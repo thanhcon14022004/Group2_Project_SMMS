@@ -79,6 +79,8 @@ namespace project_PRN232.Frontend.Controllers
                 HttpContext.Session.SetString("SMMS_USER_INFO", System.Text.Json.JsonSerializer.Serialize(user));
                 HttpContext.Session.SetString("SMMS_USER_ROLE", user.Role ?? "");
                 HttpContext.Session.SetString("SMMS_USER_NAME", user.FullName ?? "");
+                HttpContext.Session.SetString("SMMS_USER_ID", user.UserId.ToString());
+                HttpContext.Session.SetString("SMMS_USER_USERNAME", user.Username ?? "");
 
                 Response.Cookies.Append("SMMS_JWT_TOKEN", user.Token, new CookieOptions
                 {

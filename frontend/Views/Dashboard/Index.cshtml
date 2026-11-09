@@ -13,22 +13,22 @@
 
     <!-- Banner chào mừng Giảng viên -->
     <div class="card border-0 shadow-sm rounded-4 mb-4 text-white overflow-hidden" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">
-        <div class="card-body p-4">
+        <div class="card-body py-3 px-4">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 64px; height: 64px; font-size: 26px; min-width: 64px;">
+                    <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 52px; height: 52px; font-size: 22px; min-width: 52px;">
                         <i class="fa-solid fa-chalkboard-user"></i>
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <span class="badge bg-white text-primary fw-bold px-3 py-1 rounded-pill">
+                            <span class="badge bg-white text-primary fw-bold px-3 py-1 rounded-pill shadow-sm">
                                 <i class="fa-solid fa-graduation-cap me-1"></i>@lecturer.AcademicTitle
                             </span>
                             <span class="badge bg-info text-white fw-bold px-3 py-1 rounded-pill">
                                 Mã GV: @lecturer.LecturerCode
                             </span>
                         </div>
-                        <h3 class="fw-bold mb-1">Xin chào, @lecturer.AcademicTitle @lecturer.FullName</h3>
+                        <h4 class="fw-bold mb-1">Xin chào, @lecturer.AcademicTitle @lecturer.FullName</h4>
                         <div class="small text-white-50">
                             <span><i class="fa-solid fa-building me-1"></i>Bộ môn: <strong>@lecturer.Department</strong></span>
                             <span class="mx-2">|</span>
@@ -37,10 +37,10 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="/Grades" class="btn btn-light text-primary fw-bold shadow-sm">
+                    <a href="/Grades" class="btn btn-light btn-sm text-primary fw-bold shadow-sm px-3 py-2 rounded-3">
                         <i class="fa-solid fa-pen-to-square me-1"></i>Vào Sổ Điểm
                     </a>
-                    <a href="/Reports" class="btn btn-outline-light fw-semibold">
+                    <a href="/Reports" class="btn btn-outline-light btn-sm fw-semibold px-3 py-2 rounded-3">
                         <i class="fa-solid fa-chart-line me-1"></i>Báo Cáo Điểm Lớp
                     </a>
                 </div>
@@ -137,14 +137,14 @@
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light small">
                                     <tr>
-                                        <th class="ps-3" style="width: 45px;">#</th>
-                                        <th>Mã Lớp HP</th>
-                                        <th>Học kỳ</th>
-                                        <th>Môn học</th>
-                                        <th>Lịch học & Phòng</th>
-                                        <th class="text-center">Sĩ số</th>
-                                        <th class="text-center">Trạng thái điểm</th>
-                                        <th class="text-end pe-3" style="width: 180px;">Thao tác</th>
+                                        <th class="ps-3 text-center" style="width: 45px;">#</th>
+                                        <th style="min-width: 140px; white-space: nowrap;">Mã Lớp HP</th>
+                                        <th style="min-width: 130px; white-space: nowrap;">Học kỳ</th>
+                                        <th style="min-width: 220px;">Môn học</th>
+                                        <th style="min-width: 175px;">Lịch học & Phòng</th>
+                                        <th class="text-center" style="white-space: nowrap;">Sĩ số</th>
+                                        <th class="text-center" style="white-space: nowrap;">Trạng thái điểm</th>
+                                        <th class="text-end pe-3" style="width: 160px; white-space: nowrap;">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>

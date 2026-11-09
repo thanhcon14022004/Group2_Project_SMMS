@@ -56,6 +56,8 @@ namespace project_PRN232.Frontend.Services
                 _httpContextAccessor.HttpContext?.Session.SetString("SMMS_USER_INFO", respJson);
                 _httpContextAccessor.HttpContext?.Session.SetString("SMMS_USER_ROLE", user.Role);
                 _httpContextAccessor.HttpContext?.Session.SetString("SMMS_USER_NAME", user.FullName);
+                _httpContextAccessor.HttpContext?.Session.SetString("SMMS_USER_ID", user.UserId.ToString());
+                _httpContextAccessor.HttpContext?.Session.SetString("SMMS_USER_USERNAME", user.Username);
 
                 // Set token in Cookie so it is visible in DevTools -> Application -> Cookies
                 _httpContextAccessor.HttpContext?.Response.Cookies.Append("SMMS_JWT_TOKEN", user.Token, new CookieOptions

@@ -81,11 +81,17 @@ namespace project_PRN232.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleUserStatus(int id, [FromBody] UpdateUserStatusRequest request)
         {
-            var performedBy = User.Identity?.Name ?? "Admin";
-            var success = await _authService.ToggleUserStatusAsync(id, request.IsActive, performedBy);
-            if (!success) return NotFound(new { message = "Không tìm thấy người dùng." });
+            var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (int.TryParse(currentUserIdStr, out var currentUserId) && currentUserId == id)
+            {
+                return BadRequest(new { message = "Bạn không thể tự khóa tài khoản của chính mình đang đăng nhập." });
+            }
 
-            return Ok(new { message = $"Đã {(request.IsActive ? "kích hoạt" : "vô hiệu hóa")} tài khoản thành công." });
+            var performedBy = User.Identity?.Name ?? "Admin";
+            var (success, msg) = await _authService.ToggleUserStatusAsync(id, request.IsActive, performedBy);
+            if (!success) return BadRequest(new { message = msg });
+
+            return Ok(new { message = msg });
         }
     }
 }

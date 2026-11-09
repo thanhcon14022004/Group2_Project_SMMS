@@ -19,10 +19,14 @@ namespace project_PRN232.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUsers([FromQuery] string? role, [FromQuery] string? search)
+        public async Task<IActionResult> GetUsers(
+            [FromQuery] string? role, 
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var users = await _authService.GetUsersAsync(role, search);
-            return Ok(ApiResponse<List<UserDto>>.Ok(users));
+            var pagedResult = await _authService.GetUsersPagedAsync(role, search, page, pageSize);
+            return Ok(ApiResponse<PagedResult<UserDto>>.Ok(pagedResult));
         }
 
         [HttpGet("{id}")]
@@ -75,21 +79,33 @@ namespace project_PRN232.Controllers
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateUserStatus(int id, [FromBody] UpdateUserStatusRequest request)
         {
-            var performedBy = User.Identity?.Name ?? "Admin";
-            var success = await _authService.ToggleUserStatusAsync(id, request.IsActive, performedBy);
-            if (!success)
-                return NotFound(ApiResponse.ErrorResult("Không tìm thấy người dùng."));
+            var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (int.TryParse(currentUserIdStr, out var currentUserId) && currentUserId == id)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Bạn không thể tự khóa tài khoản của chính mình đang đăng nhập."));
+            }
 
-            return Ok(ApiResponse.SuccessResult($"Đã {(request.IsActive ? "kích hoạt" : "vô hiệu hóa")} tài khoản thành công."));
+            var performedBy = User.Identity?.Name ?? "Admin";
+            var (success, msg) = await _authService.ToggleUserStatusAsync(id, request.IsActive, performedBy);
+            if (!success)
+                return BadRequest(ApiResponse.ErrorResult(msg));
+
+            return Ok(ApiResponse.SuccessResult(msg));
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
+            var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (int.TryParse(currentUserIdStr, out var currentUserId) && currentUserId == id)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Bạn không thể tự xóa tài khoản của chính mình đang đăng nhập."));
+            }
+
             var performedBy = User.Identity?.Name ?? "Admin";
             var (success, msg) = await _authService.DeleteUserAsync(id, performedBy);
             if (!success)
-                return NotFound(ApiResponse.ErrorResult(msg));
+                return BadRequest(ApiResponse.ErrorResult(msg));
 
             return Ok(ApiResponse.SuccessResult(msg));
         }
