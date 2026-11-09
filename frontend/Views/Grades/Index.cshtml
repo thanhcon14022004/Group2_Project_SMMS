@@ -297,7 +297,7 @@ else if (Model == null || Model.CourseSectionId == 0)
                 {
                     <span class="badge bg-white text-dark border p-2 shadow-sm">
                         <i class="fa-solid fa-circle-check text-success me-1"></i>
-                        <strong>@comp.Name</strong>: @((comp.Weight * 100).ToString("0.#"))% (Thang @comp.Scale.ToString("0"))
+                        <strong>@comp.Name</strong>: @(comp.Weight.ToString("0.#"))% (Thang @comp.Scale.ToString("0"))
                         @if (comp.IsAdminOnly)
                         {
                             <span class="badge bg-danger ms-1" title="Chỉ Admin có quyền nhập/sửa đầu điểm này">
@@ -308,26 +308,6 @@ else if (Model == null || Model.CourseSectionId == 0)
                 }
             </div>
         </div>
-
-        <!-- Thông báo phân quyền nhập điểm -->
-        @if (role == "Admin")
-        {
-            <div class="alert alert-info py-2 px-3 mb-0 border-0 rounded-0 d-flex align-items-center">
-                <i class="fa-solid fa-user-shield text-primary me-2 fs-5"></i>
-                <small>
-                    Quyền <strong>Quản trị viên (Admin)</strong>: Bạn <strong>chỉ được nhập/sửa các đầu điểm có quyền nhập</strong> (<span class="badge bg-danger text-white"><i class="fa-solid fa-shield-halved me-1"></i>Chỉ Admin</span>). Các đầu điểm của Giảng viên (Quiz, Lab, Assignment...) sẽ được khóa an toàn (không được nhập) để bảo đảm tính toàn vẹn.
-                </small>
-            </div>
-        }
-        else if (role == "Lecturer")
-        {
-            <div class="alert alert-info py-2 px-3 mb-0 border-0 rounded-0 d-flex align-items-center">
-                <i class="fa-solid fa-chalkboard-user text-primary me-2 fs-5"></i>
-                <small>
-                    Quyền <strong>Giảng viên phụ trách</strong>: Bạn chỉ được nhập các đầu điểm quá trình (<span class="badge bg-primary-subtle text-primary border border-primary">Giảng viên</span>). Các đầu điểm <span class="badge bg-danger text-white">Chỉ Admin</span> sẽ do Phòng Đào tạo / Hội đồng khảo thí quản lý.
-                </small>
-            </div>
-        }
 
         <div class="card-body p-0">
             @if (!Model.StudentRows.Any())
@@ -355,7 +335,7 @@ else if (Model == null || Model.CourseSectionId == 0)
                                     {
                                         <th style="width: 130px;">
                                             <div>@comp.Name</div>
-                                            <small class="badge bg-light text-dark border">@((comp.Weight * 100).ToString("0.#"))%</small>
+                                            <small class="badge bg-light text-dark border">@(comp.Weight.ToString("0.#"))%</small>
                                             @if (comp.IsAdminOnly)
                                             {
                                                 <div><small class="badge bg-danger text-white border border-danger"><i class="fa-solid fa-shield-halved me-1"></i>Chỉ Admin</small></div>
