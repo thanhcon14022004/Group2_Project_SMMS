@@ -16,6 +16,37 @@ namespace project_PRN232.Frontend.Controllers
             var authCheck = CheckAuth("Admin", "Lecturer");
             if (authCheck != null) return authCheck;
 
+            bool isLecturer = CurrentUser?.Role == "Lecturer";
+
+            if (isLecturer)
+            {
+                // Luồng nghiệp vụ dành riêng cho GIẢNG VIÊN:
+                // Tải danh sách lớp học phần do chính giảng viên này phụ trách
+                var lecturerSections = await ApiClient.GetAsync<List<CourseSectionViewModel>>("course-sections") ?? new List<CourseSectionViewModel>();
+                ViewBag.LecturerSections = lecturerSections;
+
+                // Tự động chọn lớp đầu tiên nếu chưa chọn sectionId
+                if (!sectionId.HasValue && lecturerSections.Any())
+                {
+                    sectionId = lecturerSections.First().Id;
+                }
+
+                GradeSheetViewModel? lecturerSheet = null;
+                if (sectionId.HasValue && sectionId.Value > 0)
+                {
+                    lecturerSheet = await ApiClient.GetAsync<GradeSheetViewModel>($"grades/section/{sectionId.Value}");
+                    ViewBag.SelectedSectionId = sectionId.Value;
+                }
+
+                var lecturerModel = lecturerSheet ?? new GradeSheetViewModel
+                {
+                    CourseSectionId = sectionId ?? 0
+                };
+
+                return View(lecturerModel);
+            }
+
+            // Luồng nghiệp vụ dành cho QUẢN TRỊ VIÊN (Admin):
             // 1. Tải danh sách học kỳ và lớp hành chính
             var semestersTask = ApiClient.GetAsync<List<SemesterViewModel>>("semesters");
             var classesTask = ApiClient.GetAsync<List<ClassViewModel>>("classes");
