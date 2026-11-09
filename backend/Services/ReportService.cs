@@ -8,6 +8,7 @@ namespace project_PRN232.Services
     public interface IReportService
     {
         Task<DashboardSummaryDto> GetDashboardSummaryAsync();
+        Task<LecturerDashboardDto?> GetLecturerDashboardAsync(int userId);
         Task<List<StudentSemesterTranscriptDto>> GetStudentsGpaReportAsync(int? majorId = null, int? administrativeClassId = null);
         Task<byte[]> ExportGpaReportCsvAsync(int? majorId = null, int? administrativeClassId = null);
         Task<byte[]> ExportSectionGradesCsvAsync(int courseSectionId);
@@ -102,6 +103,152 @@ namespace project_PRN232.Services
                 AverageSystemGpa = avgGpa,
                 GpaDistribution = distribution
             };
+        }
+
+        public async Task<LecturerDashboardDto?> GetLecturerDashboardAsync(int userId)
+        {
+            var lecturer = await _db.Lecturers
+                .Include(l => l.User)
+                .FirstOrDefaultAsync(l => l.UserId == userId);
+
+            if (lecturer == null) return null;
+
+            var activeSemester = await _db.Semesters
+                .Where(s => s.Status == "Active")
+                .OrderByDescending(s => s.StartDate)
+                .FirstOrDefaultAsync() ?? await _db.Semesters.OrderByDescending(s => s.StartDate).FirstOrDefaultAsync();
+
+            var query = _db.CourseSections
+                .Include(cs => cs.Subject)
+                .Include(cs => cs.Schedules)
+                .Include(cs => cs.Enrollments)
+                .Where(cs => cs.LecturerId == lecturer.Id);
+
+            if (activeSemester != null)
+            {
+                query = query.Where(cs => cs.SemesterId == activeSemester.Id);
+            }
+
+            var sections = await query.OrderBy(cs => cs.Code).ToListAsync();
+
+            var sectionIds = sections.Select(cs => cs.Id).ToList();
+
+            // Sĩ số sinh viên mà GV đang dạy (tính unique SV theo các lớp học phần kỳ này)
+            var totalStudents = sections.SelectMany(cs => cs.Enrollments).Select(e => e.StudentId).Distinct().Count();
+
+            // Tiến độ nhập điểm
+            var lockedCount = sections.Count(cs => cs.IsGradeLocked);
+            var pendingCount = sections.Count(cs => !cs.IsGradeLocked);
+
+            // Tổng số môn GV đã đăng ký
+            var registeredSubjectsCount = await _db.LecturerSubjects.CountAsync(ls => ls.LecturerId == lecturer.Id);
+
+            // Format thông tin các lớp học phần
+            var assignedSections = sections.Select(cs => new LecturerSectionSummaryDto
+            {
+                Id = cs.Id,
+                Code = cs.Code,
+                SubjectCode = cs.Subject?.Code ?? "",
+                SubjectName = cs.Subject?.Name ?? "",
+                Credits = cs.Subject?.Credits ?? 0,
+                ScheduleSummary = FormatSchedule(cs.Schedules),
+                StudentCount = cs.Enrollments.Count,
+                MaxCapacity = cs.MaxCapacity,
+                IsGradeLocked = cs.IsGradeLocked,
+                GradeLockedAt = cs.GradeLockedAt
+            }).ToList();
+
+            // Phổ điểm của sinh viên các lớp do giảng viên này phụ trách
+            var teachingScores = await _db.StudentGrades
+                .Where(g => sectionIds.Contains(g.CourseSectionId) && g.Score.HasValue)
+                .GroupBy(g => g.StudentId)
+                .Select(g => new
+                {
+                    StudentId = g.Key,
+                    AvgScore = g.Average(x => (double)x.Score!.Value)
+                })
+                .ToListAsync();
+
+            if (!teachingScores.Any())
+            {
+                // Fallback: nếu kỳ này chưa có điểm nào thì lấy điểm các lớp GV từng dạy để biểu đồ trực quan
+                teachingScores = await _db.StudentGrades
+                    .Where(g => _db.CourseSections.Where(cs => cs.LecturerId == lecturer.Id).Select(cs => cs.Id).Contains(g.CourseSectionId) && g.Score.HasValue)
+                    .GroupBy(g => g.StudentId)
+                    .Select(g => new
+                    {
+                        StudentId = g.Key,
+                        AvgScore = g.Average(x => (double)x.Score!.Value)
+                    })
+                    .ToListAsync();
+            }
+
+            int countXuatSac = 0, countGioi = 0, countKha = 0, countTB = 0, countYeu = 0;
+            decimal totalScore = 0m;
+            int gpaCount = teachingScores.Count;
+
+            foreach (var sc in teachingScores)
+            {
+                var score = Math.Round((decimal)sc.AvgScore, 2);
+                totalScore += score;
+
+                if (score >= 9.0m) countXuatSac++;
+                else if (score >= 8.0m) countGioi++;
+                else if (score >= 6.5m) countKha++;
+                else if (score >= 5.0m) countTB++;
+                else countYeu++;
+            }
+
+            decimal avgTeachingScore = gpaCount > 0 ? Math.Round(totalScore / gpaCount, 2) : 0m;
+
+            var distribution = new List<GpaDistributionDto>
+            {
+                new() { Rank = "Xuất sắc (>= 9.0)", Count = countXuatSac, Percentage = gpaCount > 0 ? Math.Round((decimal)countXuatSac / gpaCount * 100, 1) : 0 },
+                new() { Rank = "Giỏi (8.0 - 8.9)", Count = countGioi, Percentage = gpaCount > 0 ? Math.Round((decimal)countGioi / gpaCount * 100, 1) : 0 },
+                new() { Rank = "Khá (6.5 - 7.9)", Count = countKha, Percentage = gpaCount > 0 ? Math.Round((decimal)countKha / gpaCount * 100, 1) : 0 },
+                new() { Rank = "Trung bình (5.0 - 6.4)", Count = countTB, Percentage = gpaCount > 0 ? Math.Round((decimal)countTB / gpaCount * 100, 1) : 0 },
+                new() { Rank = "Yếu (< 5.0)", Count = countYeu, Percentage = gpaCount > 0 ? Math.Round((decimal)countYeu / gpaCount * 100, 1) : 0 }
+            };
+
+            return new LecturerDashboardDto
+            {
+                LecturerId = lecturer.Id,
+                LecturerCode = lecturer.LecturerCode,
+                FullName = lecturer.User?.FullName ?? "",
+                AcademicTitle = lecturer.AcademicTitle,
+                Department = lecturer.Department,
+                ActiveSemesterId = activeSemester?.Id ?? 0,
+                ActiveSemesterName = activeSemester?.Name ?? "Chưa có",
+                GradeEntryDeadline = activeSemester?.GradeEntryDeadline,
+                TotalAssignedSections = sections.Count,
+                TotalStudentsTeaching = totalStudents,
+                SectionsLockedCount = lockedCount,
+                SectionsPendingGradeCount = pendingCount,
+                TotalRegisteredSubjects = registeredSubjectsCount,
+                AverageTeachingScore = avgTeachingScore,
+                GradeDistribution = distribution,
+                AssignedSections = assignedSections
+            };
+        }
+
+        private static string FormatSchedule(IEnumerable<project_PRN232.Models.Entities.CourseSectionSchedule> schedules)
+        {
+            if (schedules == null || !schedules.Any()) return "Chưa xếp lịch";
+            var items = schedules.Select(s => {
+                var dayStr = s.DayOfWeek switch
+                {
+                    DayOfWeek.Monday => "Thứ 2",
+                    DayOfWeek.Tuesday => "Thứ 3",
+                    DayOfWeek.Wednesday => "Thứ 4",
+                    DayOfWeek.Thursday => "Thứ 5",
+                    DayOfWeek.Friday => "Thứ 6",
+                    DayOfWeek.Saturday => "Thứ 7",
+                    DayOfWeek.Sunday => "Chủ nhật",
+                    _ => s.DayOfWeek.ToString()
+                };
+                return $"{dayStr} (Slot {s.Slot}, {s.Room})";
+            });
+            return string.Join("; ", items);
         }
 
         public async Task<List<StudentSemesterTranscriptDto>> GetStudentsGpaReportAsync(int? majorId = null, int? administrativeClassId = null)

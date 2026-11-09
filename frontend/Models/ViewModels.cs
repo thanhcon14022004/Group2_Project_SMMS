@@ -32,6 +32,49 @@ namespace project_PRN232.Frontend.Models
         public int SectionsLackingGrades { get; set; }
         public int UnallocatedExceptions { get; set; }
         public List<StandingCountViewModel> StandingDistribution { get; set; } = new();
+
+        public LecturerDashboardViewModel? LecturerDashboard { get; set; }
+    }
+
+    public class LecturerDashboardViewModel
+    {
+        public int LecturerId { get; set; }
+        public string LecturerCode { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string AcademicTitle { get; set; } = string.Empty;
+        public string Department { get; set; } = string.Empty;
+        public int ActiveSemesterId { get; set; }
+        public string ActiveSemesterName { get; set; } = string.Empty;
+        public DateTime? GradeEntryDeadline { get; set; }
+        public int TotalAssignedSections { get; set; }
+        public int TotalStudentsTeaching { get; set; }
+        public int SectionsLockedCount { get; set; }
+        public int SectionsPendingGradeCount { get; set; }
+        public int TotalRegisteredSubjects { get; set; }
+        public decimal AverageTeachingScore { get; set; }
+        public List<LecturerGpaDistributionViewModel> GradeDistribution { get; set; } = new();
+        public List<LecturerSectionSummaryViewModel> AssignedSections { get; set; } = new();
+    }
+
+    public class LecturerGpaDistributionViewModel
+    {
+        public string Rank { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public decimal Percentage { get; set; }
+    }
+
+    public class LecturerSectionSummaryViewModel
+    {
+        public int Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string SubjectCode { get; set; } = string.Empty;
+        public string SubjectName { get; set; } = string.Empty;
+        public int Credits { get; set; }
+        public string ScheduleSummary { get; set; } = string.Empty;
+        public int StudentCount { get; set; }
+        public int MaxCapacity { get; set; }
+        public bool IsGradeLocked { get; set; }
+        public DateTime? GradeLockedAt { get; set; }
     }
 
     public class StandingCountViewModel

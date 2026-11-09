@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,25 @@ namespace project_PRN232.Controllers
         {
             var summary = await _reportService.GetDashboardSummaryAsync();
             return Ok(ApiResponse<DashboardSummaryDto>.Ok(summary));
+        }
+
+        [HttpGet("lecturer-dashboard")]
+        [Authorize(Roles = "Lecturer,Admin")]
+        public async Task<IActionResult> GetLecturerDashboard()
+        {
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdStr, out var userId))
+            {
+                return Unauthorized(ApiResponse<object>.Fail("Không xác định được danh tính người dùng."));
+            }
+
+            var dashboard = await _reportService.GetLecturerDashboardAsync(userId);
+            if (dashboard == null)
+            {
+                return NotFound(ApiResponse<object>.Fail("Không tìm thấy thông tin hồ sơ giảng viên tương ứng."));
+            }
+
+            return Ok(ApiResponse<LecturerDashboardDto>.Ok(dashboard));
         }
 
         [HttpGet("gpa")]
