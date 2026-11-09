@@ -406,6 +406,7 @@ namespace project_PRN232.Frontend.Models
         public Dictionary<int, decimal?> ComponentScores { get; set; } = new();
         public decimal? FinalScore { get; set; }
         public bool IsPassed { get; set; }
+        public bool IsCompleted { get; set; }
     }
 
     public class TranscriptViewModel

@@ -27,6 +27,11 @@ Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
 
+## Local Developer Settings
+appsettings.Local.json
+appsettings.*.local.json
+*.local.json
+
 ## Temporary files
 *.tmp
 *.temp
