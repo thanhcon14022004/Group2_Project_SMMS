@@ -364,7 +364,13 @@ namespace project_PRN232.Frontend.Models
         public string SemesterCode { get; set; } = string.Empty;
         public int? LecturerId { get; set; }
         public string? LecturerName { get; set; }
-        public int EnrolledStudentsCount { get; set; }
+        public int EnrolledCount { get; set; }
+        public int EnrolledStudentsCount 
+        { 
+            get => EnrolledCount > 0 ? EnrolledCount : _enrolledStudentsCount; 
+            set => _enrolledStudentsCount = value; 
+        }
+        private int _enrolledStudentsCount;
         public int MaxCapacity { get; set; }
         public bool IsGradeLocked { get; set; }
         public string Status { get; set; } = string.Empty;

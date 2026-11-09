@@ -137,7 +137,7 @@ namespace project_PRN232.Services
                                 SubjectId = sub.Id,
                                 SemesterId = semester.Id,
                                 AdministrativeClassId = adminClass.Id,
-                                MaxCapacity = 31,
+                                MaxCapacity = 30,
                                 Status = "Open",
                                 CreatedAt = DateTime.UtcNow
                             };
@@ -155,7 +155,7 @@ namespace project_PRN232.Services
                         }
                         else
                         {
-                            existingSec.MaxCapacity = 31;
+                            existingSec.MaxCapacity = 30;
                         }
                     }
                 }
@@ -261,7 +261,7 @@ namespace project_PRN232.Services
                     }
                 }
 
-                // C. Kiểm tra sĩ số: Mỗi lớp tối đa 31, tối thiểu 28 sinh viên.
+                // C. Kiểm tra sĩ số: Mỗi lớp tối đa 30, tối thiểu 28 sinh viên.
                 // Nếu thiếu sinh viên (< 28) -> Tự động insert thêm sinh viên vào database cho đủ chuẩn 30 SV
                 int classAutoCreated = 0;
                 string prefix = GetMajorStudentPrefix(adminClass.Major?.Code ?? "");
@@ -306,16 +306,16 @@ namespace project_PRN232.Services
                         totalAutoCreated++;
                     }
                 }
-                else if (classStudents.Count > 31)
+                else if (classStudents.Count > 30)
                 {
-                    // Giới hạn tối đa 31 sinh viên
-                    var excess = classStudents.Skip(31).ToList();
+                    // Giới hạn tối đa 30 sinh viên
+                    var excess = classStudents.Skip(30).ToList();
                     foreach (var ex in excess)
                     {
                         ex.AdministrativeClassId = null;
                         allocatedStudentIds.Remove(ex.Id);
                     }
-                    classStudents = classStudents.Take(31).ToList();
+                    classStudents = classStudents.Take(30).ToList();
                 }
 
                 classStudentMap[adminClass.Id] = classStudents;
@@ -564,7 +564,7 @@ namespace project_PRN232.Services
             var enrolledCount = await _db.CourseSectionStudents.CountAsync(css => css.CourseSectionId == courseSectionId);
             if (enrolledCount >= section.MaxCapacity)
             {
-                throw new InvalidOperationException("Lớp học phần đã đầy sức chứa (tối đa 31 sinh viên).");
+                throw new InvalidOperationException("Lớp học phần đã đầy sức chứa (tối đa 30 sinh viên).");
             }
 
             _db.CourseSectionStudents.Add(new CourseSectionStudent
