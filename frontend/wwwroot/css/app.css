@@ -9,7 +9,7 @@
   --text-main: #2d3748;
   --text-muted: #718096;
   --border-color: #e2e8f0;
-  --sidebar-width: 250px;
+  --sidebar-width: 260px;
   --sidebar-collapsed-width: 70px;
 }
 
@@ -154,7 +154,7 @@ button, input, select, textarea, .form-control, .form-select, .btn, .badge, .tab
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 20px;
+  padding: 10px 16px;
   color: #cbd5e0;
   text-decoration: none;
   font-size: 0.9rem;
@@ -167,6 +167,7 @@ button, input, select, textarea, .form-control, .form-select, .btn, .badge, .tab
   border-bottom: none;
   width: 100%;
   text-align: left;
+  white-space: nowrap;
 }
 
 .nav-item-btn:hover {
@@ -215,6 +216,7 @@ button, input, select, textarea, .form-control, .form-select, .btn, .badge, .tab
   box-shadow: 0 2px 6px rgba(0,0,0,0.04);
   transition: transform 0.2s, box-shadow 0.2s;
   background: #fff;
+  overflow: hidden;
 }
 
 .stat-card:hover {

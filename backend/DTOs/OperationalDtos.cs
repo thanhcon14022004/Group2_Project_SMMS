@@ -122,6 +122,12 @@ namespace project_PRN232.DTOs
         public int SectionsLackingGradesCount { get; set; }
         public int SectionsLackingLecturerCount { get; set; }
         public decimal AverageSystemGpa { get; set; }
+
+        public decimal AverageGpa => AverageSystemGpa;
+        public int SectionsLackingGrades => SectionsLackingGradesCount;
+        public int SectionsLackingLecturer => SectionsLackingLecturerCount;
+        public int UnallocatedExceptions => UnallocatedExceptionsCount;
+
         public List<GpaDistributionDto> GpaDistribution { get; set; } = new();
     }
 

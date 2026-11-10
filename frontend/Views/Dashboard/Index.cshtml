@@ -274,12 +274,13 @@ else
     <!-- Giao diện Tổng quan Hệ thống dành cho Quản trị viên (Admin) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card stat-card shadow-sm border-0 border-start border-4 border-primary">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-primary rounded-3 h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="text-muted small fw-semibold">TỔNG SINH VIÊN</div>
+                            <div class="text-muted small fw-semibold text-uppercase">TỔNG SINH VIÊN</div>
                             <div class="fs-3 fw-bold text-dark mt-1">@Model.TotalStudents</div>
+                            <div class="small text-muted mt-1"><i class="fa-solid fa-users me-1"></i>Hồ sơ sinh viên</div>
                         </div>
                         <div class="stat-icon bg-primary-subtle text-primary rounded-3 p-3">
                             <i class="fa-solid fa-user-graduate fa-xl"></i>
@@ -289,12 +290,13 @@ else
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card stat-card shadow-sm border-0 border-start border-4 border-success">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-success rounded-3 h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="text-muted small fw-semibold">TỔNG GIẢNG VIÊN</div>
+                            <div class="text-muted small fw-semibold text-uppercase">TỔNG GIẢNG VIÊN</div>
                             <div class="fs-3 fw-bold text-dark mt-1">@Model.TotalLecturers</div>
+                            <div class="small text-muted mt-1"><i class="fa-solid fa-chalkboard-user me-1"></i>Cán bộ giảng dạy</div>
                         </div>
                         <div class="stat-icon bg-success-subtle text-success rounded-3 p-3">
                             <i class="fa-solid fa-chalkboard-user fa-xl"></i>
@@ -304,12 +306,13 @@ else
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card stat-card shadow-sm border-0 border-start border-4 border-info">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-info rounded-3 h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="text-muted small fw-semibold">LỚP HỌC PHẦN</div>
+                            <div class="text-muted small fw-semibold text-uppercase">LỚP HỌC PHẦN</div>
                             <div class="fs-3 fw-bold text-dark mt-1">@Model.TotalSections</div>
+                            <div class="small text-muted mt-1"><i class="fa-solid fa-layer-group me-1"></i>Tổng số lớp mở</div>
                         </div>
                         <div class="stat-icon bg-info-subtle text-info rounded-3 p-3">
                             <i class="fa-solid fa-layer-group fa-xl"></i>
@@ -319,12 +322,13 @@ else
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card stat-card shadow-sm border-0 border-start border-4 border-warning">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-warning rounded-3 h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="text-muted small fw-semibold">GPA TRUNG BÌNH</div>
+                            <div class="text-muted small fw-semibold text-uppercase">GPA TRUNG BÌNH</div>
                             <div class="fs-3 fw-bold text-dark mt-1">@Model.AverageGpa.ToString("F2")</div>
+                            <div class="small text-muted mt-1"><i class="fa-solid fa-star me-1 text-warning"></i>Toàn hệ thống</div>
                         </div>
                         <div class="stat-icon bg-warning-subtle text-warning rounded-3 p-3">
                             <i class="fa-solid fa-star fa-xl"></i>
@@ -337,96 +341,104 @@ else
 
     <div class="row g-3">
         <!-- Phân bố học lực -->
-        <div class="col-md-8">
+        <div class="col-lg-8">
             <div class="card shadow-sm border-0 rounded-3 h-100">
-                <div class="card-header bg-white py-3">
-                    <h6 class="card-title mb-0 fw-bold"><i class="fa-solid fa-chart-column text-primary me-2"></i>Phân Bố Xếp Loại Học Lực Sinh Viên</h6>
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0 fw-bold">
+                        <i class="fa-solid fa-chart-column text-primary me-2"></i>Phân Bố Xếp Loại Học Lực Sinh Viên
+                    </h6>
+                    <span class="badge bg-primary-subtle text-primary fw-semibold">GPA TB: @Model.AverageGpa.ToString("F2")</span>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex flex-column gap-3 py-2">
-                        <div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="fw-semibold text-success"><i class="fa-solid fa-medal me-1"></i>Xuất sắc (&ge; 9.0)</span>
-                                <span class="badge bg-success-subtle text-success">1 SV (33.3%)</span>
-                            </div>
-                            <div class="progress" style="height: 12px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: 33.3%"></div>
-                            </div>
+                    @if (Model.GpaDistribution != null && Model.GpaDistribution.Any())
+                    {
+                        <div class="d-flex flex-column gap-3 py-2">
+                            @foreach (var item in Model.GpaDistribution)
+                            {
+                                var barColor = "bg-primary";
+                                var textColor = "text-primary";
+                                var icon = "fa-star";
+                                if (item.Rank.Contains("Xuất sắc")) { barColor = "bg-success"; textColor = "text-success"; icon = "fa-medal"; }
+                                else if (item.Rank.Contains("Giỏi")) { barColor = "bg-info"; textColor = "text-info"; icon = "fa-award"; }
+                                else if (item.Rank.Contains("Khá")) { barColor = "bg-primary"; textColor = "text-primary"; icon = "fa-thumbs-up"; }
+                                else if (item.Rank.Contains("Trung bình")) { barColor = "bg-warning"; textColor = "text-warning"; icon = "fa-circle-check"; }
+                                else if (item.Rank.Contains("Yếu")) { barColor = "bg-danger"; textColor = "text-danger"; icon = "fa-triangle-exclamation"; }
+
+                                <div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-semibold @textColor small"><i class="fa-solid @icon me-1"></i>@item.Rank</span>
+                                        <span class="badge @barColor-subtle text-dark">@item.Count SV (@item.Percentage%)</span>
+                                    </div>
+                                    <div class="progress" style="height: 12px;">
+                                        <div class="progress-bar @barColor" role="progressbar" style="width: @item.Percentage%"></div>
+                                    </div>
+                                </div>
+                            }
                         </div>
-                        <div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="fw-semibold text-info"><i class="fa-solid fa-award me-1"></i>Giỏi (8.0 - 8.9)</span>
-                                <span class="badge bg-info-subtle text-info">2 SV (66.7%)</span>
-                            </div>
-                            <div class="progress" style="height: 12px;">
-                                <div class="progress-bar bg-info" role="progressbar" style="width: 66.7%"></div>
-                            </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-chart-simple fa-3x mb-2 text-muted"></i>
+                            <div class="fw-semibold">Chưa có dữ liệu phân bố điểm sinh viên</div>
+                            <small class="text-muted">Dữ liệu sẽ được cập nhật tự động khi có điểm sinh viên trong học kỳ.</small>
                         </div>
-                        <div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="fw-semibold text-primary"><i class="fa-solid fa-thumbs-up me-1"></i>Khá (7.0 - 7.9)</span>
-                                <span class="badge bg-primary-subtle text-primary">0 SV (0%)</span>
-                            </div>
-                            <div class="progress" style="height: 12px;">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="fw-semibold text-warning"><i class="fa-solid fa-circle-check me-1"></i>Trung bình (5.0 - 6.9)</span>
-                                <span class="badge bg-warning-subtle text-warning">0 SV (0%)</span>
-                            </div>
-                            <div class="progress" style="height: 12px;">
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="fw-semibold text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Yếu (&lt; 5.0)</span>
-                                <span class="badge bg-danger-subtle text-danger">0 SV (0%)</span>
-                            </div>
-                            <div class="progress" style="height: 12px;">
-                                <div class="progress-bar bg-danger" role="progressbar" style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
+                    }
                 </div>
             </div>
         </div>
 
         <!-- Cảnh báo & Tình trạng học kỳ -->
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0 rounded-3 h-100">
-                <div class="card-header bg-white py-3">
-                    <h6 class="card-title mb-0 fw-bold"><i class="fa-solid fa-bell text-danger me-2"></i>Cảnh Báo & Điều Hành Kỳ</h6>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-light border d-flex align-items-center mb-3">
-                        <i class="fa-solid fa-calendar-check text-primary fa-lg me-3"></i>
-                        <div>
-                            <div class="small text-muted">Học kỳ hiện tại</div>
-                            <div class="fw-bold">@(!string.IsNullOrEmpty(Model.ActiveSemesterName) ? Model.ActiveSemesterName : "Summer 2025 (SU25)")</div>
-                        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 rounded-3 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="card-header bg-white py-3">
+                        <h6 class="card-title mb-0 fw-bold"><i class="fa-solid fa-bell text-danger me-2"></i>Cảnh Báo & Điều Hành Kỳ</h6>
                     </div>
+                    <div class="card-body">
+                        <div class="alert alert-light border d-flex align-items-center mb-3">
+                            <i class="fa-solid fa-calendar-check text-primary fa-lg me-3"></i>
+                            <div>
+                                <div class="small text-muted">Học kỳ hiện tại</div>
+                                <div class="fw-bold">@(!string.IsNullOrEmpty(Model.ActiveSemesterName) ? Model.ActiveSemesterName : "Summer 2025 (SU25)")</div>
+                            </div>
+                        </div>
 
-                    <div class="list-group list-group-flush small">
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <span><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Lớp chưa có giảng viên:</span>
-                            <span class="badge @(Model.SectionsLackingLecturer > 0 ? "bg-danger" : "bg-success") rounded-pill">
-                                @Model.SectionsLackingLecturer
-                            </span>
+                        <div class="list-group list-group-flush small mb-3">
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Lớp chưa có giảng viên:</span>
+                                <span class="badge @(Model.SectionsLackingLecturer > 0 ? "bg-danger" : "bg-success") rounded-pill">
+                                    @Model.SectionsLackingLecturer
+                                </span>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span><i class="fa-solid fa-clipboard-question text-danger me-2"></i>Lớp chưa khóa đủ điểm:</span>
+                                <span class="badge @(Model.SectionsLackingGrades > 0 ? "bg-warning text-dark" : "bg-success") rounded-pill">
+                                    @Model.SectionsLackingGrades
+                                </span>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span><i class="fa-solid fa-user-xmark text-secondary me-2"></i>Ngoại lệ chưa phân bổ:</span>
+                                <span class="badge @(Model.UnallocatedExceptions > 0 ? "bg-danger" : "bg-success") rounded-pill">
+                                    @Model.UnallocatedExceptions
+                                </span>
+                            </div>
                         </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <span><i class="fa-solid fa-clipboard-question text-danger me-2"></i>Lớp chưa nhập đủ điểm:</span>
-                            <span class="badge @(Model.SectionsLackingGrades > 0 ? "bg-warning text-dark" : "bg-success") rounded-pill">
-                                @Model.SectionsLackingGrades
-                            </span>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <span><i class="fa-solid fa-user-xmark text-secondary me-2"></i>Ngoại lệ chưa phân bổ:</span>
-                            <span class="badge @(Model.UnallocatedExceptions > 0 ? "bg-danger" : "bg-success") rounded-pill">
-                                @Model.UnallocatedExceptions
-                            </span>
+
+                        <!-- Lối tắt thao tác nhanh -->
+                        <div class="p-3 bg-light rounded-3">
+                            <div class="fw-bold text-dark small mb-2"><i class="fa-solid fa-bolt text-warning me-1"></i>Thao tác điều hành nhanh:</div>
+                            <div class="d-grid gap-2">
+                                <a href="/Grades" class="btn btn-outline-primary btn-sm text-start">
+                                    <i class="fa-solid fa-pen-to-square me-2"></i>Sổ nhập & khóa điểm
+                                </a>
+                                <a href="/Semesters" class="btn btn-outline-secondary btn-sm text-start">
+                                    <i class="fa-solid fa-layer-group me-2"></i>Quản lý Lớp học phần
+                                </a>
+                                <a href="/Classes/Allocations" class="btn btn-outline-success btn-sm text-start">
+                                    <i class="fa-solid fa-users-gear me-2"></i>Phân bổ vào lớp hành chính
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

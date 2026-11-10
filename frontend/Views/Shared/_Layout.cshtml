@@ -33,36 +33,32 @@
 else
 {
     <!-- Toast / Alert Notification Container -->
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success shadow-lg position-fixed top-0 end-0 m-3 z-3 alert-dismissible fade show" role="alert" style="max-width: 420px;">
-            <div class="d-flex align-items-center">
-                <i class="fa-solid fa-circle-check fa-lg text-success me-2"></i>
-                <div class="flex-grow-1">@TempData["Success"]</div>
+    <div class="toast-notification-wrapper position-fixed end-0 p-3" style="top: 68px; z-index: 1090; max-width: 440px;">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success shadow-lg border-0 alert-dismissible fade show d-flex align-items-center rounded-3 mb-2" role="alert">
+                <i class="fa-solid fa-circle-check fa-lg text-success me-3 flex-shrink-0"></i>
+                <div class="flex-grow-1 fw-medium">@TempData["Success"]</div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger shadow-lg position-fixed top-0 end-0 m-3 z-3 alert-dismissible fade show" role="alert" style="max-width: 420px;">
-            <div class="d-flex align-items-center">
-                <i class="fa-solid fa-circle-exclamation fa-lg text-danger me-2"></i>
-                <div class="flex-grow-1">@TempData["Error"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger shadow-lg border-0 alert-dismissible fade show d-flex align-items-center rounded-3 mb-2" role="alert">
+                <i class="fa-solid fa-circle-exclamation fa-lg text-danger me-3 flex-shrink-0"></i>
+                <div class="flex-grow-1 fw-medium">@TempData["Error"]</div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </div>
-    }
-    @if (TempData["Warning"] != null)
-    {
-        <div class="alert alert-warning shadow-lg position-fixed top-0 end-0 m-3 z-3 alert-dismissible fade show" role="alert" style="max-width: 420px;">
-            <div class="d-flex align-items-center">
-                <i class="fa-solid fa-triangle-exclamation fa-lg text-warning me-2"></i>
-                <div class="flex-grow-1">@TempData["Warning"]</div>
+        }
+        @if (TempData["Warning"] != null)
+        {
+            <div class="alert alert-warning shadow-lg border-0 alert-dismissible fade show d-flex align-items-center rounded-3 mb-2" role="alert">
+                <i class="fa-solid fa-triangle-exclamation fa-lg text-warning me-3 flex-shrink-0"></i>
+                <div class="flex-grow-1 fw-medium">@TempData["Warning"]</div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </div>
-    }
+        }
+    </div>
 
     <div class="app-wrapper">
         <!-- LEFT SIDEBAR -->
@@ -194,6 +190,14 @@ else
             sidebar?.classList.toggle("collapsed");
             localStorage.setItem("smms_sidebar_collapsed", sidebar?.classList.contains("collapsed") ? "true" : "false");
         });
+
+        // Auto-dismiss alert notifications after 4.5 seconds
+        setTimeout(function () {
+            document.querySelectorAll('.toast-notification-wrapper .alert-success').forEach(function (alertEl) {
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(alertEl);
+                bsAlert.close();
+            });
+        }, 4500);
     });
 </script>
 @await RenderSectionAsync("Scripts", required: false)
