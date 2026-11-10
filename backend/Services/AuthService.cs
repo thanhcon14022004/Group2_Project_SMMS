@@ -420,7 +420,12 @@ namespace project_PRN232.Services
                 }
                 catch
                 {
-                    isPasswordValid = (user.PasswordHash == request.CurrentPassword);
+                    isPasswordValid = false;
+                }
+
+                if (!isPasswordValid && user.PasswordHash == request.CurrentPassword)
+                {
+                    isPasswordValid = true;
                 }
 
                 if (!isPasswordValid)

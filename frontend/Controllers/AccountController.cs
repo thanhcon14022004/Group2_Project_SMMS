@@ -128,13 +128,19 @@ namespace project_PRN232.Frontend.Controllers
             if (string.IsNullOrWhiteSpace(model.FullName))
             {
                 SetAlert("Họ và tên không được để trống.", "warning");
-                return View(model);
+                return View(await PopulateProfileDetailsAsync(model));
             }
 
             if (string.IsNullOrWhiteSpace(model.Email))
             {
                 SetAlert("Địa chỉ Email không được để trống.", "warning");
-                return View(model);
+                return View(await PopulateProfileDetailsAsync(model));
+            }
+
+            if (!model.Email.Contains("@") || !model.Email.Contains("."))
+            {
+                SetAlert("Địa chỉ Email không đúng định dạng.", "warning");
+                return View(await PopulateProfileDetailsAsync(model));
             }
 
             if (!string.IsNullOrWhiteSpace(model.NewPassword))
@@ -142,19 +148,19 @@ namespace project_PRN232.Frontend.Controllers
                 if (string.IsNullOrWhiteSpace(model.CurrentPassword))
                 {
                     SetAlert("Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu.", "warning");
-                    return View(model);
+                    return View(await PopulateProfileDetailsAsync(model));
                 }
 
                 if (model.NewPassword != model.ConfirmPassword)
                 {
                     SetAlert("Mật khẩu mới và mật khẩu xác nhận không khớp.", "warning");
-                    return View(model);
+                    return View(await PopulateProfileDetailsAsync(model));
                 }
 
                 if (model.NewPassword.Length < 6)
                 {
                     SetAlert("Mật khẩu mới phải có tối thiểu 6 ký tự.", "warning");
-                    return View(model);
+                    return View(await PopulateProfileDetailsAsync(model));
                 }
             }
 
@@ -202,7 +208,22 @@ namespace project_PRN232.Frontend.Controllers
             }
 
             SetAlert(message ?? "Cập nhật hồ sơ thất bại.", "danger");
-            return View(model);
+            return View(await PopulateProfileDetailsAsync(model));
+        }
+
+        private async Task<UserProfileViewModel> PopulateProfileDetailsAsync(UserProfileViewModel model)
+        {
+            var currentUser = await ApiClient.GetAsync<UserProfileViewModel>("auth/me");
+            if (currentUser != null)
+            {
+                currentUser.FullName = !string.IsNullOrWhiteSpace(model.FullName) ? model.FullName : currentUser.FullName;
+                currentUser.Email = !string.IsNullOrWhiteSpace(model.Email) ? model.Email : currentUser.Email;
+                currentUser.PhoneNumber = model.PhoneNumber ?? currentUser.PhoneNumber;
+                currentUser.Department = model.Department ?? currentUser.Department;
+                currentUser.AcademicTitle = model.AcademicTitle ?? currentUser.AcademicTitle;
+                return currentUser;
+            }
+            return model;
         }
     }
 }
