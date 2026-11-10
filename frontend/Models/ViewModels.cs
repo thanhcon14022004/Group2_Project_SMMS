@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace project_PRN232.Frontend.Models
 {
     public class CurrentUserViewModel
@@ -20,17 +22,65 @@ namespace project_PRN232.Frontend.Models
         public string? ErrorMessage { get; set; }
     }
 
+    public class UserProfileViewModel
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+        public string Role { get; set; } = string.Empty;
+
+        // Lecturer metadata
+        public int? LecturerId { get; set; }
+        public string? LecturerCode { get; set; }
+        public string? Department { get; set; }
+        public string? AcademicTitle { get; set; }
+
+        // Student metadata
+        public int? StudentId { get; set; }
+        public string? StudentCode { get; set; }
+        public string? MajorName { get; set; }
+        public string? AdministrativeClassName { get; set; }
+
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+
+        // Form fields for editing
+        public string? CurrentPassword { get; set; }
+        public string? NewPassword { get; set; }
+        public string? ConfirmPassword { get; set; }
+    }
+
     public class DashboardViewModel
     {
         public int TotalStudents { get; set; }
         public int TotalLecturers { get; set; }
         public int TotalCourses { get; set; }
         public int TotalSections { get; set; }
+
         public decimal AverageGpa { get; set; }
+        [JsonPropertyName("averageSystemGpa")]
+        public decimal AverageSystemGpa { get => AverageGpa; set => AverageGpa = value; }
+
         public string ActiveSemesterName { get; set; } = string.Empty;
+
         public int SectionsLackingLecturer { get; set; }
+        [JsonPropertyName("sectionsLackingLecturerCount")]
+        public int SectionsLackingLecturerCount { get => SectionsLackingLecturer; set => SectionsLackingLecturer = value; }
+
         public int SectionsLackingGrades { get; set; }
+        [JsonPropertyName("sectionsLackingGradesCount")]
+        public int SectionsLackingGradesCount { get => SectionsLackingGrades; set => SectionsLackingGrades = value; }
+
         public int UnallocatedExceptions { get; set; }
+        [JsonPropertyName("unallocatedExceptionsCount")]
+        public int UnallocatedExceptionsCount { get => UnallocatedExceptions; set => UnallocatedExceptions = value; }
+
+        [JsonPropertyName("gpaDistribution")]
+        public List<LecturerGpaDistributionViewModel> GpaDistribution { get; set; } = new();
+
         public List<StandingCountViewModel> StandingDistribution { get; set; } = new();
 
         public LecturerDashboardViewModel? LecturerDashboard { get; set; }
