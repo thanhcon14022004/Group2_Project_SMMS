@@ -3,7 +3,7 @@
     ViewData["Title"] = "Quản lý Ngành & Chuyên ngành hẹp";
     var defaultMajorId = ViewBag.SelectedMajorId != null 
         ? (int)ViewBag.SelectedMajorId 
-        : 0; // Mặc định 0 là "all" (Xem tất cả), hoặc có thể chọn ngành đầu tiên
+        : (Model.FirstOrDefault()?.Id ?? 0);
 }
 
 <!-- TIÊU ĐỀ TRANG & NÚT THÊM NGÀNH -->
@@ -17,12 +17,12 @@
     </button>
 </div>
 
-<!-- KHỐI BỘ LỌC GỌN GÀNG VỚI 1 DROPDOWN FULL OPTION RA HẾT CÁC NGÀNH -->
+<!-- KHỐI BỘ LỌC CHỌN NGÀNH ĐÀO TẠO -->
 <div class="card shadow-sm border-0 rounded-3 mb-4 bg-white">
     <div class="card-body p-3">
         <div class="row g-3 align-items-center">
             <!-- Cột 1: Nhãn bộ lọc -->
-            <div class="col-lg-3 col-md-4 d-flex align-items-center gap-2">
+            <div class="col-lg-4 col-md-4 d-flex align-items-center gap-2">
                 <div class="bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
                     <i class="fa-solid fa-filter fa-lg"></i>
                 </div>
@@ -32,37 +32,20 @@
                 </div>
             </div>
 
-            <!-- Cột 2: Dropdown 1 cái duy nhất có Full Option hiển thị ra tất cả các ngành -->
-            <div class="col-lg-6 col-md-5">
+            <!-- Cột 2: Dropdown chọn ngành (Mặc định hiển thị sẵn 1 ngành) -->
+            <div class="col-lg-8 col-md-8">
                 <div class="input-group">
                     <span class="input-group-text bg-light text-primary border-end-0 fw-semibold">
-                        <i class="fa-solid fa-graduation-cap me-1"></i> Ngành:
+                        <i class="fa-solid fa-graduation-cap me-1"></i> Chọn Ngành:
                     </span>
                     <select class="form-select border-start-0 ps-2 fw-semibold text-dark shadow-none" id="majorSelectDropdown" onchange="selectMajor(this.value)">
-                        <option value="all">
-                            🌟 [Tất Cả Các Ngành] — Hiển thị toàn bộ (@Model.Count ngành)
-                        </option>
-                        <optgroup label="─── TÙY CHỌN TỪNG NGÀNH CỤ THỂ ───">
-                            @foreach (var major in Model)
-                            {
-                                <option value="@major.Id">
-                                    [@major.Code] @major.Name (@major.Specializations.Count chuyên ngành)
-                                </option>
-                            }
-                        </optgroup>
+                        @foreach (var major in Model)
+                        {
+                            <option value="@major.Id" selected="@(major.Id == defaultMajorId ? "selected" : null)">
+                                [@major.Code] @major.Name (@major.Specializations.Count chuyên ngành hẹp)
+                            </option>
+                        }
                     </select>
-                </div>
-            </div>
-
-            <!-- Cột 3: Nút chuyển chế độ nhanh (Xem tất cả / Từng ngành) -->
-            <div class="col-lg-3 col-md-3 text-md-end">
-                <div class="btn-group btn-group-sm w-100" role="group">
-                    <button type="button" class="btn btn-outline-primary fw-semibold py-2" id="btnViewAll" onclick="selectMajor('all')" title="Hiển thị tất cả các ngành">
-                        <i class="fa-solid fa-border-all me-1"></i> Tất cả
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary fw-semibold py-2" id="btnViewSingle" onclick="selectMajor(@(Model.FirstOrDefault()?.Id ?? 1))" title="Xem chi tiết từng ngành">
-                        <i class="fa-solid fa-square me-1"></i> 1 Ngành
-                    </button>
                 </div>
             </div>
         </div>
@@ -87,7 +70,8 @@
     {
         @foreach (var major in Model)
         {
-            <div class="major-item-wrapper col-md-6" id="major-card-@major.Id" data-major-id="@major.Id">
+            var isDefault = major.Id == defaultMajorId;
+            <div class="major-item-wrapper col-12 @(isDefault ? "" : "d-none")" id="major-card-@major.Id" data-major-id="@major.Id">
                 <div class="card shadow-sm border-0 rounded-3 h-100">
                     <!-- HEADER CỦA NGÀNH (Giữ đầy đủ 100% nút: Ngành hẹp, Sửa, Xóa, Code badge) -->
                     <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom">
@@ -307,56 +291,31 @@
 
 @section Scripts {
 <script>
-    // Hàm chọn ngành theo giá trị dropdown (hỗ trợ cả 'all' hoặc majorId cụ thể)
+    // Hàm chọn ngành theo giá trị dropdown
     function selectMajor(target) {
+        const majorId = parseInt(target);
+        if (isNaN(majorId) || majorId <= 0) return;
+
         const dropdown = document.getElementById('majorSelectDropdown');
-        const btnViewAll = document.getElementById('btnViewAll');
-        const btnViewSingle = document.getElementById('btnViewSingle');
         const items = document.querySelectorAll('.major-item-wrapper');
 
-        if (target === 'all' || target === 0 || target === '0') {
-            // Chế độ: XEM TẤT CẢ CÁC NGÀNH
-            items.forEach(item => {
+        items.forEach(item => {
+            const itemId = parseInt(item.getAttribute('data-major-id'));
+            if (itemId === majorId) {
                 item.classList.remove('d-none');
-                item.classList.remove('col-12');
-                item.classList.add('col-md-6');
-            });
-            if (dropdown) dropdown.value = 'all';
-            if (btnViewAll) {
-                btnViewAll.className = 'btn btn-primary active fw-semibold py-2 text-white';
+            } else {
+                item.classList.add('d-none');
             }
-            if (btnViewSingle) {
-                btnViewSingle.className = 'btn btn-outline-secondary fw-semibold py-2';
-            }
-            try {
-                sessionStorage.setItem('smms_active_major_id', 'all');
-                window.location.hash = 'all';
-            } catch (e) { }
-        } else {
-            // Chế độ: XEM DUY NHẤT 1 NGÀNH ĐƯỢC CHỌN (Full width, thoáng mắt)
-            const majorId = parseInt(target);
-            items.forEach(item => {
-                const itemId = parseInt(item.getAttribute('data-major-id'));
-                if (itemId === majorId) {
-                    item.classList.remove('d-none');
-                    item.classList.remove('col-md-6');
-                    item.classList.add('col-12');
-                } else {
-                    item.classList.add('d-none');
-                }
-            });
-            if (dropdown) dropdown.value = majorId.toString();
-            if (btnViewAll) {
-                btnViewAll.className = 'btn btn-outline-primary fw-semibold py-2';
-            }
-            if (btnViewSingle) {
-                btnViewSingle.className = 'btn btn-primary active fw-semibold py-2 text-white';
-            }
-            try {
-                sessionStorage.setItem('smms_active_major_id', majorId);
-                window.location.hash = 'major-' + majorId;
-            } catch (e) { }
+        });
+
+        if (dropdown && dropdown.value !== majorId.toString()) {
+            dropdown.value = majorId.toString();
         }
+
+        try {
+            sessionStorage.setItem('smms_active_major_id', majorId);
+            window.location.hash = 'major-' + majorId;
+        } catch (e) { }
     }
 
     // Modal Handlers
@@ -387,40 +346,37 @@
         new bootstrap.Modal(document.getElementById('modalEditSpec')).show();
     }
 
-    // Khởi tạo trạng thái khi trang vừa load
+    // Khởi tạo trạng thái khi trang vừa load (luôn để sẵn 1 ngành)
     document.addEventListener("DOMContentLoaded", function () {
-        let initialTarget = 'all'; // Mặc định mở Tất cả các ngành hoặc giữ lại lựa chọn trước
+        let initialTarget = @defaultMajorId;
 
-        @if (defaultMajorId > 0)
-        {
-            <text>initialTarget = @defaultMajorId;</text>
-        }
-        else
-        {
-            <text>
-            const hash = window.location.hash;
-            if (hash && hash.startsWith('#major-')) {
-                const parsed = parseInt(hash.replace('#major-', ''));
-                if (!isNaN(parsed) && document.getElementById('major-card-' + parsed)) {
-                    initialTarget = parsed;
-                }
-            } else if (hash === '#all') {
-                initialTarget = 'all';
-            } else {
-                const saved = sessionStorage.getItem('smms_active_major_id');
-                if (saved === 'all') {
-                    initialTarget = 'all';
-                } else if (saved) {
-                    const parsedSaved = parseInt(saved);
-                    if (!isNaN(parsedSaved) && document.getElementById('major-card-' + parsedSaved)) {
-                        initialTarget = parsedSaved;
-                    }
+        const hash = window.location.hash;
+        if (hash && hash.startsWith('#major-')) {
+            const parsed = parseInt(hash.replace('#major-', ''));
+            if (!isNaN(parsed) && document.getElementById('major-card-' + parsed)) {
+                initialTarget = parsed;
+            }
+        } else {
+            const saved = sessionStorage.getItem('smms_active_major_id');
+            if (saved && saved !== 'all') {
+                const parsedSaved = parseInt(saved);
+                if (!isNaN(parsedSaved) && document.getElementById('major-card-' + parsedSaved)) {
+                    initialTarget = parsedSaved;
                 }
             }
-            </text>
         }
 
-        selectMajor(initialTarget);
+        if (initialTarget > 0) {
+            selectMajor(initialTarget);
+        } else {
+            const firstCard = document.querySelector('.major-item-wrapper');
+            if (firstCard) {
+                const firstId = parseInt(firstCard.getAttribute('data-major-id'));
+                if (!isNaN(firstId)) {
+                    selectMajor(firstId);
+                }
+            }
+        }
     });
 </script>
 }
