@@ -11,12 +11,13 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? selectedMajorId = null)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
 
             var majors = await ApiClient.GetAsync<List<MajorViewModel>>("majors") ?? new List<MajorViewModel>();
+            ViewBag.SelectedMajorId = selectedMajorId;
             return View(majors);
         }
 
@@ -60,7 +61,7 @@ namespace project_PRN232.Frontend.Controllers
             });
 
             SetAlert(msg, success ? "success" : "danger");
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { selectedMajorId = majorId });
         }
 
         [HttpPost]
@@ -77,7 +78,7 @@ namespace project_PRN232.Frontend.Controllers
             });
 
             SetAlert(msg, success ? "success" : "danger");
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { selectedMajorId = id });
         }
 
         [HttpPost]
@@ -92,7 +93,7 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> EditSpecialization(int id, string name, string? description, bool isActive)
+        public async Task<IActionResult> EditSpecialization(int id, string name, string? description, bool isActive, int? majorId = null)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
@@ -105,18 +106,18 @@ namespace project_PRN232.Frontend.Controllers
             });
 
             SetAlert(msg, success ? "success" : "danger");
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { selectedMajorId = majorId });
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteSpecialization(int id)
+        public async Task<IActionResult> DeleteSpecialization(int id, int? majorId = null)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
 
             var (success, msg) = await ApiClient.DeleteAsync($"specializations/{id}");
             SetAlert(msg, success ? "success" : "danger");
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { selectedMajorId = majorId });
         }
     }
 }

@@ -1,86 +1,186 @@
 @model List<project_PRN232.Frontend.Models.MajorViewModel>
 @{
     ViewData["Title"] = "Quản lý Ngành & Chuyên ngành hẹp";
+    var defaultMajorId = ViewBag.SelectedMajorId != null 
+        ? (int)ViewBag.SelectedMajorId 
+        : (Model.FirstOrDefault()?.Id ?? 0);
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<!-- TIÊU ĐỀ TRANG & NÚT THÊM NGÀNH -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
-        <h5 class="fw-bold mb-0">Danh sách Ngành Đào Tạo</h5>
+        <h5 class="fw-bold mb-0 text-dark">Danh sách Ngành Đào Tạo</h5>
         <small class="text-muted">Quản lý các ngành chính và chuyên ngành hẹp theo quy định</small>
     </div>
-    <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalAddMajor">
+    <button class="btn btn-primary btn-sm rounded-3 shadow-sm px-3 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAddMajor">
         <i class="fa-solid fa-plus me-1"></i> Thêm Ngành Mới
     </button>
 </div>
 
-<div class="row g-3">
-    @foreach (var major in Model)
-    {
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0 rounded-3 h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="badge @(major.IsActive ? "bg-primary" : "bg-secondary") me-2">@major.Code</span>
-                        <strong class="fs-6">@major.Name</strong>
-                        @if (!major.IsActive)
-                        {
-                            <span class="badge bg-danger ms-1">Inactive</span>
-                        }
-                    </div>
-                    <div class="d-flex gap-1">
-                        <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="openAddSpecModal(@major.Id, '@major.Code')" title="Thêm ngành hẹp">
-                            <i class="fa-solid fa-plus me-1"></i> Ngành hẹp
-                        </button>
-                        <button class="btn btn-outline-warning btn-sm rounded-pill" onclick="openEditMajorModal(@major.Id, '@major.Code', '@major.Name', '@(major.Description ?? "")', @(major.IsActive ? "true" : "false"))" title="Sửa ngành">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa ngành @major.Code? Nếu ngành có liên kết lớp học, hệ thống sẽ chuyển sang trạng thái Inactive.');">
-                            <input type="hidden" name="id" value="@major.Id" />
-                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill" title="Xóa ngành">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted small mb-3">@major.Description</p>
-                    <h6 class="fw-bold small text-uppercase text-secondary mb-2">Các Chuyên ngành hẹp:</h6>
-                    @if (major.Specializations.Count == 0)
-                    {
-                        <div class="text-muted small fst-italic">Chưa có chuyên ngành hẹp nào được cấu hình.</div>
-                    }
-                    else
-                    {
-                        <ul class="list-group list-group-flush small">
-                            @foreach (var spec in major.Specializations)
-                            {
-                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="me-2">
-                                        <span class="badge bg-secondary-subtle text-secondary me-2">@spec.Code</span>
-                                        <strong>@spec.Name</strong>
-                                        <div class="text-muted" style="font-size: 0.8rem;">@spec.Description</div>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="badge @(spec.IsActive ? "bg-success" : "bg-danger")">
-                                            @(spec.IsActive ? "Active" : "Inactive")
-                                        </span>
-                                        <button class="btn btn-link text-warning p-0 ms-1" onclick="openEditSpecModal(@spec.Id, '@spec.Code', '@spec.Name', '@(spec.Description ?? "")', @(spec.IsActive ? "true" : "false"))" title="Sửa ngành hẹp">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                        <form asp-action="DeleteSpecialization" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa chuyên ngành @spec.Code?');">
-                                            <input type="hidden" name="id" value="@spec.Id" />
-                                            <button type="submit" class="btn btn-link text-danger p-0 ms-1" title="Xóa ngành hẹp">
-                                                <i class="fa-solid fa-trash-can"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </li>
-                            }
-                        </ul>
-                    }
+<!-- KHỐI BỘ LỌC CHỌN NGÀNH (FILTER PILLS BAR) -->
+<div class="card shadow-sm border-0 rounded-3 mb-4 bg-white">
+    <div class="card-body p-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 border-bottom mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-filter text-primary"></i>
+                <span class="fw-bold small text-secondary text-uppercase">Bộ lọc ngành đào tạo:</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">@Model.Count ngành</span>
+            </div>
+            <!-- Ô tìm nhanh ngành -->
+            <div style="max-width: 260px; width: 100%;">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="searchMajorInput" class="form-control bg-light border-start-0 ps-0" placeholder="Tìm nhanh ngành đào tạo..." />
                 </div>
             </div>
         </div>
+
+        <!-- Dải Pills chọn ngành -->
+        <div class="d-flex flex-wrap gap-2 pt-1" id="majorFilterContainer">
+            @foreach (var major in Model)
+            {
+                var isSelected = major.Id == defaultMajorId;
+                <button type="button" 
+                        class="btn btn-sm filter-pill-btn rounded-pill px-3 py-2 fw-semibold transition-all @(isSelected ? "btn-primary active shadow-sm" : "btn-outline-secondary bg-light text-dark border")"
+                        id="pill-btn-@major.Id"
+                        data-major-id="@major.Id"
+                        data-search-text="@major.Name.ToLower() @major.Code.ToLower()"
+                        onclick="selectMajor(@major.Id)">
+                    <span class="badge @(isSelected ? "bg-white text-primary" : "bg-primary text-white") me-1 font-monospace pill-code-badge">@major.Code</span>
+                    <span class="pill-title">@major.Name</span>
+                    <span class="badge @(isSelected ? "bg-white bg-opacity-25 text-white" : "bg-secondary-subtle text-dark border") rounded-pill ms-1 pill-count-badge" title="@major.Specializations.Count chuyên ngành hẹp">
+                        @major.Specializations.Count
+                    </span>
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- KHU VỰC HIỂN THỊ CHI TIẾT DUY NHẤT 1 NGÀNH ĐƯỢC CHỌN -->
+<div id="majorsContainer">
+    @if (Model.Count == 0)
+    {
+        <div class="card shadow-sm border-0 rounded-3 text-center py-5">
+            <div class="card-body">
+                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted fw-bold">Chưa có ngành đào tạo nào trong hệ thống</h6>
+                <p class="text-muted small">Vui lòng bấm nút <strong>"+ Thêm Ngành Mới"</strong> ở góc trên bên phải để bắt đầu thiết lập.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        @foreach (var major in Model)
+        {
+            var isSelected = major.Id == defaultMajorId;
+            <div class="major-detail-card @(isSelected ? "" : "d-none")" id="major-card-@major.Id" data-major-id="@major.Id">
+                <div class="card shadow-sm border-0 rounded-3">
+                    <!-- HEADER CỦA NGÀNH (Bám sát giao diện cũ, đầy đủ nút) -->
+                    <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <span class="badge @(major.IsActive ? "bg-primary" : "bg-secondary") fs-6 px-3 py-2 font-monospace">@major.Code</span>
+                            <strong class="fs-5 text-dark">@major.Name</strong>
+                            @if (!major.IsActive)
+                            {
+                                <span class="badge bg-danger ms-1">Inactive</span>
+                            }
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill ms-1">
+                                <i class="fa-solid fa-network-wired me-1"></i>@major.Specializations.Count chuyên ngành hẹp
+                            </span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold" onclick="openAddSpecModal(@major.Id, '@major.Code')" title="Thêm ngành hẹp">
+                                <i class="fa-solid fa-plus me-1"></i> Ngành hẹp
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm rounded-pill px-3 py-1 fw-semibold" onclick="openEditMajorModal(@major.Id, '@major.Code', '@major.Name', '@(major.Description ?? "")', @(major.IsActive ? "true" : "false"))" title="Sửa ngành">
+                                <i class="fa-solid fa-pen me-1"></i> Sửa
+                            </button>
+                            <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa ngành @major.Code? Nếu ngành có liên kết lớp học, hệ thống sẽ chuyển sang trạng thái Inactive.');">
+                                <input type="hidden" name="id" value="@major.Id" />
+                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 fw-semibold" title="Xóa ngành">
+                                    <i class="fa-solid fa-trash me-1"></i> Xóa
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <!-- Mô tả ngành đào tạo -->
+                        <div class="p-3 bg-light rounded-3 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="text-muted small fw-semibold text-uppercase mb-1">
+                                    <i class="fa-solid fa-circle-info me-1 text-primary"></i>Giới thiệu ngành đào tạo:
+                                </div>
+                                <div class="text-dark">@(string.IsNullOrWhiteSpace(major.Description) ? "Chưa có mô tả chi tiết cho ngành này." : major.Description)</div>
+                            </div>
+                            <div class="text-end">
+                                <span class="text-muted small d-block mb-1">Trạng thái đào tạo:</span>
+                                <span class="badge @(major.IsActive ? "bg-success" : "bg-danger") px-3 py-1 rounded-pill">
+                                    @(major.IsActive ? "Active (Đang hoạt động)" : "Inactive (Tạm ngưng)")
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Tiêu đề danh sách chuyên ngành hẹp -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold small text-uppercase text-secondary mb-0">
+                                <i class="fa-solid fa-layer-group text-primary me-2"></i>CÁC CHUYÊN NGÀNH HẸP TRỰC THUỘC (@major.Specializations.Count):
+                            </h6>
+                            <button class="btn btn-sm btn-outline-primary rounded-3 px-3" onclick="openAddSpecModal(@major.Id, '@major.Code')">
+                                <i class="fa-solid fa-plus me-1"></i> Thêm Chuyên Ngành Hẹp Mới
+                            </button>
+                        </div>
+
+                        <!-- Danh sách chuyên ngành hẹp -->
+                        @if (major.Specializations.Count == 0)
+                        {
+                            <div class="text-center py-5 bg-light rounded-3 border">
+                                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                                <div class="text-muted fw-semibold mb-2">Chưa có chuyên ngành hẹp nào được cấu hình cho ngành @major.Name.</div>
+                                <button class="btn btn-primary btn-sm rounded-pill px-3 py-2" onclick="openAddSpecModal(@major.Id, '@major.Code')">
+                                    <i class="fa-solid fa-plus me-1"></i> Thêm chuyên ngành hẹp đầu tiên
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="list-group list-group-flush border rounded-3 overflow-hidden">
+                                @foreach (var spec in major.Specializations)
+                                {
+                                    <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center py-3 px-3 hover-bg-light">
+                                        <div class="me-3 mb-2 mb-md-0">
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 font-monospace">@spec.Code</span>
+                                                <strong class="fs-6 text-dark">@spec.Name</strong>
+                                                <span class="badge @(spec.IsActive ? "bg-success" : "bg-danger") rounded-pill ms-1" style="font-size: 0.75rem;">
+                                                    @(spec.IsActive ? "Active" : "Inactive")
+                                                </span>
+                                            </div>
+                                            <div class="text-muted small" style="font-size: 0.85rem;">
+                                                @(string.IsNullOrWhiteSpace(spec.Description) ? "Chưa có mô tả chi tiết." : spec.Description)
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button class="btn btn-outline-warning btn-sm rounded-pill px-3" onclick="openEditSpecModal(@spec.Id, '@spec.Code', '@spec.Name', '@(spec.Description ?? "")', @(spec.IsActive ? "true" : "false"), @major.Id)" title="Sửa ngành hẹp">
+                                                <i class="fa-solid fa-pen-to-square me-1"></i> Sửa
+                                            </button>
+                                            <form asp-action="DeleteSpecialization" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa chuyên ngành @spec.Code?');">
+                                                <input type="hidden" name="id" value="@spec.Id" />
+                                                <input type="hidden" name="majorId" value="@major.Id" />
+                                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3" title="Xóa ngành hẹp">
+                                                    <i class="fa-solid fa-trash-can me-1"></i> Xóa
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
     }
 </div>
 
@@ -104,12 +204,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Mô tả</label>
-                        <textarea name="description" class="form-control" rows="3"></textarea>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Nhập mô tả giới thiệu về ngành đào tạo..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Lưu Ngành</button>
+                    <button type="submit" class="btn btn-primary fw-semibold"><i class="fa-solid fa-floppy-disk me-1"></i> Lưu Ngành</button>
                 </div>
             </form>
         </div>
@@ -123,7 +223,7 @@
             <form asp-controller="Majors" asp-action="Edit" method="post">
                 <input type="hidden" name="id" id="editMajorId" />
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Chỉnh Sửa Ngành: <span id="editMajorCodeBadge" class="text-primary"></span></h5>
+                    <h5 class="modal-title fw-bold">Chỉnh Sửa Ngành: <span id="editMajorCodeBadge" class="text-primary font-monospace"></span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -142,7 +242,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Cập nhật Ngành</button>
+                    <button type="submit" class="btn btn-primary fw-semibold"><i class="fa-solid fa-floppy-disk me-1"></i> Cập nhật Ngành</button>
                 </div>
             </form>
         </div>
@@ -156,7 +256,7 @@
             <form asp-controller="Majors" asp-action="CreateSpecialization" method="post">
                 <input type="hidden" name="majorId" id="specMajorId" />
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Thêm Chuyên Ngành Hẹp (<span id="specMajorCode"></span>)</h5>
+                    <h5 class="modal-title fw-bold">Thêm Chuyên Ngành Hẹp (<span id="specMajorCode" class="text-primary font-monospace"></span>)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -166,16 +266,16 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Tên chuyên ngành hẹp <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" placeholder="VD: Hệ thống thông tin" required />
+                        <input type="text" name="name" class="form-control" placeholder="VD: Hệ thống thông tin doanh nghiệp" required />
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Mô tả</label>
-                        <textarea name="description" class="form-control" rows="3"></textarea>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Nhập mô tả chuyên ngành hẹp..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Lưu Chuyên Ngành</button>
+                    <button type="submit" class="btn btn-primary fw-semibold"><i class="fa-solid fa-floppy-disk me-1"></i> Lưu Chuyên Ngành</button>
                 </div>
             </form>
         </div>
@@ -188,8 +288,9 @@
         <div class="modal-content">
             <form asp-controller="Majors" asp-action="EditSpecialization" method="post">
                 <input type="hidden" name="id" id="editSpecId" />
+                <input type="hidden" name="majorId" id="editSpecMajorId" />
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Chỉnh Sửa Chuyên Ngành: <span id="editSpecCodeBadge" class="text-primary"></span></h5>
+                    <h5 class="modal-title fw-bold">Chỉnh Sửa Chuyên Ngành: <span id="editSpecCodeBadge" class="text-primary font-monospace"></span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -208,7 +309,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Cập nhật Chuyên Ngành</button>
+                    <button type="submit" class="btn btn-primary fw-semibold"><i class="fa-solid fa-floppy-disk me-1"></i> Cập nhật Chuyên Ngành</button>
                 </div>
             </form>
         </div>
@@ -217,6 +318,45 @@
 
 @section Scripts {
 <script>
+    // Hàm chọn và hiển thị duy nhất 1 ngành theo ID
+    function selectMajor(majorId) {
+        if (!majorId) return;
+
+        // 1. Cập nhật trạng thái các nút lọc Pills
+        document.querySelectorAll('.filter-pill-btn').forEach(btn => {
+            const btnId = parseInt(btn.getAttribute('data-major-id'));
+            const codeBadge = btn.querySelector('.pill-code-badge');
+            const countBadge = btn.querySelector('.pill-count-badge');
+
+            if (btnId === majorId) {
+                btn.className = 'btn btn-sm filter-pill-btn rounded-pill px-3 py-2 fw-semibold transition-all btn-primary active shadow-sm';
+                if (codeBadge) codeBadge.className = 'badge bg-white text-primary me-1 font-monospace pill-code-badge';
+                if (countBadge) countBadge.className = 'badge bg-white bg-opacity-25 text-white rounded-pill ms-1 pill-count-badge';
+            } else {
+                btn.className = 'btn btn-sm filter-pill-btn rounded-pill px-3 py-2 fw-semibold transition-all btn-outline-secondary bg-light text-dark border';
+                if (codeBadge) codeBadge.className = 'badge bg-primary text-white me-1 font-monospace pill-code-badge';
+                if (countBadge) countBadge.className = 'badge bg-secondary-subtle text-dark border rounded-pill ms-1 pill-count-badge';
+            }
+        });
+
+        // 2. Ẩn tất cả card ngành và chỉ hiển thị đúng card ngành được chọn
+        document.querySelectorAll('.major-detail-card').forEach(card => {
+            const cardId = parseInt(card.getAttribute('data-major-id'));
+            if (cardId === majorId) {
+                card.classList.remove('d-none');
+            } else {
+                card.classList.add('d-none');
+            }
+        });
+
+        // 3. Lưu ngành vừa chọn vào sessionStorage để giữ trạng thái
+        try {
+            sessionStorage.setItem('smms_active_major_id', majorId);
+            window.location.hash = 'major-' + majorId;
+        } catch (e) { }
+    }
+
+    // Modal Handlers
     function openAddSpecModal(majorId, majorCode) {
         document.getElementById('specMajorId').value = majorId;
         document.getElementById('specMajorCode').innerText = majorCode;
@@ -232,13 +372,56 @@
         new bootstrap.Modal(document.getElementById('modalEditMajor')).show();
     }
 
-    function openEditSpecModal(id, code, name, desc, isActive) {
+    function openEditSpecModal(id, code, name, desc, isActive, majorId) {
         document.getElementById('editSpecId').value = id;
         document.getElementById('editSpecCodeBadge').innerText = code;
         document.getElementById('editSpecName').value = name;
         document.getElementById('editSpecDesc').value = desc;
         document.getElementById('editSpecActive').checked = isActive;
+        if (majorId) {
+            document.getElementById('editSpecMajorId').value = majorId;
+        }
         new bootstrap.Modal(document.getElementById('modalEditSpec')).show();
     }
+
+    // Khởi tạo trạng thái khi trang vừa nạp
+    document.addEventListener("DOMContentLoaded", function () {
+        // Kiểm tra hash hoặc sessionStorage hoặc mặc định
+        let targetId = @defaultMajorId;
+        
+        const hash = window.location.hash;
+        if (hash && hash.startsWith('#major-')) {
+            const parsed = parseInt(hash.replace('#major-', ''));
+            if (!isNaN(parsed) && document.getElementById('major-card-' + parsed)) {
+                targetId = parsed;
+            }
+        } else {
+            const saved = sessionStorage.getItem('smms_active_major_id');
+            if (saved) {
+                const parsedSaved = parseInt(saved);
+                if (!isNaN(parsedSaved) && document.getElementById('major-card-' + parsedSaved)) {
+                    targetId = parsedSaved;
+                }
+            }
+        }
+
+        if (targetId) {
+            selectMajor(targetId);
+        }
+
+        // Tìm kiếm nhanh trong thanh bộ lọc
+        const searchInput = document.getElementById('searchMajorInput');
+        searchInput?.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            document.querySelectorAll('.filter-pill-btn').forEach(btn => {
+                const text = (btn.getAttribute('data-search-text') || '').toLowerCase();
+                if (!query || text.includes(query)) {
+                    btn.classList.remove('d-none');
+                } else {
+                    btn.classList.add('d-none');
+                }
+            });
+        });
+    });
 </script>
 }
