@@ -3,7 +3,7 @@
     ViewData["Title"] = "Quản lý Ngành & Chuyên ngành hẹp";
     var defaultMajorId = ViewBag.SelectedMajorId != null 
         ? (int)ViewBag.SelectedMajorId 
-        : (Model.FirstOrDefault()?.Id ?? 0);
+        : 0; // Mặc định 0 là "all" (Xem tất cả), hoặc có thể chọn ngành đầu tiên
 }
 
 <!-- TIÊU ĐỀ TRANG & NÚT THÊM NGÀNH -->
@@ -17,55 +17,69 @@
     </button>
 </div>
 
-<!-- KHỐI BỘ LỌC CHỌN NGÀNH (FILTER PILLS BAR) -->
+<!-- KHỐI BỘ LỌC GỌN GÀNG VỚI 1 DROPDOWN FULL OPTION RA HẾT CÁC NGÀNH -->
 <div class="card shadow-sm border-0 rounded-3 mb-4 bg-white">
     <div class="card-body p-3">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 border-bottom mb-2">
-            <div class="d-flex align-items-center gap-2">
-                <i class="fa-solid fa-filter text-primary"></i>
-                <span class="fw-bold small text-secondary text-uppercase">Bộ lọc ngành đào tạo:</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">@Model.Count ngành</span>
-            </div>
-            <!-- Ô tìm nhanh ngành -->
-            <div style="max-width: 260px; width: 100%;">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
-                    <input type="text" id="searchMajorInput" class="form-control bg-light border-start-0 ps-0" placeholder="Tìm nhanh ngành đào tạo..." />
+        <div class="row g-3 align-items-center">
+            <!-- Cột 1: Nhãn bộ lọc -->
+            <div class="col-lg-3 col-md-4 d-flex align-items-center gap-2">
+                <div class="bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                    <i class="fa-solid fa-filter fa-lg"></i>
+                </div>
+                <div>
+                    <div class="fw-bold text-dark small text-uppercase">Bộ Lọc Ngành Đào Tạo</div>
+                    <div class="text-muted small" style="font-size: 0.8rem;">Tổng số: <strong class="text-primary">@Model.Count</strong> ngành đào tạo</div>
                 </div>
             </div>
-        </div>
 
-        <!-- Dải Pills chọn ngành -->
-        <div class="d-flex flex-wrap gap-2 pt-1" id="majorFilterContainer">
-            @foreach (var major in Model)
-            {
-                var isSelected = major.Id == defaultMajorId;
-                <button type="button" 
-                        class="btn btn-sm filter-pill-btn rounded-pill px-3 py-2 fw-semibold transition-all @(isSelected ? "btn-primary active shadow-sm" : "btn-outline-secondary bg-light text-dark border")"
-                        id="pill-btn-@major.Id"
-                        data-major-id="@major.Id"
-                        data-search-text="@major.Name.ToLower() @major.Code.ToLower()"
-                        onclick="selectMajor(@major.Id)">
-                    <span class="badge @(isSelected ? "bg-white text-primary" : "bg-primary text-white") me-1 font-monospace pill-code-badge">@major.Code</span>
-                    <span class="pill-title">@major.Name</span>
-                    <span class="badge @(isSelected ? "bg-white bg-opacity-25 text-white" : "bg-secondary-subtle text-dark border") rounded-pill ms-1 pill-count-badge" title="@major.Specializations.Count chuyên ngành hẹp">
-                        @major.Specializations.Count
+            <!-- Cột 2: Dropdown 1 cái duy nhất có Full Option hiển thị ra tất cả các ngành -->
+            <div class="col-lg-6 col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-primary border-end-0 fw-semibold">
+                        <i class="fa-solid fa-graduation-cap me-1"></i> Ngành:
                     </span>
-                </button>
-            }
+                    <select class="form-select border-start-0 ps-2 fw-semibold text-dark shadow-none" id="majorSelectDropdown" onchange="selectMajor(this.value)">
+                        <option value="all">
+                            🌟 [Tất Cả Các Ngành] — Hiển thị toàn bộ (@Model.Count ngành)
+                        </option>
+                        <optgroup label="─── TÙY CHỌN TỪNG NGÀNH CỤ THỂ ───">
+                            @foreach (var major in Model)
+                            {
+                                <option value="@major.Id">
+                                    [@major.Code] @major.Name (@major.Specializations.Count chuyên ngành)
+                                </option>
+                            }
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Cột 3: Nút chuyển chế độ nhanh (Xem tất cả / Từng ngành) -->
+            <div class="col-lg-3 col-md-3 text-md-end">
+                <div class="btn-group btn-group-sm w-100" role="group">
+                    <button type="button" class="btn btn-outline-primary fw-semibold py-2" id="btnViewAll" onclick="selectMajor('all')" title="Hiển thị tất cả các ngành">
+                        <i class="fa-solid fa-border-all me-1"></i> Tất cả
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary fw-semibold py-2" id="btnViewSingle" onclick="selectMajor(@(Model.FirstOrDefault()?.Id ?? 1))" title="Xem chi tiết từng ngành">
+                        <i class="fa-solid fa-square me-1"></i> 1 Ngành
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- KHU VỰC HIỂN THỊ CHI TIẾT DUY NHẤT 1 NGÀNH ĐƯỢC CHỌN -->
-<div id="majorsContainer">
+<!-- KHU VỰC HIỂN THỊ DANH SÁCH NGÀNH & CHUYÊN NGÀNH HẸP -->
+<div class="row g-3" id="majorsContainer">
     @if (Model.Count == 0)
     {
-        <div class="card shadow-sm border-0 rounded-3 text-center py-5">
-            <div class="card-body">
-                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
-                <h6 class="text-muted fw-bold">Chưa có ngành đào tạo nào trong hệ thống</h6>
-                <p class="text-muted small">Vui lòng bấm nút <strong>"+ Thêm Ngành Mới"</strong> ở góc trên bên phải để bắt đầu thiết lập.</p>
+        <div class="col-12">
+            <div class="card shadow-sm border-0 rounded-3 text-center py-5">
+                <div class="card-body">
+                    <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                    <h6 class="text-muted fw-bold">Chưa có ngành đào tạo nào trong hệ thống</h6>
+                    <p class="text-muted small">Vui lòng bấm nút <strong>"+ Thêm Ngành Mới"</strong> ở góc trên bên phải để bắt đầu thiết lập.</p>
+                </div>
             </div>
         </div>
     }
@@ -73,109 +87,84 @@
     {
         @foreach (var major in Model)
         {
-            var isSelected = major.Id == defaultMajorId;
-            <div class="major-detail-card @(isSelected ? "" : "d-none")" id="major-card-@major.Id" data-major-id="@major.Id">
-                <div class="card shadow-sm border-0 rounded-3">
-                    <!-- HEADER CỦA NGÀNH (Bám sát giao diện cũ, đầy đủ nút) -->
+            <div class="major-item-wrapper col-md-6" id="major-card-@major.Id" data-major-id="@major.Id">
+                <div class="card shadow-sm border-0 rounded-3 h-100">
+                    <!-- HEADER CỦA NGÀNH (Giữ đầy đủ 100% nút: Ngành hẹp, Sửa, Xóa, Code badge) -->
                     <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom">
                         <div class="d-flex align-items-center flex-wrap gap-2">
-                            <span class="badge @(major.IsActive ? "bg-primary" : "bg-secondary") fs-6 px-3 py-2 font-monospace">@major.Code</span>
-                            <strong class="fs-5 text-dark">@major.Name</strong>
+                            <span class="badge @(major.IsActive ? "bg-primary" : "bg-secondary") fs-6 px-2 py-1 font-monospace">@major.Code</span>
+                            <strong class="fs-6 text-dark">@major.Name</strong>
                             @if (!major.IsActive)
                             {
                                 <span class="badge bg-danger ms-1">Inactive</span>
                             }
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill ms-1">
-                                <i class="fa-solid fa-network-wired me-1"></i>@major.Specializations.Count chuyên ngành hẹp
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill font-monospace" style="font-size: 0.72rem;">
+                                @major.Specializations.Count chuyên ngành
                             </span>
                         </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold" onclick="openAddSpecModal(@major.Id, '@major.Code')" title="Thêm ngành hẹp">
+                        <div class="d-flex gap-1 align-items-center">
+                            <button class="btn btn-outline-primary btn-sm rounded-pill px-2 py-1" onclick="openAddSpecModal(@major.Id, '@major.Code')" title="Thêm ngành hẹp">
                                 <i class="fa-solid fa-plus me-1"></i> Ngành hẹp
                             </button>
-                            <button class="btn btn-outline-warning btn-sm rounded-pill px-3 py-1 fw-semibold" onclick="openEditMajorModal(@major.Id, '@major.Code', '@major.Name', '@(major.Description ?? "")', @(major.IsActive ? "true" : "false"))" title="Sửa ngành">
-                                <i class="fa-solid fa-pen me-1"></i> Sửa
+                            <button class="btn btn-outline-warning btn-sm rounded-pill px-2 py-1" onclick="openEditMajorModal(@major.Id, '@major.Code', '@major.Name', '@(major.Description ?? "")', @(major.IsActive ? "true" : "false"))" title="Sửa ngành">
+                                <i class="fa-solid fa-pen"></i>
                             </button>
                             <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa ngành @major.Code? Nếu ngành có liên kết lớp học, hệ thống sẽ chuyển sang trạng thái Inactive.');">
                                 <input type="hidden" name="id" value="@major.Id" />
-                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 fw-semibold" title="Xóa ngành">
-                                    <i class="fa-solid fa-trash me-1"></i> Xóa
+                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-2 py-1" title="Xóa ngành">
+                                    <i class="fa-solid fa-trash"></i>
                                 </button>
                             </form>
                         </div>
                     </div>
 
-                    <div class="card-body p-4">
+                    <div class="card-body">
                         <!-- Mô tả ngành đào tạo -->
-                        <div class="p-3 bg-light rounded-3 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
-                            <div>
-                                <div class="text-muted small fw-semibold text-uppercase mb-1">
-                                    <i class="fa-solid fa-circle-info me-1 text-primary"></i>Giới thiệu ngành đào tạo:
-                                </div>
-                                <div class="text-dark">@(string.IsNullOrWhiteSpace(major.Description) ? "Chưa có mô tả chi tiết cho ngành này." : major.Description)</div>
-                            </div>
-                            <div class="text-end">
-                                <span class="text-muted small d-block mb-1">Trạng thái đào tạo:</span>
-                                <span class="badge @(major.IsActive ? "bg-success" : "bg-danger") px-3 py-1 rounded-pill">
-                                    @(major.IsActive ? "Active (Đang hoạt động)" : "Inactive (Tạm ngưng)")
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Tiêu đề danh sách chuyên ngành hẹp -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold small text-uppercase text-secondary mb-0">
-                                <i class="fa-solid fa-layer-group text-primary me-2"></i>CÁC CHUYÊN NGÀNH HẸP TRỰC THUỘC (@major.Specializations.Count):
-                            </h6>
-                            <button class="btn btn-sm btn-outline-primary rounded-3 px-3" onclick="openAddSpecModal(@major.Id, '@major.Code')">
-                                <i class="fa-solid fa-plus me-1"></i> Thêm Chuyên Ngành Hẹp Mới
+                        <p class="text-muted small mb-3">@(string.IsNullOrWhiteSpace(major.Description) ? "Chưa có mô tả cho ngành này." : major.Description)</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold small text-uppercase text-secondary mb-0">CÁC CHUYÊN NGÀNH HẸP:</h6>
+                            <button class="btn btn-link btn-sm text-primary p-0 text-decoration-none fw-semibold" onclick="openAddSpecModal(@major.Id, '@major.Code')">
+                                <i class="fa-solid fa-plus me-1"></i>Thêm nhanh
                             </button>
                         </div>
 
                         <!-- Danh sách chuyên ngành hẹp -->
                         @if (major.Specializations.Count == 0)
                         {
-                            <div class="text-center py-5 bg-light rounded-3 border">
-                                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
-                                <div class="text-muted fw-semibold mb-2">Chưa có chuyên ngành hẹp nào được cấu hình cho ngành @major.Name.</div>
-                                <button class="btn btn-primary btn-sm rounded-pill px-3 py-2" onclick="openAddSpecModal(@major.Id, '@major.Code')">
-                                    <i class="fa-solid fa-plus me-1"></i> Thêm chuyên ngành hẹp đầu tiên
-                                </button>
-                            </div>
+                            <div class="text-muted small fst-italic py-2">Chưa có chuyên ngành hẹp nào được cấu hình.</div>
                         }
                         else
                         {
-                            <div class="list-group list-group-flush border rounded-3 overflow-hidden">
+                            <ul class="list-group list-group-flush small">
                                 @foreach (var spec in major.Specializations)
                                 {
-                                    <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center py-3 px-3 hover-bg-light">
-                                        <div class="me-3 mb-2 mb-md-0">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-bottom">
+                                        <div class="me-2">
                                             <div class="d-flex align-items-center gap-2 mb-1">
-                                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 font-monospace">@spec.Code</span>
-                                                <strong class="fs-6 text-dark">@spec.Name</strong>
-                                                <span class="badge @(spec.IsActive ? "bg-success" : "bg-danger") rounded-pill ms-1" style="font-size: 0.75rem;">
-                                                    @(spec.IsActive ? "Active" : "Inactive")
-                                                </span>
+                                                <span class="badge bg-secondary-subtle text-secondary me-1 font-monospace">@spec.Code</span>
+                                                <strong class="text-dark">@spec.Name</strong>
                                             </div>
-                                            <div class="text-muted small" style="font-size: 0.85rem;">
-                                                @(string.IsNullOrWhiteSpace(spec.Description) ? "Chưa có mô tả chi tiết." : spec.Description)
-                                            </div>
+                                            <div class="text-muted" style="font-size: 0.8rem;">@spec.Description</div>
                                         </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <button class="btn btn-outline-warning btn-sm rounded-pill px-3" onclick="openEditSpecModal(@spec.Id, '@spec.Code', '@spec.Name', '@(spec.Description ?? "")', @(spec.IsActive ? "true" : "false"), @major.Id)" title="Sửa ngành hẹp">
-                                                <i class="fa-solid fa-pen-to-square me-1"></i> Sửa
+                                        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                            <span class="badge @(spec.IsActive ? "bg-success" : "bg-danger")" style="font-size: 0.7rem;">
+                                                @(spec.IsActive ? "Active" : "Inactive")
+                                            </span>
+                                            <button class="btn btn-link text-warning p-0 ms-1" onclick="openEditSpecModal(@spec.Id, '@spec.Code', '@spec.Name', '@(spec.Description ?? "")', @(spec.IsActive ? "true" : "false"), @major.Id)" title="Sửa ngành hẹp">
+                                                <i class="fa-solid fa-pen-to-square"></i>
                                             </button>
                                             <form asp-action="DeleteSpecialization" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa chuyên ngành @spec.Code?');">
                                                 <input type="hidden" name="id" value="@spec.Id" />
                                                 <input type="hidden" name="majorId" value="@major.Id" />
-                                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3" title="Xóa ngành hẹp">
-                                                    <i class="fa-solid fa-trash-can me-1"></i> Xóa
+                                                <button type="submit" class="btn btn-link text-danger p-0 ms-1" title="Xóa ngành hẹp">
+                                                    <i class="fa-solid fa-trash-can"></i>
                                                 </button>
                                             </form>
                                         </div>
-                                    </div>
+                                    </li>
                                 }
-                            </div>
+                            </ul>
                         }
                     </div>
                 </div>
@@ -318,42 +307,56 @@
 
 @section Scripts {
 <script>
-    // Hàm chọn và hiển thị duy nhất 1 ngành theo ID
-    function selectMajor(majorId) {
-        if (!majorId) return;
+    // Hàm chọn ngành theo giá trị dropdown (hỗ trợ cả 'all' hoặc majorId cụ thể)
+    function selectMajor(target) {
+        const dropdown = document.getElementById('majorSelectDropdown');
+        const btnViewAll = document.getElementById('btnViewAll');
+        const btnViewSingle = document.getElementById('btnViewSingle');
+        const items = document.querySelectorAll('.major-item-wrapper');
 
-        // 1. Cập nhật trạng thái các nút lọc Pills
-        document.querySelectorAll('.filter-pill-btn').forEach(btn => {
-            const btnId = parseInt(btn.getAttribute('data-major-id'));
-            const codeBadge = btn.querySelector('.pill-code-badge');
-            const countBadge = btn.querySelector('.pill-count-badge');
-
-            if (btnId === majorId) {
-                btn.className = 'btn btn-sm filter-pill-btn rounded-pill px-3 py-2 fw-semibold transition-all btn-primary active shadow-sm';
-                if (codeBadge) codeBadge.className = 'badge bg-white text-primary me-1 font-monospace pill-code-badge';
-                if (countBadge) countBadge.className = 'badge bg-white bg-opacity-25 text-white rounded-pill ms-1 pill-count-badge';
-            } else {
-                btn.className = 'btn btn-sm filter-pill-btn rounded-pill px-3 py-2 fw-semibold transition-all btn-outline-secondary bg-light text-dark border';
-                if (codeBadge) codeBadge.className = 'badge bg-primary text-white me-1 font-monospace pill-code-badge';
-                if (countBadge) countBadge.className = 'badge bg-secondary-subtle text-dark border rounded-pill ms-1 pill-count-badge';
+        if (target === 'all' || target === 0 || target === '0') {
+            // Chế độ: XEM TẤT CẢ CÁC NGÀNH
+            items.forEach(item => {
+                item.classList.remove('d-none');
+                item.classList.remove('col-12');
+                item.classList.add('col-md-6');
+            });
+            if (dropdown) dropdown.value = 'all';
+            if (btnViewAll) {
+                btnViewAll.className = 'btn btn-primary active fw-semibold py-2 text-white';
             }
-        });
-
-        // 2. Ẩn tất cả card ngành và chỉ hiển thị đúng card ngành được chọn
-        document.querySelectorAll('.major-detail-card').forEach(card => {
-            const cardId = parseInt(card.getAttribute('data-major-id'));
-            if (cardId === majorId) {
-                card.classList.remove('d-none');
-            } else {
-                card.classList.add('d-none');
+            if (btnViewSingle) {
+                btnViewSingle.className = 'btn btn-outline-secondary fw-semibold py-2';
             }
-        });
-
-        // 3. Lưu ngành vừa chọn vào sessionStorage để giữ trạng thái
-        try {
-            sessionStorage.setItem('smms_active_major_id', majorId);
-            window.location.hash = 'major-' + majorId;
-        } catch (e) { }
+            try {
+                sessionStorage.setItem('smms_active_major_id', 'all');
+                window.location.hash = 'all';
+            } catch (e) { }
+        } else {
+            // Chế độ: XEM DUY NHẤT 1 NGÀNH ĐƯỢC CHỌN (Full width, thoáng mắt)
+            const majorId = parseInt(target);
+            items.forEach(item => {
+                const itemId = parseInt(item.getAttribute('data-major-id'));
+                if (itemId === majorId) {
+                    item.classList.remove('d-none');
+                    item.classList.remove('col-md-6');
+                    item.classList.add('col-12');
+                } else {
+                    item.classList.add('d-none');
+                }
+            });
+            if (dropdown) dropdown.value = majorId.toString();
+            if (btnViewAll) {
+                btnViewAll.className = 'btn btn-outline-primary fw-semibold py-2';
+            }
+            if (btnViewSingle) {
+                btnViewSingle.className = 'btn btn-primary active fw-semibold py-2 text-white';
+            }
+            try {
+                sessionStorage.setItem('smms_active_major_id', majorId);
+                window.location.hash = 'major-' + majorId;
+            } catch (e) { }
+        }
     }
 
     // Modal Handlers
@@ -384,44 +387,40 @@
         new bootstrap.Modal(document.getElementById('modalEditSpec')).show();
     }
 
-    // Khởi tạo trạng thái khi trang vừa nạp
+    // Khởi tạo trạng thái khi trang vừa load
     document.addEventListener("DOMContentLoaded", function () {
-        // Kiểm tra hash hoặc sessionStorage hoặc mặc định
-        let targetId = @defaultMajorId;
-        
-        const hash = window.location.hash;
-        if (hash && hash.startsWith('#major-')) {
-            const parsed = parseInt(hash.replace('#major-', ''));
-            if (!isNaN(parsed) && document.getElementById('major-card-' + parsed)) {
-                targetId = parsed;
-            }
-        } else {
-            const saved = sessionStorage.getItem('smms_active_major_id');
-            if (saved) {
-                const parsedSaved = parseInt(saved);
-                if (!isNaN(parsedSaved) && document.getElementById('major-card-' + parsedSaved)) {
-                    targetId = parsedSaved;
+        let initialTarget = 'all'; // Mặc định mở Tất cả các ngành hoặc giữ lại lựa chọn trước
+
+        @if (defaultMajorId > 0)
+        {
+            <text>initialTarget = @defaultMajorId;</text>
+        }
+        else
+        {
+            <text>
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#major-')) {
+                const parsed = parseInt(hash.replace('#major-', ''));
+                if (!isNaN(parsed) && document.getElementById('major-card-' + parsed)) {
+                    initialTarget = parsed;
+                }
+            } else if (hash === '#all') {
+                initialTarget = 'all';
+            } else {
+                const saved = sessionStorage.getItem('smms_active_major_id');
+                if (saved === 'all') {
+                    initialTarget = 'all';
+                } else if (saved) {
+                    const parsedSaved = parseInt(saved);
+                    if (!isNaN(parsedSaved) && document.getElementById('major-card-' + parsedSaved)) {
+                        initialTarget = parsedSaved;
+                    }
                 }
             }
+            </text>
         }
 
-        if (targetId) {
-            selectMajor(targetId);
-        }
-
-        // Tìm kiếm nhanh trong thanh bộ lọc
-        const searchInput = document.getElementById('searchMajorInput');
-        searchInput?.addEventListener('input', function () {
-            const query = this.value.trim().toLowerCase();
-            document.querySelectorAll('.filter-pill-btn').forEach(btn => {
-                const text = (btn.getAttribute('data-search-text') || '').toLowerCase();
-                if (!query || text.includes(query)) {
-                    btn.classList.remove('d-none');
-                } else {
-                    btn.classList.add('d-none');
-                }
-            });
-        });
+        selectMajor(initialTarget);
     });
 </script>
 }
