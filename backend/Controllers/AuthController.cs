@@ -53,6 +53,23 @@ namespace project_PRN232.Controllers
             return Ok(user);
         }
 
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+        {
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdStr, out var userId)) return Unauthorized();
+
+            var performedBy = User.Identity?.Name ?? "User";
+            var (success, message, user) = await _authService.UpdateProfileAsync(userId, request, performedBy);
+            if (!success)
+            {
+                return BadRequest(new { message });
+            }
+
+            return Ok(new { success = true, message, data = user });
+        }
+
         [HttpGet("users")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUsers([FromQuery] string? role, [FromQuery] string? search)

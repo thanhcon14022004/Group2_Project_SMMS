@@ -22,6 +22,37 @@ namespace project_PRN232.Frontend.Models
         public string? ErrorMessage { get; set; }
     }
 
+    public class UserProfileViewModel
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+        public string Role { get; set; } = string.Empty;
+
+        // Lecturer metadata
+        public int? LecturerId { get; set; }
+        public string? LecturerCode { get; set; }
+        public string? Department { get; set; }
+        public string? AcademicTitle { get; set; }
+
+        // Student metadata
+        public int? StudentId { get; set; }
+        public string? StudentCode { get; set; }
+        public string? MajorName { get; set; }
+        public string? AdministrativeClassName { get; set; }
+
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+
+        // Form fields for editing
+        public string? CurrentPassword { get; set; }
+        public string? NewPassword { get; set; }
+        public string? ConfirmPassword { get; set; }
+    }
+
     public class DashboardViewModel
     {
         public int TotalStudents { get; set; }

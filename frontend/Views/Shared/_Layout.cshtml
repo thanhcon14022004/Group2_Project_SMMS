@@ -136,9 +136,12 @@ else
                 }
             </nav>
 
-            <div class="sidebar-footer p-3 border-top border-secondary">
-                <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger btn-sm w-100" title="Đăng xuất khỏi hệ thống">
-                    <i class="fa-solid fa-right-from-bracket me-1"></i> <span>Đăng xuất</span>
+            <div class="sidebar-footer p-3 border-top border-secondary d-flex flex-column gap-2">
+                <a asp-controller="Account" asp-action="Profile" class="btn btn-outline-light btn-sm w-100 text-start @(currentCtrl == "Account" && currentAct == "Profile" ? "active border-primary text-primary bg-primary bg-opacity-10" : "")" title="Xem & Chỉnh sửa hồ sơ cá nhân">
+                    <i class="fa-solid fa-user-gear me-2"></i> <span>Hồ sơ cá nhân</span>
+                </a>
+                <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger btn-sm w-100 text-start" title="Đăng xuất khỏi hệ thống">
+                    <i class="fa-solid fa-right-from-bracket me-2"></i> <span>Đăng xuất</span>
                 </a>
             </div>
         </aside>
@@ -153,16 +156,36 @@ else
                     </button>
                     <span class="fs-5 fw-bold text-primary">@ViewData["Title"]</span>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="text-end">
-                        <div class="fw-semibold text-dark">@fullName</div>
-                        <span class="badge @(role == "Admin" ? "bg-danger" : role == "Lecturer" ? "bg-primary" : "bg-success")">
-                            @role
-                        </span>
-                    </div>
-                    <div class="user-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px; font-weight: bold;">
-                        @(fullName.Length > 0 ? fullName[0].ToString().ToUpper() : "U")
-                    </div>
+                <div class="dropdown">
+                    <button class="btn p-0 border-0 d-flex align-items-center gap-2 text-decoration-none shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Menu tài khoản">
+                        <div class="text-end d-none d-sm-block">
+                            <div class="fw-semibold text-dark small">@fullName</div>
+                            <span class="badge @(role == "Admin" ? "bg-danger" : role == "Lecturer" ? "bg-primary" : "bg-success")">
+                                @role
+                            </span>
+                        </div>
+                        <div class="user-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px; font-weight: bold; cursor: pointer;">
+                            @(fullName.Length > 0 ? fullName[0].ToString().ToUpper() : "U")
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-secondary small ms-1 d-none d-sm-inline"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2 py-2" style="min-width: 220px; z-index: 1050;">
+                        <li class="px-3 py-2 border-bottom">
+                            <div class="fw-bold text-dark text-truncate">@fullName</div>
+                            <small class="text-muted d-block mt-1"><i class="fa-solid fa-shield-halved me-1"></i>Vai trò: <strong>@(role == "Admin" ? "Quản trị viên" : role == "Lecturer" ? "Giảng viên" : "Sinh viên")</strong></small>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2 @(currentCtrl == "Account" && currentAct == "Profile" ? "active bg-light text-primary fw-bold" : "")" asp-controller="Account" asp-action="Profile">
+                                <i class="fa-solid fa-user-gear text-primary me-2"></i> Hồ sơ cá nhân
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <a class="dropdown-item py-2 text-danger" asp-controller="Account" asp-action="Logout">
+                                <i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             </header>
 

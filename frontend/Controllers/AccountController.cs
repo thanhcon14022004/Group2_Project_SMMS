@@ -102,6 +102,108 @@ namespace project_PRN232.Frontend.Controllers
             SetAlert("Đã đăng xuất khỏi hệ thống thành công.", "info");
             return RedirectToAction("Login");
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Profile()
+        {
+            var authCheck = CheckAuth();
+            if (authCheck != null) return authCheck;
+
+            var user = await ApiClient.GetAsync<UserProfileViewModel>("auth/me");
+            if (user == null)
+            {
+                SetAlert("Không thể tải thông tin hồ sơ tài khoản.", "danger");
+                return RedirectToAction("Index", "Dashboard");
+            }
+
+            return View(user);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Profile(UserProfileViewModel model)
+        {
+            var authCheck = CheckAuth();
+            if (authCheck != null) return authCheck;
+
+            if (string.IsNullOrWhiteSpace(model.FullName))
+            {
+                SetAlert("Họ và tên không được để trống.", "warning");
+                return View(model);
+            }
+
+            if (string.IsNullOrWhiteSpace(model.Email))
+            {
+                SetAlert("Địa chỉ Email không được để trống.", "warning");
+                return View(model);
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.NewPassword))
+            {
+                if (string.IsNullOrWhiteSpace(model.CurrentPassword))
+                {
+                    SetAlert("Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu.", "warning");
+                    return View(model);
+                }
+
+                if (model.NewPassword != model.ConfirmPassword)
+                {
+                    SetAlert("Mật khẩu mới và mật khẩu xác nhận không khớp.", "warning");
+                    return View(model);
+                }
+
+                if (model.NewPassword.Length < 6)
+                {
+                    SetAlert("Mật khẩu mới phải có tối thiểu 6 ký tự.", "warning");
+                    return View(model);
+                }
+            }
+
+            var requestBody = new
+            {
+                fullName = model.FullName.Trim(),
+                email = model.Email.Trim(),
+                phoneNumber = model.PhoneNumber?.Trim(),
+                department = model.Department?.Trim(),
+                academicTitle = model.AcademicTitle?.Trim(),
+                currentPassword = model.CurrentPassword,
+                newPassword = model.NewPassword
+            };
+
+            var (success, message) = await ApiClient.PutAsync("auth/profile", requestBody);
+            if (!success && CurrentUser?.Role == "Admin")
+            {
+                var fallbackRes = await ApiClient.PutAsync($"users/{CurrentUser.UserId}", requestBody);
+                if (fallbackRes.Success)
+                {
+                    success = true;
+                    message = fallbackRes.Message;
+                }
+            }
+
+            if (success)
+            {
+                HttpContext.Session.SetString("SMMS_USER_NAME", model.FullName.Trim());
+
+                var updatedUser = await ApiClient.GetAsync<UserProfileViewModel>("auth/me");
+                if (updatedUser != null)
+                {
+                    var currentUser = ApiClient.GetCurrentUser();
+                    if (currentUser != null)
+                    {
+                        currentUser.FullName = updatedUser.FullName;
+                        HttpContext.Session.SetString("SMMS_USER_INFO", System.Text.Json.JsonSerializer.Serialize(currentUser));
+                    }
+                    SetAlert("Cập nhật hồ sơ cá nhân thành công!", "success");
+                    return View(updatedUser);
+                }
+
+                SetAlert("Cập nhật hồ sơ cá nhân thành công!", "success");
+                return RedirectToAction("Profile");
+            }
+
+            SetAlert(message ?? "Cập nhật hồ sơ thất bại.", "danger");
+            return View(model);
+        }
     }
 }
 

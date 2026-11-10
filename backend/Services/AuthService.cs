@@ -18,6 +18,7 @@ namespace project_PRN232.Services
         Task<PagedResult<UserDto>> GetUsersPagedAsync(string? role = null, string? search = null, int page = 1, int pageSize = 10);
         Task<UserDto?> GetUserByIdAsync(int id);
         Task<UserDto?> UpdateUserAsync(int id, project_PRN232.Controllers.UpdateUserRequest request, string performedBy);
+        Task<(bool Success, string Message, UserDto? User)> UpdateProfileAsync(int userId, UpdateProfileRequest request, string performedBy);
         Task<(bool Success, string Message)> DeleteUserAsync(int userId, string performedBy);
     }
 
@@ -397,6 +398,89 @@ namespace project_PRN232.Services
                 CreatedAt = user.CreatedAt,
                 LastLoginAt = user.LastLoginAt
             };
+        }
+
+        public async Task<(bool Success, string Message, UserDto? User)> UpdateProfileAsync(int userId, UpdateProfileRequest request, string performedBy)
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null) return (false, "Không tìm thấy người dùng.", null);
+
+            // 1. Kiểm tra nếu có yêu cầu đổi mật khẩu
+            if (!string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+                {
+                    return (false, "Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu.", null);
+                }
+
+                bool isPasswordValid = false;
+                try
+                {
+                    isPasswordValid = BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash);
+                }
+                catch
+                {
+                    isPasswordValid = (user.PasswordHash == request.CurrentPassword);
+                }
+
+                if (!isPasswordValid)
+                {
+                    return (false, "Mật khẩu hiện tại không chính xác.", null);
+                }
+
+                if (request.NewPassword.Length < 6)
+                {
+                    return (false, "Mật khẩu mới phải có ít nhất 6 ký tự.", null);
+                }
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            }
+
+            // 2. Kiểm tra Email
+            if (!string.IsNullOrWhiteSpace(request.Email) && !request.Email.Equals(user.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                var emailExists = await _db.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId);
+                if (emailExists)
+                {
+                    return (false, "Địa chỉ email đã được sử dụng bởi một tài khoản khác.", null);
+                }
+                user.Email = request.Email.Trim();
+            }
+
+            // 3. Cập nhật Họ và tên
+            if (!string.IsNullOrWhiteSpace(request.FullName))
+            {
+                user.FullName = request.FullName.Trim();
+            }
+
+            // 4. Cập nhật Số điện thoại
+            if (request.PhoneNumber != null)
+            {
+                user.PhoneNumber = request.PhoneNumber.Trim();
+            }
+
+            // 5. Nếu là Giảng viên, cập nhật Bộ môn và Học hàm/học vị nếu có
+            if (user.Role == "Lecturer")
+            {
+                var lecturer = await _db.Lecturers.FirstOrDefaultAsync(l => l.UserId == userId);
+                if (lecturer != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(request.Department))
+                    {
+                        lecturer.Department = request.Department.Trim();
+                    }
+                    if (!string.IsNullOrWhiteSpace(request.AcademicTitle))
+                    {
+                        lecturer.AcademicTitle = request.AcademicTitle.Trim();
+                    }
+                }
+            }
+
+            await _db.SaveChangesAsync();
+            await _auditLog.LogAsync("USER_UPDATED", "User", user.Id.ToString(), performedBy, $"Người dùng '{user.Username}' đã cập nhật thông tin hồ sơ cá nhân.");
+
+            var updatedUser = await GetUserByIdAsync(userId);
+            return (true, "Cập nhật hồ sơ cá nhân thành công.", updatedUser);
         }
     }
 }

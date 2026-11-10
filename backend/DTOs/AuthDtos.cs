@@ -71,5 +71,16 @@ namespace project_PRN232.DTOs
     {
         public bool IsActive { get; set; }
     }
+
+    public class UpdateProfileRequest
+    {
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? Department { get; set; }
+        public string? AcademicTitle { get; set; }
+        public string? CurrentPassword { get; set; }
+        public string? NewPassword { get; set; }
+    }
 }
 
