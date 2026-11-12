@@ -16,7 +16,9 @@ namespace project_PRN232.Frontend.Controllers
             [FromQuery] int? semesterId,
             [FromQuery] int? subjectId,
             [FromQuery] bool? isLocked,
-            [FromQuery] string? orderby)
+            [FromQuery] string? orderby,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
             var authCheck = CheckAuth();
             if (authCheck != null) return authCheck;
@@ -45,19 +47,28 @@ namespace project_PRN232.Frontend.Controllers
                 filters.Add($"IsGradeLocked eq {isLocked.Value.ToString().ToLower()}");
             }
 
-            var queryParams = new List<string>();
+            var odataPreviewParams = new List<string>();
             if (filters.Any())
             {
-                queryParams.Add($"$filter={string.Join(" and ", filters)}");
+                odataPreviewParams.Add($"$filter={string.Join(" and ", filters)}");
             }
             if (!string.IsNullOrWhiteSpace(orderby))
             {
-                queryParams.Add($"$orderby={orderby}");
+                odataPreviewParams.Add($"$orderby={orderby}");
             }
 
-            var endpoint = "course-sections" + (queryParams.Any() ? "?" + string.Join("&", queryParams) : "");
+            var pagedQuery = new List<string>
+            {
+                $"page={page}",
+                $"pageSize={pageSize}"
+            };
+            if (!string.IsNullOrWhiteSpace(search)) pagedQuery.Add($"search={Uri.EscapeDataString(search.Trim())}");
+            if (semesterId.HasValue && semesterId.Value > 0) pagedQuery.Add($"semesterId={semesterId.Value}");
+            if (subjectId.HasValue && subjectId.Value > 0) pagedQuery.Add($"subjectId={subjectId.Value}");
+            if (isLocked.HasValue) pagedQuery.Add($"isLocked={isLocked.Value.ToString().ToLower()}");
+            if (!string.IsNullOrWhiteSpace(orderby)) pagedQuery.Add($"orderby={Uri.EscapeDataString(orderby)}");
 
-            var sectionsTask = ApiClient.GetAsync<List<CourseSectionViewModel>>(endpoint);
+            var sectionsTask = ApiClient.GetAsync<PagedResult<CourseSectionViewModel>>($"course-sections/paged?{string.Join("&", pagedQuery)}");
             var semestersTask = ApiClient.GetAsync<List<SemesterViewModel>>("semesters");
             var subjectsTask = ApiClient.GetAsync<List<SubjectViewModel>>("subjects");
             var lecturersTask = ApiClient.GetAsync<List<LecturerViewModel>>("lecturers");
@@ -72,9 +83,9 @@ namespace project_PRN232.Frontend.Controllers
             ViewBag.CurrentSubjectId = subjectId;
             ViewBag.CurrentIsLocked = isLocked;
             ViewBag.CurrentOrderBy = orderby;
-            ViewBag.CurrentODataQuery = queryParams.Any() ? string.Join("&", queryParams) : "";
+            ViewBag.CurrentODataQuery = odataPreviewParams.Any() ? string.Join("&", odataPreviewParams) : "";
 
-            var sections = (await sectionsTask) ?? new List<CourseSectionViewModel>();
+            var sections = (await sectionsTask) ?? new PagedResult<CourseSectionViewModel> { PageIndex = page, PageSize = pageSize };
 
             return View(sections);
         }

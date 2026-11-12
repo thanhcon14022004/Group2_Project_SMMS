@@ -1,0 +1,97 @@
+@model project_PRN232.Frontend.Models.PaginationViewModel
+@using Microsoft.AspNetCore.Http.Extensions
+@{
+    if (Model == null || Model.TotalCount <= 0)
+    {
+        return;
+    }
+
+    int cur = Math.Max(1, Model.PageIndex);
+    int size = Math.Max(1, Model.PageSize);
+    int total = Math.Max(1, Model.TotalPages);
+    int startItem = (cur - 1) * size + 1;
+    int endItem = Math.Min(cur * size, Model.TotalCount);
+
+    string BuildPageUrl(int targetPage, int? targetSize = null)
+    {
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(Context.Request.QueryString.Value ?? "");
+        var dict = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in query)
+        {
+            dict[kvp.Key] = kvp.Value.ToString();
+        }
+        dict[Model.PageParamName] = targetPage.ToString();
+        dict[Model.PageSizeParamName] = (targetSize ?? size).ToString();
+
+        var filtered = dict
+            .Where(kv => !string.IsNullOrEmpty(kv.Value))
+            .Select(kv => new KeyValuePair<string, string?>(kv.Key, kv.Value));
+
+        return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(Context.Request.Path.Value ?? "", filtered);
+    }
+}
+
+<div class="card-footer bg-white border-top py-3 px-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div class="d-flex flex-wrap align-items-center gap-3">
+        <small class="text-muted">
+            Hiển thị <strong>@startItem</strong> - <strong>@endItem</strong> / <strong>@Model.TotalCount</strong> @Model.ItemLabel
+            (Trang <strong>@cur</strong> / <strong>@total</strong>)
+        </small>
+        <div class="d-flex align-items-center gap-2">
+            <label class="text-muted small mb-0 text-nowrap">Số dòng/trang:</label>
+            <select class="form-select form-select-sm w-auto"
+                    aria-label="Số dòng mỗi trang"
+                    onchange="smmsUpdatePageSize(this.value, '@Model.PageParamName', '@Model.PageSizeParamName')">
+                @foreach (var opt in Model.PageSizeOptions)
+                {
+                    if (size == opt)
+                    {
+                        <option value="@opt" selected>@opt</option>
+                    }
+                    else
+                    {
+                        <option value="@opt">@opt</option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (total > 1)
+    {
+        <nav aria-label="Phân trang">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(cur <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="@(cur <= 1 ? "#" : BuildPageUrl(1))" title="Trang đầu">&laquo; Đầu</a>
+                </li>
+                <li class="page-item @(cur <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="@(cur <= 1 ? "#" : BuildPageUrl(cur - 1))" title="Trang trước">&lsaquo; Trước</a>
+                </li>
+                @for (int p = Math.Max(1, cur - 2); p <= Math.Min(total, cur + 2); p++)
+                {
+                    <li class="page-item @(p == cur ? "active" : "")">
+                        <a class="page-link" href="@BuildPageUrl(p)">@p</a>
+                    </li>
+                }
+                <li class="page-item @(cur >= total ? "disabled" : "")">
+                    <a class="page-link" href="@(cur >= total ? "#" : BuildPageUrl(cur + 1))" title="Trang sau">Sau &rsaquo;</a>
+                </li>
+                <li class="page-item @(cur >= total ? "disabled" : "")">
+                    <a class="page-link" href="@(cur >= total ? "#" : BuildPageUrl(total))" title="Trang cuối">Cuối &raquo;</a>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>
+
+<script>
+    if (typeof window.smmsUpdatePageSize !== 'function') {
+        window.smmsUpdatePageSize = function (newSize, pageParam, sizeParam) {
+            const url = new URL(window.location.href);
+            url.searchParams.set(sizeParam || 'pageSize', newSize);
+            url.searchParams.set(pageParam || 'page', '1');
+            window.location.href = url.toString();
+        };
+    }
+</script>
+

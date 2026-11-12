@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = "Phân bổ Sinh viên vào Lớp Hành chính";
     var semesters = (List<project_PRN232.Frontend.Models.SemesterViewModel>)(ViewBag.Semesters ?? new List<project_PRN232.Frontend.Models.SemesterViewModel>());
+    var pagedSummaries = ViewBag.PagedClassSummaries as project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.ClassAllocationSummaryViewModel>;
+    int totalSummaryClasses = pagedSummaries?.TotalCount ?? Model.ClassSummaries?.Count ?? 0;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -60,7 +62,7 @@
                     <i class="fa-solid fa-circle-check fa-xl text-success me-3"></i>
                     <div>
                         <div class="fw-bold text-success">Mùa học @Model.SemesterCode đã được phân bổ hành chính trước đó!</div>
-                        <div class="small text-muted">Hệ thống đang hiển thị <strong>@Model.ClassSummaries.Count lớp hành chính</strong> trong mùa @Model.SemesterCode đã được phân bổ (@Model.TotalEligibleStudents sinh viên).</div>
+                        <div class="small text-muted">Hệ thống đang hiển thị <strong>@totalSummaryClasses lớp hành chính</strong> trong mùa @Model.SemesterCode đã được phân bổ (@Model.TotalEligibleStudents sinh viên).</div>
                     </div>
                 </div>
                 <form asp-action="RunAllocation" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn chạy lại phân bổ cho các lớp hành chính của mùa @Model.SemesterCode?');">
@@ -114,7 +116,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small class="text-muted fw-semibold">Số lớp hành chính đạt chuẩn</small>
-                        <h3 class="fw-bold text-success mt-1 mb-0">@(Model.ClassSummaries?.Count ?? 0) lớp</h3>
+                        <h3 class="fw-bold text-success mt-1 mb-0">@totalSummaryClasses lớp</h3>
                     </div>
                     <div class="bg-success-subtle text-success p-3 rounded-circle">
                         <i class="fa-solid fa-chalkboard-user fa-lg"></i>
@@ -143,7 +145,7 @@
         <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                 <h6 class="fw-bold mb-0 text-dark">
-                    <i class="fa-solid fa-list-check me-2 text-primary"></i>Danh sách các Lớp Hành chính Mùa @Model.SemesterCode Đã Phân bổ (@(Model.ClassSummaries?.Count ?? 0) lớp)
+                    <i class="fa-solid fa-list-check me-2 text-primary"></i>Danh sách các Lớp Hành chính Mùa @Model.SemesterCode Đã Phân bổ (@totalSummaryClasses lớp)
                 </h6>
                 <span class="badge bg-success-subtle text-success border border-success px-3 py-1">
                     <i class="fa-solid fa-check-double me-1"></i>Tất cả các lớp đạt chuẩn 28 - 31 SV
@@ -166,7 +168,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @{ int cIdx = 1; }
+                            @{ int cIdx = pagedSummaries != null ? (pagedSummaries.PageIndex - 1) * pagedSummaries.PageSize + 1 : 1; }
                             @foreach (var cs in Model.ClassSummaries!)
                             {
                                 <tr>
@@ -223,6 +225,10 @@
                     </table>
                 </div>
             </div>
+            @if (pagedSummaries != null)
+            {
+                @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(pagedSummaries, "lớp hành chính"))
+            }
         </div>
     }
 }

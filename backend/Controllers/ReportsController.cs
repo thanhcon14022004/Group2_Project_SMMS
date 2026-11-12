@@ -56,9 +56,42 @@ namespace project_PRN232.Controllers
             return Ok(ApiResponse<List<StudentSemesterTranscriptDto>>.Ok(report));
         }
 
+        [HttpGet("gpa/paged")]
+        [Authorize(Roles = "Admin,Lecturer")]
+        public async Task<IActionResult> GetGpaReportPaged(
+            [FromQuery] int? majorId,
+            [FromQuery] int? administrativeClassId,
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var report = await _reportService.GetStudentsGpaReportPagedAsync(majorId, administrativeClassId, search, page, pageSize);
+            return Ok(ApiResponse<GpaReportPagedDto>.Ok(report));
+        }
+
         [HttpGet("students")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetStudentsReport([FromQuery] int? majorId, [FromQuery] int? cohort)
+        {
+            var list = await BuildStudentsReportQuery(majorId, cohort, null).ToListAsync();
+            return Ok(ApiResponse<object>.Ok(list));
+        }
+
+        [HttpGet("students/paged")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetStudentsReportPaged(
+            [FromQuery] int? majorId,
+            [FromQuery] int? cohort,
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var query = BuildStudentsReportQuery(majorId, cohort, search);
+            var paged = await PaginationHelper.PaginateAsync(query, page, pageSize);
+            return Ok(ApiResponse<PagedResult<object>>.Ok(paged));
+        }
+
+        private IQueryable<object> BuildStudentsReportQuery(int? majorId, int? cohort, string? search)
         {
             var query = _db.Students
                 .Include(s => s.User)
@@ -67,24 +100,31 @@ namespace project_PRN232.Controllers
                 .AsNoTracking()
                 .AsQueryable();
 
-            if (majorId.HasValue) query = query.Where(s => s.MajorId == majorId.Value);
-            if (cohort.HasValue) query = query.Where(s => s.Cohort == cohort.Value);
-
-            var list = await query.Select(s => new
+            if (majorId.HasValue && majorId.Value > 0) query = query.Where(s => s.MajorId == majorId.Value);
+            if (cohort.HasValue && cohort.Value > 0) query = query.Where(s => s.Cohort == cohort.Value);
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                s.Id,
-                s.StudentCode,
-                FullName = s.User != null ? s.User.FullName : "",
-                Email = s.User != null ? s.User.Email : "",
-                MajorCode = s.Major != null ? s.Major.Code : "",
-                ClassName = s.AdministrativeClass != null ? s.AdministrativeClass.Name : "",
-                s.Cohort,
-                s.CurrentSemester,
-                s.Status,
-                IsActive = s.User != null && s.User.IsActive
-            }).ToListAsync();
+                var q = search.Trim().ToLower();
+                query = query.Where(s =>
+                    s.StudentCode.ToLower().Contains(q) ||
+                    (s.User != null && s.User.FullName.ToLower().Contains(q)));
+            }
 
-            return Ok(ApiResponse<object>.Ok(list));
+            return query
+                .OrderBy(s => s.StudentCode)
+                .Select(s => (object)new
+                {
+                    s.Id,
+                    s.StudentCode,
+                    FullName = s.User != null ? s.User.FullName : "",
+                    Email = s.User != null ? s.User.Email : "",
+                    MajorCode = s.Major != null ? s.Major.Code : "",
+                    ClassName = s.AdministrativeClass != null ? s.AdministrativeClass.Name : "",
+                    s.Cohort,
+                    s.CurrentSemester,
+                    s.Status,
+                    IsActive = s.User != null && s.User.IsActive
+                });
         }
 
         [HttpGet("grades")]
@@ -235,6 +275,86 @@ namespace project_PRN232.Controllers
                 .ToList();
 
             return Ok(ApiResponse<object>.Ok(missing));
+        }
+
+        [HttpGet("course-sections/paged")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetCourseSectionsReportPaged(
+            [FromQuery] int? semesterId,
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var activeSemId = semesterId ?? (await _db.Semesters.OrderByDescending(s => s.StartDate).Select(s => s.Id).FirstOrDefaultAsync());
+            var query = _db.CourseSections
+                .Include(cs => cs.Subject)
+                .Include(cs => cs.Lecturer).ThenInclude(l => l!.User)
+                .Include(cs => cs.Enrollments)
+                .Where(cs => cs.SemesterId == activeSemId)
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var q = search.Trim().ToLower();
+                query = query.Where(cs =>
+                    cs.Code.ToLower().Contains(q) ||
+                    cs.Name.ToLower().Contains(q) ||
+                    (cs.Subject != null && cs.Subject.Code.ToLower().Contains(q)));
+            }
+
+            var projected = query
+                .OrderBy(cs => cs.Code)
+                .Select(cs => (object)new
+                {
+                    cs.Id,
+                    cs.Code,
+                    cs.Name,
+                    SubjectCode = cs.Subject != null ? cs.Subject.Code : "",
+                    LecturerName = cs.Lecturer != null && cs.Lecturer.User != null ? cs.Lecturer.User.FullName : "Chưa phân công",
+                    EnrolledCount = cs.Enrollments.Count,
+                    cs.MaxCapacity,
+                    cs.IsGradeLocked,
+                    cs.Status
+                });
+
+            var paged = await PaginationHelper.PaginateAsync(projected, page, pageSize);
+            return Ok(ApiResponse<PagedResult<object>>.Ok(paged));
+        }
+
+        [HttpGet("unassigned/paged")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetUnassignedStudentsReportPaged(
+            [FromQuery] int? semesterId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var activeSemId = semesterId ?? (await _db.Semesters.OrderByDescending(s => s.StartDate).Select(s => s.Id).FirstOrDefaultAsync());
+            var enrolledStudentIds = await _db.CourseSectionStudents
+                .Where(css => css.CourseSection != null && css.CourseSection.SemesterId == activeSemId)
+                .Select(css => css.StudentId)
+                .Distinct()
+                .ToListAsync();
+
+            var query = _db.Students
+                .Include(s => s.User)
+                .Include(s => s.Major)
+                .Include(s => s.AdministrativeClass)
+                .Where(s => s.Status == "Studying" && !enrolledStudentIds.Contains(s.Id))
+                .AsNoTracking()
+                .OrderBy(s => s.StudentCode)
+                .Select(s => (object)new
+                {
+                    s.Id,
+                    s.StudentCode,
+                    FullName = s.User != null ? s.User.FullName : "",
+                    MajorCode = s.Major != null ? s.Major.Code : "",
+                    ClassName = s.AdministrativeClass != null ? s.AdministrativeClass.Name : "",
+                    s.CurrentSemester
+                });
+
+            var paged = await PaginationHelper.PaginateAsync(query, page, pageSize);
+            return Ok(ApiResponse<PagedResult<object>>.Ok(paged));
         }
 
         [HttpGet("export/gpa-csv")]

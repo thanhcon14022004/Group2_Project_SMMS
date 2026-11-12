@@ -12,6 +12,7 @@ namespace project_PRN232.Services
         Task<CurriculumConfigDto> UpdateConfigAsync(int id, UpdateCurriculumConfigRequest request, string performedBy);
         Task<List<CurriculumConfigDto>> GetAllConfigsAsync(int? majorId = null, string? version = null);
         Task<CurriculumConfigDto?> GetConfigByIdAsync(int id);
+        Task<PagedResult<CurriculumConfigDto>> GetConfigsPagedAsync(int? majorId = null, int? semesterNumber = null, string? version = null, string? search = null, int page = 1, int pageSize = 20);
         Task<bool> DeleteConfigAsync(int id, string performedBy);
         Task<int> DeleteAllConfigsAsync(string performedBy);
     }
@@ -380,14 +381,76 @@ namespace project_PRN232.Services
             // Fetch records without SQL ORDER BY to avoid heavy SORT operator and RESOURCE_SEMAPHORE memory wait on LocalDB
             var rawConfigs = await query.ToListAsync();
             var configs = rawConfigs.OrderBy(c => c.MajorId ?? 0).ThenBy(c => c.SemesterNumber).ToList();
+            return await MapConfigsToDtosAsync(configs);
+        }
+
+        public async Task<PagedResult<CurriculumConfigDto>> GetConfigsPagedAsync(
+            int? majorId = null,
+            int? semesterNumber = null,
+            string? version = null,
+            string? search = null,
+            int page = 1,
+            int pageSize = 20)
+        {
+            var (normalizedPage, normalizedSize) = PaginationHelper.Normalize(page, pageSize, defaultPageSize: 20);
+
+            var query = _db.CurriculumConfigs
+                .Include(c => c.Major)
+                .Include(c => c.Specialization)
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (majorId.HasValue && majorId.Value > 0)
+            {
+                query = query.Where(c => c.MajorId == majorId.Value || c.MajorId == null);
+            }
+            if (semesterNumber.HasValue && semesterNumber.Value > 0)
+            {
+                query = query.Where(c => c.SemesterNumber == semesterNumber.Value);
+            }
+            if (!string.IsNullOrWhiteSpace(version))
+            {
+                var ver = version.Trim();
+                query = query.Where(c => c.Version == ver);
+            }
+
+            var rawConfigs = await query.ToListAsync();
+            var orderedConfigs = rawConfigs
+                .OrderBy(c => c.MajorId ?? 0)
+                .ThenBy(c => c.SemesterNumber)
+                .ThenBy(c => c.Id)
+                .ToList();
+
+            var mappedAll = await MapConfigsToDtosAsync(orderedConfigs);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLower();
+                mappedAll = mappedAll.Where(c =>
+                    (!string.IsNullOrEmpty(c.Name) && c.Name.ToLower().Contains(term)) ||
+                    (!string.IsNullOrEmpty(c.MajorCode) && c.MajorCode.ToLower().Contains(term)) ||
+                    (!string.IsNullOrEmpty(c.SpecializationCode) && c.SpecializationCode.ToLower().Contains(term)) ||
+                    (!string.IsNullOrEmpty(c.Description) && c.Description.ToLower().Contains(term)) ||
+                    c.Subjects.Any(s => s.SubjectCode.ToLower().Contains(term) || s.SubjectName.ToLower().Contains(term))
+                ).ToList();
+            }
+
+            return PaginationHelper.Paginate(mappedAll, normalizedPage, normalizedSize);
+        }
+
+        private async Task<List<CurriculumConfigDto>> MapConfigsToDtosAsync(List<CurriculumConfig> configs)
+        {
+            if (configs.Count == 0) return new List<CurriculumConfigDto>();
+
             var configIds = configs.Select(c => c.Id).ToHashSet();
 
             var currSubjects = await _db.CurriculumSubjects
                 .AsNoTracking()
                 .Include(cs => cs.Subject)
+                .Where(cs => configIds.Contains(cs.CurriculumConfigId))
                 .ToListAsync();
 
-            var csLookup = currSubjects.Where(cs => configIds.Contains(cs.CurriculumConfigId)).ToLookup(cs => cs.CurriculumConfigId);
+            var csLookup = currSubjects.ToLookup(cs => cs.CurriculumConfigId);
 
             return configs.Select(c => new CurriculumConfigDto
             {

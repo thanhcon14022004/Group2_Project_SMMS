@@ -1,8 +1,9 @@
-@model List<project_PRN232.Frontend.Models.SubjectViewModel>
+@model project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.SubjectViewModel>
 @{
     ViewData["Title"] = "Quản lý Môn học & Đầu điểm";
     var specializations = (List<project_PRN232.Frontend.Models.SpecializationViewModel>)(ViewBag.Specializations ?? new List<project_PRN232.Frontend.Models.SpecializationViewModel>());
     var majors = (List<project_PRN232.Frontend.Models.MajorViewModel>)(ViewBag.Majors ?? new List<project_PRN232.Frontend.Models.MajorViewModel>());
+    var allSubjects = (List<project_PRN232.Frontend.Models.SubjectViewModel>)(ViewBag.AllSubjects ?? Model?.Items ?? new List<project_PRN232.Frontend.Models.SubjectViewModel>());
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -13,7 +14,7 @@
         <small class="text-muted">Phân loại môn cơ sở ngành & chuyên ngành hẹp, cấu hình đầu điểm (chuẩn 100%) và môn tiên quyết</small>
     </div>
     <div class="d-flex gap-2 align-items-center">
-        <span id="filterCountBadge" class="badge bg-white text-dark border shadow-sm px-3 py-2">Hiển thị @Model.Count môn học</span>
+        <span id="filterCountBadge" class="badge bg-white text-dark border shadow-sm px-3 py-2">Hiển thị @(Model?.Items?.Count ?? 0) / @(Model?.TotalCount ?? 0) môn học</span>
         <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddSubject">
             <i class="fa-solid fa-plus me-1"></i> Thêm Môn Học Mới
         </button>
@@ -117,7 +118,17 @@
                     </tr>
                 </thead>
                 <tbody id="tbodySubjects">
-                    @foreach (var sub in Model)
+                    @{ var subjectItems = Model?.Items ?? new List<project_PRN232.Frontend.Models.SubjectViewModel>(); }
+                    @if (!subjectItems.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="fa-solid fa-folder-open fa-2x mb-2 d-block text-secondary"></i>
+                                Không tìm thấy môn học nào phù hợp.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var sub in subjectItems)
                     {
                         var totalWeight = sub.GradeComponents.Sum(c => c.Weight);
                         <tr class="subject-row"
@@ -225,6 +236,7 @@
             </table>
         </div>
     </div>
+    @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(Model ?? new(), "môn học"))
 </div>
 
 <!-- Modal Thêm Môn Học -->
@@ -469,7 +481,7 @@
                         <label class="form-label small fw-semibold">Chọn môn tiên quyết</label>
                         <select name="prerequisiteSubjectId" class="form-select" required>
                             <option value="">-- Chọn môn tiên quyết --</option>
-                            @foreach (var s in Model)
+                            @foreach (var s in allSubjects)
                             {
                                 <option value="@s.Id">@s.Code - @s.Name</option>
                             }
@@ -900,7 +912,11 @@
 
         const badge = document.getElementById('filterCountBadge');
         if (badge) {
-            badge.innerText = `Hiển thị ${visibleCount} / ${rows.length} môn`;
+            if (visibleCount === rows.length) {
+                badge.innerText = `Hiển thị @(Model?.Items?.Count ?? 0) / @(Model?.TotalCount ?? 0) môn học`;
+            } else {
+                badge.innerText = `Đang lọc nhanh ${visibleCount} / ${rows.length} môn trên trang`;
+            }
         }
     }
 </script>

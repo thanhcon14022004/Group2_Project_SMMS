@@ -156,13 +156,29 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Transcript(int? studentId)
+        public async Task<IActionResult> Transcript(int? studentId, string? semesterCode, string? search, int page = 1, int pageSize = 20)
         {
             var authCheck = CheckAuth();
             if (authCheck != null) return authCheck;
 
-            string endpoint = studentId.HasValue ? $"students/{studentId.Value}/transcript" : "grades/transcript";
-            var transcript = await ApiClient.GetAsync<TranscriptViewModel>(endpoint) ?? new TranscriptViewModel();
+            if (page < 1) page = 1;
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var queryParts = new List<string>
+            {
+                $"page={page}",
+                $"pageSize={pageSize}"
+            };
+            if (studentId.HasValue && studentId.Value > 0) queryParts.Add($"studentId={studentId.Value}");
+            if (!string.IsNullOrWhiteSpace(semesterCode)) queryParts.Add($"semesterCode={Uri.EscapeDataString(semesterCode.Trim())}");
+            if (!string.IsNullOrWhiteSpace(search)) queryParts.Add($"search={Uri.EscapeDataString(search.Trim())}");
+
+            ViewBag.CurrentStudentId = studentId;
+            ViewBag.CurrentSemesterCode = semesterCode ?? "";
+            ViewBag.CurrentSearch = search ?? "";
+
+            var transcript = await ApiClient.GetAsync<StudentTranscriptPagedViewModel>($"grades/transcript/paged?{string.Join("&", queryParts)}")
+                ?? new StudentTranscriptPagedViewModel();
 
             return View(transcript);
         }

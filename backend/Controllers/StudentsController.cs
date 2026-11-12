@@ -29,6 +29,26 @@ namespace project_PRN232.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetStudents([FromQuery] int? majorId, [FromQuery] int? classId, [FromQuery] string? search)
         {
+            var list = await BuildStudentDetailQuery(majorId, classId, search).ToListAsync();
+            return Ok(ApiResponse<List<StudentDetailDto>>.Ok(list));
+        }
+
+        [HttpGet("paged")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetStudentsPaged(
+            [FromQuery] int? majorId,
+            [FromQuery] int? classId,
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var query = BuildStudentDetailQuery(majorId, classId, search);
+            var paged = await PaginationHelper.PaginateAsync(query, page, pageSize);
+            return Ok(ApiResponse<PagedResult<StudentDetailDto>>.Ok(paged));
+        }
+
+        private IQueryable<StudentDetailDto> BuildStudentDetailQuery(int? majorId, int? classId, string? search)
+        {
             var query = _db.Students
                 .Include(s => s.User)
                 .Include(s => s.Major)
@@ -37,8 +57,8 @@ namespace project_PRN232.Controllers
                 .AsNoTracking()
                 .AsQueryable();
 
-            if (majorId.HasValue) query = query.Where(s => s.MajorId == majorId.Value);
-            if (classId.HasValue) query = query.Where(s => s.AdministrativeClassId == classId.Value);
+            if (majorId.HasValue && majorId.Value > 0) query = query.Where(s => s.MajorId == majorId.Value);
+            if (classId.HasValue && classId.Value > 0) query = query.Where(s => s.AdministrativeClassId == classId.Value);
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var sTerm = search.Trim().ToLower();
@@ -46,29 +66,29 @@ namespace project_PRN232.Controllers
                                          (s.User != null && s.User.FullName.ToLower().Contains(sTerm)));
             }
 
-            var list = await query.Select(s => new StudentDetailDto
-            {
-                Id = s.Id,
-                StudentCode = s.StudentCode,
-                UserId = s.UserId,
-                FullName = s.User != null ? s.User.FullName : "",
-                Email = s.User != null ? s.User.Email : "",
-                PhoneNumber = s.User != null ? s.User.PhoneNumber : "",
-                MajorId = s.MajorId,
-                MajorCode = s.Major != null ? s.Major.Code : "",
-                MajorName = s.Major != null ? s.Major.Name : "",
-                SpecializationId = s.SpecializationId,
-                SpecializationCode = s.Specialization != null ? s.Specialization.Code : null,
-                SpecializationName = s.Specialization != null ? s.Specialization.Name : null,
-                AdministrativeClassId = s.AdministrativeClassId,
-                AdministrativeClassName = s.AdministrativeClass != null ? s.AdministrativeClass.Name : null,
-                Cohort = s.Cohort,
-                CurrentSemester = s.CurrentSemester,
-                Status = s.Status,
-                IsActive = s.User != null && s.User.IsActive
-            }).ToListAsync();
-
-            return Ok(ApiResponse<List<StudentDetailDto>>.Ok(list));
+            return query
+                .OrderBy(s => s.StudentCode)
+                .Select(s => new StudentDetailDto
+                {
+                    Id = s.Id,
+                    StudentCode = s.StudentCode,
+                    UserId = s.UserId,
+                    FullName = s.User != null ? s.User.FullName : "",
+                    Email = s.User != null ? s.User.Email : "",
+                    PhoneNumber = s.User != null ? s.User.PhoneNumber : "",
+                    MajorId = s.MajorId,
+                    MajorCode = s.Major != null ? s.Major.Code : "",
+                    MajorName = s.Major != null ? s.Major.Name : "",
+                    SpecializationId = s.SpecializationId,
+                    SpecializationCode = s.Specialization != null ? s.Specialization.Code : null,
+                    SpecializationName = s.Specialization != null ? s.Specialization.Name : null,
+                    AdministrativeClassId = s.AdministrativeClassId,
+                    AdministrativeClassName = s.AdministrativeClass != null ? s.AdministrativeClass.Name : null,
+                    Cohort = s.Cohort,
+                    CurrentSemester = s.CurrentSemester,
+                    Status = s.Status,
+                    IsActive = s.User != null && s.User.IsActive
+                });
         }
 
         [HttpGet("{id}")]

@@ -17,7 +17,9 @@ namespace project_PRN232.Frontend.Controllers
             [FromQuery] int? specializationId,
             [FromQuery] int? currentSemester,
             [FromQuery] int? cohort,
-            [FromQuery] string? orderby)
+            [FromQuery] string? orderby,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
             var authCheck = CheckAuth("Admin", "Student");
             if (authCheck != null) return authCheck;
@@ -45,19 +47,29 @@ namespace project_PRN232.Frontend.Controllers
                 filters.Add($"Cohort eq {cohort.Value}");
             }
 
-            var queryParams = new List<string>();
+            var odataPreviewParams = new List<string>();
             if (filters.Any())
             {
-                queryParams.Add($"$filter={string.Join(" and ", filters)}");
+                odataPreviewParams.Add($"$filter={string.Join(" and ", filters)}");
             }
             if (!string.IsNullOrWhiteSpace(orderby))
             {
-                queryParams.Add($"$orderby={orderby}");
+                odataPreviewParams.Add($"$orderby={orderby}");
             }
 
-            var classEndpoint = "classes" + (queryParams.Any() ? "?" + string.Join("&", queryParams) : "");
+            var pagedQuery = new List<string>
+            {
+                $"page={page}",
+                $"pageSize={pageSize}"
+            };
+            if (!string.IsNullOrWhiteSpace(search)) pagedQuery.Add($"search={Uri.EscapeDataString(search.Trim())}");
+            if (majorId.HasValue && majorId.Value > 0) pagedQuery.Add($"majorId={majorId.Value}");
+            if (specializationId.HasValue && specializationId.Value > 0) pagedQuery.Add($"specializationId={specializationId.Value}");
+            if (currentSemester.HasValue && currentSemester.Value > 0) pagedQuery.Add($"currentSemester={currentSemester.Value}");
+            if (cohort.HasValue && cohort.Value > 0) pagedQuery.Add($"cohort={cohort.Value}");
+            if (!string.IsNullOrWhiteSpace(orderby)) pagedQuery.Add($"orderby={Uri.EscapeDataString(orderby)}");
 
-            var classesTask = ApiClient.GetAsync<List<ClassViewModel>>(classEndpoint);
+            var classesTask = ApiClient.GetAsync<PagedResult<ClassViewModel>>($"classes/paged?{string.Join("&", pagedQuery)}");
             var majorsTask = ApiClient.GetAsync<List<MajorViewModel>>("majors");
             var semestersTask = ApiClient.GetAsync<List<SemesterViewModel>>("semesters");
             var specializationsTask = ApiClient.GetAsync<List<SpecializationViewModel>>("specializations");
@@ -73,9 +85,9 @@ namespace project_PRN232.Frontend.Controllers
             ViewBag.CurrentSemesterNum = currentSemester;
             ViewBag.CurrentCohort = cohort;
             ViewBag.CurrentOrderBy = orderby;
-            ViewBag.CurrentODataQuery = queryParams.Any() ? string.Join("&", queryParams) : "";
+            ViewBag.CurrentODataQuery = odataPreviewParams.Any() ? string.Join("&", odataPreviewParams) : "";
 
-            var classes = (await classesTask) ?? new List<ClassViewModel>();
+            var classes = (await classesTask) ?? new PagedResult<ClassViewModel> { PageIndex = page, PageSize = pageSize };
 
             return View(classes);
         }
@@ -218,7 +230,7 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Allocations(int? semesterId)
+        public async Task<IActionResult> Allocations(int? semesterId, int page = 1, int pageSize = 20)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
@@ -229,29 +241,41 @@ namespace project_PRN232.Frontend.Controllers
 
             var selectedSemesterId = semesterId ?? activeSemesters.FirstOrDefault()?.Id ?? allSemesters.FirstOrDefault()?.Id ?? 0;
 
-            // Nếu các lớp của mùa này đã được phân bổ hành chính trước đó, tự động tải và hiển thị
-            AllocationViewModel? model = null;
+            AllocationStatusPagedViewModel? pagedStatus = null;
             if (selectedSemesterId > 0)
             {
-                model = await ApiClient.GetAsync<AllocationViewModel>($"allocations/status/{selectedSemesterId}");
+                pagedStatus = await ApiClient.GetAsync<AllocationStatusPagedViewModel>($"allocations/status/{selectedSemesterId}/paged?page={page}&pageSize={pageSize}");
             }
 
-            if (model == null)
+            AllocationViewModel model;
+            if (pagedStatus == null)
             {
-                model = new AllocationViewModel 
-                { 
+                model = new AllocationViewModel
+                {
                     SemesterId = selectedSemesterId,
                     ClassSummaries = new List<ClassAllocationSummaryViewModel>(),
                     Allocations = new List<AllocationItemViewModel>(),
                     Exceptions = new List<UnallocatedExceptionViewModel>()
                 };
+                ViewBag.PagedClassSummaries = new PagedResult<ClassAllocationSummaryViewModel> { PageIndex = page, PageSize = pageSize };
             }
             else
             {
-                model.SemesterId = selectedSemesterId;
-                model.ClassSummaries ??= new List<ClassAllocationSummaryViewModel>();
-                model.Allocations ??= new List<AllocationItemViewModel>();
-                model.Exceptions ??= new List<UnallocatedExceptionViewModel>();
+                var pagedSummaries = pagedStatus.PagedClassSummaries ?? new PagedResult<ClassAllocationSummaryViewModel>();
+                model = new AllocationViewModel
+                {
+                    SemesterId = selectedSemesterId,
+                    SemesterCode = pagedStatus.SemesterCode,
+                    TotalEligibleStudents = pagedStatus.TotalEligibleStudents,
+                    TotalEnrolledSections = pagedStatus.TotalEnrolledSections,
+                    AutoCreatedStudentsCount = pagedStatus.AutoCreatedStudentsCount,
+                    BlockedPrerequisiteCount = pagedStatus.BlockedPrerequisiteCount,
+                    CapacityOverflowCount = pagedStatus.CapacityOverflowCount,
+                    ClassSummaries = pagedSummaries.Items ?? new List<ClassAllocationSummaryViewModel>(),
+                    Allocations = new List<AllocationItemViewModel>(),
+                    Exceptions = new List<UnallocatedExceptionViewModel>()
+                };
+                ViewBag.PagedClassSummaries = pagedSummaries;
             }
 
             return View(model);
@@ -337,14 +361,27 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Transfers()
+        public async Task<IActionResult> Transfers(string? status, int page = 1, int pageSize = 20)
         {
-            var authCheck = CheckAuth("Student");
+            var authCheck = CheckAuth("Admin", "Student");
             if (authCheck != null) return authCheck;
 
-            var requests = await ApiClient.GetAsync<List<ClassTransferViewModel>>("classtransfers/requests") ?? new List<ClassTransferViewModel>();
-            ViewBag.Classes = await ApiClient.GetAsync<List<ClassViewModel>>("classes") ?? new List<ClassViewModel>();
+            var queryParams = new List<string>
+            {
+                $"page={page}",
+                $"pageSize={pageSize}"
+            };
+            if (!string.IsNullOrWhiteSpace(status)) queryParams.Add($"status={Uri.EscapeDataString(status.Trim())}");
 
+            var requestsTask = ApiClient.GetAsync<PagedResult<ClassTransferViewModel>>($"classtransfers/requests/paged?{string.Join("&", queryParams)}");
+            var classesTask = ApiClient.GetAsync<List<ClassViewModel>>("classes");
+
+            await Task.WhenAll(requestsTask, classesTask);
+
+            ViewBag.Classes = (await classesTask) ?? new List<ClassViewModel>();
+            ViewBag.CurrentStatus = status;
+
+            var requests = (await requestsTask) ?? new PagedResult<ClassTransferViewModel> { PageIndex = page, PageSize = pageSize };
             return View(requests);
         }
 

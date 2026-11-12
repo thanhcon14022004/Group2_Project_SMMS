@@ -1,4 +1,4 @@
-@model List<project_PRN232.Frontend.Models.ClassViewModel>
+@model project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.ClassViewModel>
 @{
     ViewData["Title"] = "Quản lý Lớp Hành chính";
     var majors = (List<project_PRN232.Frontend.Models.MajorViewModel>)(ViewBag.Majors ?? new List<project_PRN232.Frontend.Models.MajorViewModel>());
@@ -36,7 +36,7 @@
             <small class="text-muted">Lọc lớp hành chính với cú pháp <code>$filter</code>, <code>$orderby</code> theo chuẩn OData v4</small>
         </div>
         <div>
-            <span class="badge bg-light text-dark border">Tổng cộng @Model.Count lớp hành chính</span>
+            <span class="badge bg-light text-dark border">Tổng cộng @Model.TotalCount lớp hành chính</span>
         </div>
     </div>
     <div class="card-body p-3">
@@ -153,7 +153,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model == null || !Model.Any())
+                    @if (Model == null || Model.Items == null || !Model.Items.Any())
                     {
                         <tr>
                             <td colspan="9" class="text-center py-4 text-muted">
@@ -164,7 +164,7 @@
                     }
                     else
                     {
-                        @foreach (var c in Model)
+                        @foreach (var c in Model.Items)
                         {
                             <tr>
                                 <td class="ps-3 fw-bold text-primary">@c.Code</td>
@@ -237,6 +237,7 @@
             </table>
         </div>
     </div>
+    @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(Model ?? new(), "lớp hành chính"))
 </div>
 
 <!-- Modal Thêm Lớp Hành Chính (MÃ LỚP, NGÀNH, NGÀNH HẸP (TÙY CHỌN), KÌ, HỌC PHẦN) -->

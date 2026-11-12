@@ -31,6 +31,87 @@ namespace project_PRN232.Controllers
         [EnableQuery(PageSize = 100)]
         public async Task<IActionResult> GetSections([FromQuery] int? semesterId, [FromQuery] int? subjectId)
         {
+            var (query, isEmpty) = await BuildScopedSectionsQueryAsync(semesterId, subjectId);
+            if (isEmpty) return Ok(new List<CourseSectionDto>().AsQueryable());
+
+            var sections = await query.OrderBy(cs => cs.Code).ToListAsync();
+            var list = await MapSectionsToDtosAsync(sections);
+
+            return Ok(list.AsQueryable());
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetSectionsPaged(
+            [FromQuery] string? search,
+            [FromQuery] int? semesterId,
+            [FromQuery] int? subjectId,
+            [FromQuery] bool? isLocked,
+            [FromQuery] string? orderby,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var (normalizedPage, normalizedSize) = PaginationHelper.Normalize(page, pageSize, defaultPageSize: 20);
+            var (query, isEmpty) = await BuildScopedSectionsQueryAsync(semesterId, subjectId);
+            if (isEmpty)
+            {
+                return Ok(ApiResponse<PagedResult<CourseSectionDto>>.Ok(new PagedResult<CourseSectionDto>
+                {
+                    Items = new List<CourseSectionDto>(),
+                    TotalCount = 0,
+                    PageIndex = 1,
+                    PageSize = normalizedSize
+                }));
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var q = search.Trim().ToLower();
+                query = query.Where(cs =>
+                    cs.Code.ToLower().Contains(q) ||
+                    cs.Name.ToLower().Contains(q) ||
+                    (cs.Subject != null && (cs.Subject.Code.ToLower().Contains(q) || cs.Subject.Name.ToLower().Contains(q))) ||
+                    (cs.Lecturer != null && cs.Lecturer.User != null && cs.Lecturer.User.FullName.ToLower().Contains(q)));
+            }
+            if (isLocked.HasValue)
+            {
+                query = query.Where(cs => cs.IsGradeLocked == isLocked.Value);
+            }
+
+            query = orderby switch
+            {
+                "Code desc" => query.OrderByDescending(cs => cs.Code),
+                "MaxCapacity asc" => query.OrderBy(cs => cs.MaxCapacity).ThenBy(cs => cs.Code),
+                "MaxCapacity desc" => query.OrderByDescending(cs => cs.MaxCapacity).ThenBy(cs => cs.Code),
+                "EnrolledCount asc" => query.OrderBy(cs => cs.Enrollments.Count(e => e.Status == "Enrolled")).ThenBy(cs => cs.Code),
+                "EnrolledCount desc" => query.OrderByDescending(cs => cs.Enrollments.Count(e => e.Status == "Enrolled")).ThenBy(cs => cs.Code),
+                _ => query.OrderBy(cs => cs.Code)
+            };
+
+            var totalCount = await query.CountAsync();
+            var totalPages = normalizedSize > 0 ? (int)Math.Ceiling((double)totalCount / normalizedSize) : 0;
+            if (totalPages > 0 && normalizedPage > totalPages)
+            {
+                normalizedPage = totalPages;
+            }
+
+            var sections = await query
+                .Skip((normalizedPage - 1) * normalizedSize)
+                .Take(normalizedSize)
+                .ToListAsync();
+
+            var items = await MapSectionsToDtosAsync(sections);
+
+            return Ok(ApiResponse<PagedResult<CourseSectionDto>>.Ok(new PagedResult<CourseSectionDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageIndex = normalizedPage,
+                PageSize = normalizedSize
+            }));
+        }
+
+        private async Task<(IQueryable<CourseSection> query, bool isEmpty)> BuildScopedSectionsQueryAsync(int? semesterId, int? subjectId)
+        {
             var userRole = User.FindFirstValue(ClaimTypes.Role);
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             int.TryParse(userIdStr, out var userId);
@@ -43,19 +124,19 @@ namespace project_PRN232.Controllers
                 .AsNoTracking()
                 .AsQueryable();
 
-            if (semesterId.HasValue) query = query.Where(cs => cs.SemesterId == semesterId.Value);
-            if (subjectId.HasValue) query = query.Where(cs => cs.SubjectId == subjectId.Value);
+            if (semesterId.HasValue && semesterId.Value > 0) query = query.Where(cs => cs.SemesterId == semesterId.Value);
+            if (subjectId.HasValue && subjectId.Value > 0) query = query.Where(cs => cs.SubjectId == subjectId.Value);
 
             if (userRole == "Lecturer")
             {
-                var lecturer = await _db.Lecturers.FirstOrDefaultAsync(l => l.UserId == userId);
-                if (lecturer == null) return Ok(new List<CourseSectionDto>().AsQueryable());
+                var lecturer = await _db.Lecturers.AsNoTracking().FirstOrDefaultAsync(l => l.UserId == userId);
+                if (lecturer == null) return (query.Where(_ => false), true);
                 query = query.Where(cs => cs.LecturerId == lecturer.Id);
             }
             else if (userRole == "Student")
             {
-                var student = await _db.Students.FirstOrDefaultAsync(s => s.UserId == userId);
-                if (student == null) return Ok(new List<CourseSectionDto>().AsQueryable());
+                var student = await _db.Students.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == userId);
+                if (student == null) return (query.Where(_ => false), true);
                 var enrolledIds = await _db.CourseSectionStudents
                     .Where(e => e.StudentId == student.Id)
                     .Select(e => e.CourseSectionId)
@@ -63,24 +144,29 @@ namespace project_PRN232.Controllers
                 query = query.Where(cs => enrolledIds.Contains(cs.Id));
             }
 
-            var sections = await query.ToListAsync();
+            return (query, false);
+        }
+
+        private async Task<List<CourseSectionDto>> MapSectionsToDtosAsync(List<CourseSection> sections)
+        {
+            if (sections.Count == 0) return new List<CourseSectionDto>();
+
             var sectionIds = sections.Select(cs => cs.Id).ToList();
 
-            // Đếm số lượng sinh viên bằng GroupBy cực nhanh
             var enrollCounts = await _db.CourseSectionStudents
+                .AsNoTracking()
                 .Where(e => sectionIds.Contains(e.CourseSectionId) && e.Status == "Enrolled")
                 .GroupBy(e => e.CourseSectionId)
                 .Select(g => new { SectionId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.SectionId, x => x.Count);
 
-            // Lấy lịch học theo lookup
             var schedules = await _db.CourseSectionSchedules
                 .Where(s => sectionIds.Contains(s.CourseSectionId))
                 .AsNoTracking()
                 .ToListAsync();
             var scheduleLookup = schedules.ToLookup(s => s.CourseSectionId);
 
-            var list = sections.Select(cs => new CourseSectionDto
+            return sections.Select(cs => new CourseSectionDto
             {
                 Id = cs.Id,
                 Code = cs.Code,
@@ -109,8 +195,6 @@ namespace project_PRN232.Controllers
                     Room = sc.Room
                 }).ToList()
             }).ToList();
-
-            return Ok(list.AsQueryable());
         }
 
         [HttpGet("{id}")]

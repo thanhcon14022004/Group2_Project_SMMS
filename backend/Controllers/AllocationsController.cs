@@ -71,6 +71,44 @@ namespace project_PRN232.Controllers
             }
         }
 
+        [HttpGet("status/{semesterId}/paged")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<AllocationStatusPagedDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetAllocationStatusPaged(
+            int semesterId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            if (semesterId <= 0)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Mã học kỳ không hợp lệ."));
+            }
+
+            try
+            {
+                var result = await _allocationService.GetAllocationStatusAsync(semesterId);
+                var dto = new AllocationStatusPagedDto
+                {
+                    SemesterId = result.SemesterId,
+                    SemesterCode = result.SemesterCode,
+                    TotalStudentsProcessed = result.TotalStudentsProcessed,
+                    TotalEligibleStudents = result.TotalEligibleStudents,
+                    TotalEnrolledSections = result.TotalEnrolledSections,
+                    AutoCreatedStudentsCount = result.AutoCreatedStudentsCount,
+                    BlockedPrerequisiteCount = result.BlockedPrerequisiteCount,
+                    CapacityOverflowCount = result.CapacityOverflowCount,
+                    UnallocatedCount = result.UnallocatedCount,
+                    PagedClassSummaries = PaginationHelper.Paginate(result.ClassSummaries, page, pageSize)
+                };
+                return Ok(ApiResponse<AllocationStatusPagedDto>.Ok(dto));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse.ErrorResult(ex.Message));
+            }
+        }
+
         /// <summary>
         /// Lấy danh sách sinh viên chưa được phân bổ do ngoại lệ (tiên quyết, trùng lịch, sĩ số).
         /// </summary>
@@ -86,6 +124,23 @@ namespace project_PRN232.Controllers
 
             var exceptions = await _allocationService.GetUnallocatedExceptionsAsync(semesterId);
             return Ok(exceptions);
+        }
+
+        [HttpGet("exceptions/{semesterId}/paged")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetExceptionsPaged(
+            int semesterId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            if (semesterId <= 0)
+            {
+                return BadRequest(ApiResponse.ErrorResult("Mã học kỳ không hợp lệ."));
+            }
+
+            var exceptions = await _allocationService.GetUnallocatedExceptionsAsync(semesterId);
+            var paged = PaginationHelper.Paginate(exceptions, page, pageSize);
+            return Ok(ApiResponse<PagedResult<UnallocatedExceptionDto>>.Ok(paged));
         }
 
         /// <summary>

@@ -1,22 +1,33 @@
-@model List<project_PRN232.Frontend.Models.ClassTransferViewModel>
+@model project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.ClassTransferViewModel>
 @inject IHttpContextAccessor HttpContextAccessor
 @{
     ViewData["Title"] = "Chuyển Lớp Hành chính";
     var role = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "";
-    var classes = (List<project_PRN232.Frontend.Models.ClassViewModel>)ViewBag.Classes;
+    var classes = (List<project_PRN232.Frontend.Models.ClassViewModel>)(ViewBag.Classes ?? new List<project_PRN232.Frontend.Models.ClassViewModel>());
+    var currentStatus = (string?)ViewBag.CurrentStatus;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h5 class="fw-bold mb-0">Quản lý Yêu cầu Chuyển Lớp Hành chính</h5>
         <small class="text-muted">Kiểm tra thời hạn chuyển lớp của kỳ và ghi nhật ký thao tác</small>
     </div>
-    @if (role == "Student")
-    {
-        <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalRequestTransfer">
-            <i class="fa-solid fa-paper-plane me-1"></i> Gửi Yêu Cầu Chuyển Lớp
-        </button>
-    }
+    <div class="d-flex align-items-center gap-2">
+        <form method="get" asp-action="Transfers" class="d-flex align-items-center gap-2">
+            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">-- Tất cả trạng thái --</option>
+                <!option value="Pending" @(currentStatus == "Pending" ? "selected" : "")>Chờ duyệt</!option>
+                <!option value="Approved" @(currentStatus == "Approved" ? "selected" : "")>Đã duyệt</!option>
+                <!option value="Rejected" @(currentStatus == "Rejected" ? "selected" : "")>Từ chối</!option>
+            </select>
+        </form>
+        @if (role == "Student")
+        {
+            <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalRequestTransfer">
+                <i class="fa-solid fa-paper-plane me-1"></i> Gửi Yêu Cầu Chuyển Lớp
+            </button>
+        }
+    </div>
 </div>
 
 <div class="card shadow-sm border-0 rounded-3">
@@ -39,7 +50,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.Count == 0)
+                    @if (Model == null || Model.Items == null || !Model.Items.Any())
                     {
                         <tr>
                             <td colspan="8" class="text-center py-4 text-muted">
@@ -48,8 +59,10 @@
                             </td>
                         </tr>
                     }
-                    @foreach (var r in Model)
+                    else
                     {
+                        foreach (var r in Model.Items)
+                        {
                         <tr>
                             <td class="ps-3 fw-bold text-primary">@r.StudentCode</td>
                             <td>@r.StudentName</td>
@@ -94,11 +107,13 @@
                                 </td>
                             }
                         </tr>
+                        }
                     }
                 </tbody>
             </table>
         </div>
     </div>
+    @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(Model ?? new(), "yêu cầu"))
 </div>
 
 <!-- Modal Gửi Yêu Cầu Chuyển Lớp (Sinh viên) -->

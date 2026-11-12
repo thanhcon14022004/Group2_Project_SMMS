@@ -32,16 +32,100 @@ namespace project_PRN232.Controllers
                 .OrderBy(s => s.Code)
                 .ToListAsync();
 
-            var components = await _db.SubjectGradeComponents.AsNoTracking().ToListAsync();
+            var dtos = await BuildSubjectDtosAsync(subjects);
+            return Ok(dtos.AsQueryable());
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetSubjectsPaged(
+            [FromQuery] string? search,
+            [FromQuery] int? majorId,
+            [FromQuery] int? specializationId,
+            [FromQuery] int? credits,
+            [FromQuery] string? orderby,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var (normalizedPage, normalizedSize) = PaginationHelper.Normalize(page, pageSize, defaultPageSize: 20);
+
+            var query = _db.Subjects
+                .AsNoTracking()
+                .Include(s => s.Major)
+                .Include(s => s.Specialization)
+                    .ThenInclude(sp => sp!.Major)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var q = search.Trim().ToLower();
+                query = query.Where(s => s.Code.ToLower().Contains(q) || s.Name.ToLower().Contains(q));
+            }
+            if (majorId.HasValue && majorId.Value > 0)
+            {
+                query = query.Where(s => s.MajorId == majorId.Value || (s.Specialization != null && s.Specialization.MajorId == majorId.Value));
+            }
+            if (specializationId.HasValue && specializationId.Value > 0)
+            {
+                query = query.Where(s => s.SpecializationId == specializationId.Value);
+            }
+            if (credits.HasValue && credits.Value > 0)
+            {
+                query = credits.Value >= 5
+                    ? query.Where(s => s.Credits >= 5)
+                    : query.Where(s => s.Credits == credits.Value);
+            }
+
+            query = orderby switch
+            {
+                "Code desc" => query.OrderByDescending(s => s.Code),
+                "Credits asc" => query.OrderBy(s => s.Credits).ThenBy(s => s.Code),
+                "Credits desc" => query.OrderByDescending(s => s.Credits).ThenBy(s => s.Code),
+                _ => query.OrderBy(s => s.Code)
+            };
+
+            var totalCount = await query.CountAsync();
+            var totalPages = normalizedSize > 0 ? (int)Math.Ceiling((double)totalCount / normalizedSize) : 0;
+            if (totalPages > 0 && normalizedPage > totalPages)
+            {
+                normalizedPage = totalPages;
+            }
+
+            var subjects = await query
+                .Skip((normalizedPage - 1) * normalizedSize)
+                .Take(normalizedSize)
+                .ToListAsync();
+
+            var dtos = await BuildSubjectDtosAsync(subjects);
+
+            return Ok(ApiResponse<PagedResult<SubjectDto>>.Ok(new PagedResult<SubjectDto>
+            {
+                Items = dtos,
+                TotalCount = totalCount,
+                PageIndex = normalizedPage,
+                PageSize = normalizedSize
+            }));
+        }
+
+        private async Task<List<SubjectDto>> BuildSubjectDtosAsync(List<Subject> subjects)
+        {
+            if (subjects.Count == 0) return new List<SubjectDto>();
+
+            var subjectIds = subjects.Select(s => s.Id).ToList();
+
+            var components = await _db.SubjectGradeComponents
+                .AsNoTracking()
+                .Where(c => subjectIds.Contains(c.SubjectId))
+                .ToListAsync();
             var compLookup = components.ToLookup(c => c.SubjectId);
 
             var prereqs = await _db.PrerequisiteSubjects
                 .Include(p => p.Prerequisite)
                 .AsNoTracking()
+                .Where(p => subjectIds.Contains(p.SubjectId))
                 .ToListAsync();
             var prereqLookup = prereqs.ToLookup(p => p.SubjectId);
 
-            var dtos = subjects.Select(s => new SubjectDto
+            return subjects.Select(s => new SubjectDto
             {
                 Id = s.Id,
                 Code = s.Code,
@@ -75,8 +159,6 @@ namespace project_PRN232.Controllers
                     MinScore = p.MinScore
                 }).ToList()
             }).ToList();
-
-            return Ok(dtos.AsQueryable());
         }
 
         [HttpGet("{id}")]

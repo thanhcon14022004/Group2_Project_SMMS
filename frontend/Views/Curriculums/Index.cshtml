@@ -1,4 +1,4 @@
-@model List<project_PRN232.Frontend.Models.CurriculumViewModel>
+@model project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.CurriculumViewModel>
 @{
     ViewData["Title"] = "Cấu hình Chương trình Đào tạo";
     var majors = (List<project_PRN232.Frontend.Models.MajorViewModel>)(ViewBag.Majors ?? new List<project_PRN232.Frontend.Models.MajorViewModel>());
@@ -12,7 +12,7 @@
         <small class="text-muted">Quản lý theo phiên bản (VD: 2024.1), ngành, học kỳ và chuyên ngành hẹp</small>
     </div>
     <div class="d-flex gap-2">
-        @if (Model.Any())
+        @if (Model.Items.Any())
         {
             <form asp-action="DeleteAll" method="post" class="d-inline" onsubmit="return confirm('CẢNH BÁO: Bạn có chắc chắn muốn XÓA TẤT CẢ các cấu hình chương trình đào tạo trong hệ thống không?');">
                 <button type="submit" class="btn btn-outline-danger btn-sm rounded-3">
@@ -37,7 +37,7 @@
         </div>
         <div>
             <span class="badge bg-light text-dark border">
-                Hiển thị @Model.Count / @ViewBag.TotalRecords cấu hình (Trang @ViewBag.CurrentPage / @ViewBag.TotalPages)
+                Hiển thị @Model.Items.Count / @Model.TotalCount cấu hình (Trang @Model.PageIndex / @Math.Max(1, Model.TotalPages))
             </span>
         </div>
     </div>
@@ -111,7 +111,7 @@
 
 <div class="card shadow-sm border-0 rounded-3">
     <div class="card-body p-0">
-        @if (!Model.Any())
+        @if (!Model.Items.Any())
         {
             <div class="text-center py-5">
                 <i class="fa-solid fa-folder-open text-muted fa-3x mb-3"></i>
@@ -139,7 +139,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var c in Model)
+                        @foreach (var c in Model.Items)
                         {
                             var subjectIds = c.Subjects.Select(s => s.EffectiveId).Where(id => id > 0).ToList();
                             var subjectIdsJson = System.Text.Json.JsonSerializer.Serialize(subjectIds);
@@ -222,44 +222,7 @@
                 </table>
             </div>
 
-            @if (ViewBag.TotalPages > 1)
-            {
-                <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
-                    <small class="text-muted">
-                        Trang <strong>@ViewBag.CurrentPage</strong> / <strong>@ViewBag.TotalPages</strong> (Tổng số: @ViewBag.TotalRecords cấu hình)
-                    </small>
-                    <nav>
-                        <ul class="pagination pagination-sm mb-0">
-                            @{
-                                int cur = ViewBag.CurrentPage;
-                                int total = ViewBag.TotalPages;
-                                int? mId = ViewBag.CurrentMajorId;
-                                int? sNum = ViewBag.CurrentSemester;
-                                string? ver = ViewBag.CurrentVersion;
-                                string? qSearch = ViewBag.CurrentSearch;
-                            }
-                            <li class="page-item @(cur <= 1 ? "disabled" : "")">
-                                <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-majorId="@mId" asp-route-semesterNumber="@sNum" asp-route-version="@ver" asp-route-search="@qSearch">&laquo; Đầu</a>
-                            </li>
-                            <li class="page-item @(cur <= 1 ? "disabled" : "")">
-                                <a class="page-link" asp-action="Index" asp-route-page="@(cur - 1)" asp-route-majorId="@mId" asp-route-semesterNumber="@sNum" asp-route-version="@ver" asp-route-search="@qSearch">&lsaquo; Trước</a>
-                            </li>
-                            @for (int p = Math.Max(1, cur - 2); p <= Math.Min(total, cur + 2); p++)
-                            {
-                                <li class="page-item @(p == cur ? "active" : "")">
-                                    <a class="page-link" asp-action="Index" asp-route-page="@p" asp-route-majorId="@mId" asp-route-semesterNumber="@sNum" asp-route-version="@ver" asp-route-search="@qSearch">@p</a>
-                                </li>
-                            }
-                            <li class="page-item @(cur >= total ? "disabled" : "")">
-                                <a class="page-link" asp-action="Index" asp-route-page="@(cur + 1)" asp-route-majorId="@mId" asp-route-semesterNumber="@sNum" asp-route-version="@ver" asp-route-search="@qSearch">Sau &rsaquo;</a>
-                            </li>
-                            <li class="page-item @(cur >= total ? "disabled" : "")">
-                                <a class="page-link" asp-action="Index" asp-route-page="@total" asp-route-majorId="@mId" asp-route-semesterNumber="@sNum" asp-route-version="@ver" asp-route-search="@qSearch">Cuối &raquo;</a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
-            }
+            @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(Model ?? new(), "cấu hình"))
         }
     </div>
 </div>
