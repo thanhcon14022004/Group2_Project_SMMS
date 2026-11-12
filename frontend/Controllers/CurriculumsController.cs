@@ -16,72 +16,38 @@ namespace project_PRN232.Frontend.Controllers
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
 
-            var configsTask = ApiClient.GetAsync<List<CurriculumViewModel>>("curriculums");
+            var queryParams = new List<string>
+            {
+                $"page={page}",
+                $"pageSize={pageSize}"
+            };
+            if (majorId.HasValue && majorId.Value > 0) queryParams.Add($"majorId={majorId.Value}");
+            if (semesterNumber.HasValue && semesterNumber.Value > 0) queryParams.Add($"semesterNumber={semesterNumber.Value}");
+            if (!string.IsNullOrWhiteSpace(version)) queryParams.Add($"version={Uri.EscapeDataString(version.Trim())}");
+            if (!string.IsNullOrWhiteSpace(search)) queryParams.Add($"search={Uri.EscapeDataString(search.Trim())}");
+
+            var pagedConfigsTask = ApiClient.GetAsync<PagedResult<CurriculumViewModel>>($"curriculums/paged?{string.Join("&", queryParams)}");
             var majorsTask = ApiClient.GetAsync<List<MajorViewModel>>("majors");
             var specializationsTask = ApiClient.GetAsync<List<SpecializationViewModel>>("specializations");
             var subjectsTask = ApiClient.GetAsync<List<SubjectViewModel>>("subjects");
 
-            await Task.WhenAll(configsTask, majorsTask, specializationsTask, subjectsTask);
+            await Task.WhenAll(pagedConfigsTask, majorsTask, specializationsTask, subjectsTask);
 
-            var majors = (await majorsTask) ?? new List<MajorViewModel>();
-            var specializations = (await specializationsTask) ?? new List<SpecializationViewModel>();
-            var subjects = (await subjectsTask) ?? new List<SubjectViewModel>();
-            var configs = (await configsTask) ?? new List<CurriculumViewModel>();
+            var pagedConfigs = (await pagedConfigsTask) ?? new PagedResult<CurriculumViewModel> { PageIndex = page, PageSize = pageSize };
 
-            ViewBag.Majors = majors;
-            ViewBag.Specializations = specializations;
-            ViewBag.Subjects = subjects;
+            ViewBag.Majors = (await majorsTask) ?? new List<MajorViewModel>();
+            ViewBag.Specializations = (await specializationsTask) ?? new List<SpecializationViewModel>();
+            ViewBag.Subjects = (await subjectsTask) ?? new List<SubjectViewModel>();
 
             // Lưu trạng thái bộ lọc
             ViewBag.CurrentMajorId = majorId;
             ViewBag.CurrentSemester = semesterNumber;
             ViewBag.CurrentVersion = version;
             ViewBag.CurrentSearch = search;
-
-            var query = configs.AsEnumerable();
-
-            if (majorId.HasValue && majorId.Value > 0)
-            {
-                query = query.Where(c => c.MajorId == majorId.Value || c.MajorId == null);
-            }
-
-            if (semesterNumber.HasValue && semesterNumber.Value > 0)
-            {
-                query = query.Where(c => c.SemesterNumber == semesterNumber.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(version))
-            {
-                query = query.Where(c => string.Equals(c.Version, version.Trim(), StringComparison.OrdinalIgnoreCase));
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim().ToLower();
-                query = query.Where(c =>
-                    (c.Name != null && c.Name.ToLower().Contains(term)) ||
-                    (c.MajorCode != null && c.MajorCode.ToLower().Contains(term)) ||
-                    (c.SpecializationCode != null && c.SpecializationCode.ToLower().Contains(term)) ||
-                    (c.Description != null && c.Description.ToLower().Contains(term)) ||
-                    c.Subjects.Any(s => s.EffectiveCode.ToLower().Contains(term) || s.EffectiveName.ToLower().Contains(term))
-                );
-            }
-
-            var allFiltered = query.ToList();
-            var totalCount = allFiltered.Count;
-
-            if (pageSize <= 0) pageSize = 20;
-            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
-            if (totalPages < 1) totalPages = 1;
-            if (page < 1) page = 1;
-            if (page > totalPages) page = totalPages;
-
-            var pagedConfigs = allFiltered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-
-            ViewBag.TotalRecords = totalCount;
-            ViewBag.CurrentPage = page;
-            ViewBag.PageSize = pageSize;
-            ViewBag.TotalPages = totalPages;
+            ViewBag.TotalRecords = pagedConfigs.TotalCount;
+            ViewBag.CurrentPage = pagedConfigs.PageIndex;
+            ViewBag.PageSize = pagedConfigs.PageSize;
+            ViewBag.TotalPages = Math.Max(1, pagedConfigs.TotalPages);
 
             return View(pagedConfigs);
         }

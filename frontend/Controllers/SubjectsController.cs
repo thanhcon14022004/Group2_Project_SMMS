@@ -16,7 +16,9 @@ namespace project_PRN232.Frontend.Controllers
             [FromQuery] int? majorId,
             [FromQuery] int? specializationId,
             [FromQuery] int? credits,
-            [FromQuery] string? orderby)
+            [FromQuery] string? orderby,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
@@ -43,35 +45,46 @@ namespace project_PRN232.Frontend.Controllers
                     filters.Add($"Credits eq {credits.Value}");
             }
 
-            var queryParams = new List<string>();
+            var odataPreviewParams = new List<string>();
             if (filters.Any())
             {
-                queryParams.Add($"$filter={string.Join(" and ", filters)}");
+                odataPreviewParams.Add($"$filter={string.Join(" and ", filters)}");
             }
             if (!string.IsNullOrWhiteSpace(orderby))
             {
-                queryParams.Add($"$orderby={orderby}");
+                odataPreviewParams.Add($"$orderby={orderby}");
             }
 
-            var subjectEndpoint = "subjects" + (queryParams.Any() ? "?" + string.Join("&", queryParams) : "");
+            var pagedQuery = new List<string>
+            {
+                $"page={page}",
+                $"pageSize={pageSize}"
+            };
+            if (!string.IsNullOrWhiteSpace(search)) pagedQuery.Add($"search={Uri.EscapeDataString(search.Trim())}");
+            if (majorId.HasValue && majorId.Value > 0) pagedQuery.Add($"majorId={majorId.Value}");
+            if (specializationId.HasValue && specializationId.Value > 0) pagedQuery.Add($"specializationId={specializationId.Value}");
+            if (credits.HasValue && credits.Value > 0) pagedQuery.Add($"credits={credits.Value}");
+            if (!string.IsNullOrWhiteSpace(orderby)) pagedQuery.Add($"orderby={Uri.EscapeDataString(orderby)}");
 
-            var subjectsTask = ApiClient.GetAsync<List<SubjectViewModel>>(subjectEndpoint);
+            var pagedSubjectsTask = ApiClient.GetAsync<PagedResult<SubjectViewModel>>($"subjects/paged?{string.Join("&", pagedQuery)}");
+            var allSubjectsTask = ApiClient.GetAsync<List<SubjectViewModel>>("subjects");
             var specializationsTask = ApiClient.GetAsync<List<SpecializationViewModel>>("specializations");
             var majorsTask = ApiClient.GetAsync<List<MajorViewModel>>("majors");
 
-            await Task.WhenAll(subjectsTask, specializationsTask, majorsTask);
+            await Task.WhenAll(pagedSubjectsTask, allSubjectsTask, specializationsTask, majorsTask);
 
             ViewBag.Majors = (await majorsTask) ?? new List<MajorViewModel>();
             ViewBag.Specializations = (await specializationsTask) ?? new List<SpecializationViewModel>();
+            ViewBag.AllSubjects = (await allSubjectsTask) ?? new List<SubjectViewModel>();
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentMajorId = majorId;
             ViewBag.CurrentSpecializationId = specializationId;
             ViewBag.CurrentCredits = credits;
             ViewBag.CurrentOrderBy = orderby;
-            ViewBag.CurrentODataQuery = queryParams.Any() ? string.Join("&", queryParams) : "";
+            ViewBag.CurrentODataQuery = odataPreviewParams.Any() ? string.Join("&", odataPreviewParams) : "";
 
-            var subjects = (await subjectsTask) ?? new List<SubjectViewModel>();
-            return View(subjects);
+            var result = (await pagedSubjectsTask) ?? new PagedResult<SubjectViewModel> { PageIndex = page, PageSize = pageSize };
+            return View(result);
         }
 
         [HttpPost]

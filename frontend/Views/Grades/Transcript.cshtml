@@ -1,8 +1,13 @@
-@model project_PRN232.Frontend.Models.TranscriptViewModel
+@model project_PRN232.Frontend.Models.StudentTranscriptPagedViewModel
 @inject IHttpContextAccessor HttpContextAccessor
 @{
     ViewData["Title"] = "Bảng điểm Cá nhân & GPA Thang 10";
     var role = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "";
+    var pagedSubjects = Model?.PagedSubjects ?? new project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.TranscriptSubjectRecordViewModel>();
+    var subjectRecords = pagedSubjects.Items ?? new();
+    var availableSemesters = Model?.AvailableSemesters ?? new List<string>();
+    var currentSemesterCode = (string?)ViewBag.CurrentSemesterCode ?? "";
+    var currentSearch = (string?)ViewBag.CurrentSearch ?? "";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -13,7 +18,7 @@
     @if (role == "Admin")
     {
         <form method="get" asp-action="Transcript" class="d-flex gap-2 align-items-center">
-            <input type="number" name="studentId" class="form-control form-control-sm" placeholder="Nhập Student ID..." style="width: 180px;" value="@(Model.StudentId > 0 ? Model.StudentId.ToString() : "")" />
+            <input type="number" name="studentId" class="form-control form-control-sm" placeholder="Nhập Student ID..." style="width: 180px;" value="@(Model?.StudentId > 0 ? Model.StudentId.ToString() : "")" />
             <button type="submit" class="btn btn-outline-primary btn-sm rounded-3">
                 <i class="fa-solid fa-magnifying-glass me-1"></i> Tra cứu
             </button>
@@ -110,11 +115,37 @@
 
     <!-- Transcript Table -->
     <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-white py-3">
-            <h6 class="fw-bold mb-0"><i class="fa-solid fa-list-check me-2 text-primary"></i>Chi tiết Kết quả Môn học</h6>
+        <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <h6 class="fw-bold mb-0"><i class="fa-solid fa-list-check me-2 text-primary"></i>Chi tiết Kết quả Môn học</h6>
+                <span class="badge bg-light text-dark border">@pagedSubjects.TotalCount môn học</span>
+            </div>
+            <form method="get" asp-action="Transcript" class="d-flex flex-wrap gap-2 align-items-center">
+                @if (role == "Admin" && Model.StudentId > 0)
+                {
+                    <input type="hidden" name="studentId" value="@Model.StudentId" />
+                }
+                @if (!string.IsNullOrEmpty(Context.Request.Query["pageSize"]))
+                {
+                    <input type="hidden" name="pageSize" value="@Context.Request.Query["pageSize"]" />
+                }
+                <select name="semesterCode" class="form-select form-select-sm" style="width: 170px;" onchange="this.form.submit()">
+                    <option value="">-- Tất cả học kỳ --</option>
+                    @foreach (var sem in availableSemesters)
+                    {
+                        <option value="@sem" selected="@(currentSemesterCode == sem ? "selected" : null)">@sem</option>
+                    }
+                </select>
+                <div class="input-group input-group-sm" style="width: 230px;">
+                    <input type="text" name="search" class="form-control" placeholder="Mã môn, tên môn..." value="@currentSearch" />
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+            </form>
         </div>
         <div class="card-body p-0">
-            @if (Model.SubjectRecords == null || !Model.SubjectRecords.Any())
+            @if (!subjectRecords.Any())
             {
                 <div class="p-5 text-center text-muted">
                     <i class="fa-solid fa-clipboard-list fa-3x mb-3 text-secondary"></i>
@@ -137,8 +168,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @{ int idx = 1; }
-                            @foreach (var rec in Model.SubjectRecords)
+                            @{ int idx = ((Math.Max(1, pagedSubjects.PageIndex) - 1) * Math.Max(1, pagedSubjects.PageSize)) + 1; }
+                            @foreach (var rec in subjectRecords)
                             {
                                 <tr>
                                     <td>@(idx++)</td>
@@ -170,6 +201,7 @@
                 </div>
             }
         </div>
+        @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(pagedSubjects, "môn học"))
     </div>
 }
 else

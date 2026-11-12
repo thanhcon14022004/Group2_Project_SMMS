@@ -15,7 +15,9 @@ namespace project_PRN232.Frontend.Controllers
             [FromQuery] string? search,
             [FromQuery] string? status,
             [FromQuery] int? year,
-            [FromQuery] string? orderby)
+            [FromQuery] string? orderby,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
             var authCheck = CheckAuth("Admin");
             if (authCheck != null) return authCheck;
@@ -37,25 +39,34 @@ namespace project_PRN232.Frontend.Controllers
                 filters.Add($"(contains(Code, '{shortY}') or contains(Name, '{yStr}'))");
             }
 
-            var queryParams = new List<string>();
+            var odataPreviewParams = new List<string>();
             if (filters.Any())
             {
-                queryParams.Add($"$filter={string.Join(" and ", filters)}");
+                odataPreviewParams.Add($"$filter={string.Join(" and ", filters)}");
             }
             if (!string.IsNullOrWhiteSpace(orderby))
             {
-                queryParams.Add($"$orderby={orderby}");
+                odataPreviewParams.Add($"$orderby={orderby}");
             }
 
-            var semesterEndpoint = "semesters" + (queryParams.Any() ? "?" + string.Join("&", queryParams) : "");
+            var pagedQuery = new List<string>
+            {
+                $"page={page}",
+                $"pageSize={pageSize}"
+            };
+            if (!string.IsNullOrWhiteSpace(search)) pagedQuery.Add($"search={Uri.EscapeDataString(search.Trim())}");
+            if (!string.IsNullOrWhiteSpace(status)) pagedQuery.Add($"status={Uri.EscapeDataString(status.Trim())}");
+            if (year.HasValue && year.Value > 0) pagedQuery.Add($"year={year.Value}");
+            if (!string.IsNullOrWhiteSpace(orderby)) pagedQuery.Add($"orderby={Uri.EscapeDataString(orderby)}");
 
-            var semesters = await ApiClient.GetAsync<List<SemesterViewModel>>(semesterEndpoint) ?? new List<SemesterViewModel>();
+            var semesters = await ApiClient.GetAsync<PagedResult<SemesterViewModel>>($"semesters/paged?{string.Join("&", pagedQuery)}")
+                ?? new PagedResult<SemesterViewModel> { PageIndex = page, PageSize = pageSize };
 
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentStatus = status;
             ViewBag.CurrentYear = year;
             ViewBag.CurrentOrderBy = orderby;
-            ViewBag.CurrentODataQuery = queryParams.Any() ? string.Join("&", queryParams) : "";
+            ViewBag.CurrentODataQuery = odataPreviewParams.Any() ? string.Join("&", odataPreviewParams) : "";
 
             return View(semesters);
         }

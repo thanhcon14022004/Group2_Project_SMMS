@@ -31,20 +31,97 @@ namespace project_PRN232.Controllers
             var query = _db.AdministrativeClasses
                 .Include(c => c.Major)
                 .Include(c => c.Specialization)
-                .Include(c => c.Students)
                 .AsNoTracking()
                 .AsQueryable();
 
             if (majorId.HasValue) query = query.Where(c => c.MajorId == majorId.Value);
             if (cohort.HasValue) query = query.Where(c => c.Cohort == cohort.Value);
 
-            var classes = await query.ToListAsync();
+            var classes = await query.OrderBy(c => c.Code).ToListAsync();
+            var list = await MapClassesToDtosAsync(classes);
+
+            return Ok(list.AsQueryable());
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetClassesPaged(
+            [FromQuery] string? search,
+            [FromQuery] int? majorId,
+            [FromQuery] int? specializationId,
+            [FromQuery] int? currentSemester,
+            [FromQuery] int? cohort,
+            [FromQuery] string? orderby,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var (normalizedPage, normalizedSize) = PaginationHelper.Normalize(page, pageSize, defaultPageSize: 20);
+
+            var query = _db.AdministrativeClasses
+                .Include(c => c.Major)
+                .Include(c => c.Specialization)
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var q = search.Trim().ToLower();
+                query = query.Where(c => c.Code.ToLower().Contains(q) || c.Name.ToLower().Contains(q));
+            }
+            if (majorId.HasValue && majorId.Value > 0) query = query.Where(c => c.MajorId == majorId.Value);
+            if (specializationId.HasValue && specializationId.Value > 0) query = query.Where(c => c.SpecializationId == specializationId.Value);
+            if (currentSemester.HasValue && currentSemester.Value > 0) query = query.Where(c => c.CurrentSemester == currentSemester.Value);
+            if (cohort.HasValue && cohort.Value > 0) query = query.Where(c => c.Cohort == cohort.Value);
+
+            query = orderby switch
+            {
+                "Code desc" => query.OrderByDescending(c => c.Code),
+                "CurrentSemester asc" => query.OrderBy(c => c.CurrentSemester).ThenBy(c => c.Code),
+                "CurrentSemester desc" => query.OrderByDescending(c => c.CurrentSemester).ThenBy(c => c.Code),
+                _ => query.OrderBy(c => c.Code)
+            };
+
+            var totalCount = await query.CountAsync();
+            var totalPages = normalizedSize > 0 ? (int)Math.Ceiling((double)totalCount / normalizedSize) : 0;
+            if (totalPages > 0 && normalizedPage > totalPages)
+            {
+                normalizedPage = totalPages;
+            }
+
+            var pagedClasses = await query
+                .Skip((normalizedPage - 1) * normalizedSize)
+                .Take(normalizedSize)
+                .ToListAsync();
+
+            var items = await MapClassesToDtosAsync(pagedClasses);
+
+            return Ok(ApiResponse<PagedResult<AdministrativeClassDto>>.Ok(new PagedResult<AdministrativeClassDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageIndex = normalizedPage,
+                PageSize = normalizedSize
+            }));
+        }
+
+        private async Task<List<AdministrativeClassDto>> MapClassesToDtosAsync(List<AdministrativeClass> classes)
+        {
+            if (classes.Count == 0) return new List<AdministrativeClassDto>();
+
+            var classIds = classes.Select(c => c.Id).ToList();
+
+            var studentCounts = await _db.Students
+                .AsNoTracking()
+                .Where(s => s.AdministrativeClassId.HasValue && classIds.Contains(s.AdministrativeClassId.Value) && s.User != null && s.User.IsActive)
+                .GroupBy(s => s.AdministrativeClassId!.Value)
+                .Select(g => new { ClassId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ClassId, x => x.Count);
+
             var courseSections = await _db.CourseSections
                 .AsNoTracking()
                 .Select(cs => new { cs.AdministrativeClassId, cs.Code })
                 .ToListAsync();
 
-            var list = classes.Select(c => new AdministrativeClassDto
+            return classes.Select(c => new AdministrativeClassDto
             {
                 Id = c.Id,
                 Code = c.Code,
@@ -56,12 +133,10 @@ namespace project_PRN232.Controllers
                 SpecializationId = c.SpecializationId,
                 SpecializationCode = c.Specialization != null ? c.Specialization.Code : null,
                 CurrentSemester = c.CurrentSemester,
-                StudentCount = c.Students.Count(s => s.User != null && s.User.IsActive),
+                StudentCount = studentCounts.TryGetValue(c.Id, out var sc) ? sc : 0,
                 CourseSectionsCount = courseSections.Count(cs => cs.AdministrativeClassId == c.Id || cs.Code.EndsWith("_" + c.Code)),
                 IsActive = c.IsActive
             }).ToList();
-
-            return Ok(list.AsQueryable());
         }
 
         [HttpGet("{id}")]

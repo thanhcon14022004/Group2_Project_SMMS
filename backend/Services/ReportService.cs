@@ -10,6 +10,7 @@ namespace project_PRN232.Services
         Task<DashboardSummaryDto> GetDashboardSummaryAsync();
         Task<LecturerDashboardDto?> GetLecturerDashboardAsync(int userId);
         Task<List<StudentSemesterTranscriptDto>> GetStudentsGpaReportAsync(int? majorId = null, int? administrativeClassId = null);
+        Task<GpaReportPagedDto> GetStudentsGpaReportPagedAsync(int? majorId = null, int? administrativeClassId = null, string? search = null, int page = 1, int pageSize = 20);
         Task<byte[]> ExportGpaReportCsvAsync(int? majorId = null, int? administrativeClassId = null);
         Task<byte[]> ExportGpaReportWordAsync(int? majorId = null, int? administrativeClassId = null);
         Task<byte[]> ExportSectionGradesCsvAsync(int courseSectionId);
@@ -294,6 +295,34 @@ namespace project_PRN232.Services
             }
 
             return list.OrderByDescending(t => t.CumulativeGpa).ToList();
+        }
+
+        public async Task<GpaReportPagedDto> GetStudentsGpaReportPagedAsync(
+            int? majorId = null,
+            int? administrativeClassId = null,
+            string? search = null,
+            int page = 1,
+            int pageSize = 20)
+        {
+            var all = await GetStudentsGpaReportAsync(majorId, administrativeClassId);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var q = search.Trim().ToLower();
+                all = all.Where(s =>
+                    s.StudentCode.ToLower().Contains(q) ||
+                    s.FullName.ToLower().Contains(q)).ToList();
+            }
+
+            decimal avgGpa = all.Any() ? Math.Round(all.Average(m => m.CumulativeGpa), 2) : 0m;
+            int highStandingCount = all.Count(m => m.AcademicStanding == "Xuất sắc" || m.AcademicStanding == "Giỏi");
+
+            return new GpaReportPagedDto
+            {
+                PagedItems = PaginationHelper.Paginate(all, page, pageSize),
+                AverageCumulativeGpa = avgGpa,
+                HighStandingCount = highStandingCount
+            };
         }
 
         public async Task<byte[]> ExportGpaReportCsvAsync(int? majorId = null, int? administrativeClassId = null)

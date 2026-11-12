@@ -27,6 +27,25 @@ namespace project_PRN232.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetLecturers([FromQuery] string? department, [FromQuery] string? search)
         {
+            var list = await BuildLecturerDetailQuery(department, search).ToListAsync();
+            return Ok(ApiResponse<List<LecturerDetailDto>>.Ok(list));
+        }
+
+        [HttpGet("paged")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetLecturersPaged(
+            [FromQuery] string? department,
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var query = BuildLecturerDetailQuery(department, search);
+            var paged = await PaginationHelper.PaginateAsync(query, page, pageSize);
+            return Ok(ApiResponse<PagedResult<LecturerDetailDto>>.Ok(paged));
+        }
+
+        private IQueryable<LecturerDetailDto> BuildLecturerDetailQuery(string? department, string? search)
+        {
             var query = _db.Lecturers
                 .Include(l => l.User)
                 .AsNoTracking()
@@ -42,20 +61,20 @@ namespace project_PRN232.Controllers
                                          (l.User != null && l.User.FullName.ToLower().Contains(term)));
             }
 
-            var list = await query.Select(l => new LecturerDetailDto
-            {
-                Id = l.Id,
-                LecturerCode = l.LecturerCode,
-                UserId = l.UserId,
-                FullName = l.User != null ? l.User.FullName : "",
-                Email = l.User != null ? l.User.Email : "",
-                PhoneNumber = l.User != null ? l.User.PhoneNumber : "",
-                Department = l.Department,
-                AcademicTitle = l.AcademicTitle,
-                IsActive = l.User != null && l.User.IsActive
-            }).ToListAsync();
-
-            return Ok(ApiResponse<List<LecturerDetailDto>>.Ok(list));
+            return query
+                .OrderBy(l => l.LecturerCode)
+                .Select(l => new LecturerDetailDto
+                {
+                    Id = l.Id,
+                    LecturerCode = l.LecturerCode,
+                    UserId = l.UserId,
+                    FullName = l.User != null ? l.User.FullName : "",
+                    Email = l.User != null ? l.User.Email : "",
+                    PhoneNumber = l.User != null ? l.User.PhoneNumber : "",
+                    Department = l.Department,
+                    AcademicTitle = l.AcademicTitle,
+                    IsActive = l.User != null && l.User.IsActive
+                });
         }
 
         [HttpGet("{id}")]

@@ -1,4 +1,4 @@
-@model List<project_PRN232.Frontend.Models.TranscriptViewModel>
+@model project_PRN232.Frontend.Models.GpaReportPagedViewModel
 @inject IHttpContextAccessor HttpContextAccessor
 @{
     var userRole = (string?)ViewBag.UserRole ?? HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "Admin";
@@ -11,7 +11,7 @@
     // Dành cho Giảng viên
     var sections = (List<project_PRN232.Frontend.Models.CourseSectionViewModel>)ViewBag.Sections ?? new();
     int? selectedSectionId = ViewBag.SelectedSectionId as int?;
-    var gradeSheet = ViewBag.GradeSheet as project_PRN232.Frontend.Models.GradeSheetViewModel;
+    var gradeSheet = ViewBag.GradeReport as project_PRN232.Frontend.Models.SectionGradeReportPagedViewModel;
 }
 
 @if (isLecturer)
@@ -90,22 +90,23 @@
     }
     else
     {
-        var studentRows = gradeSheet.StudentRows ?? new();
-        int totalStudents = studentRows.Count;
-        int gradedStudents = studentRows.Count(r => r.FinalScore.HasValue);
-        int passedStudents = studentRows.Count(r => r.IsPassed);
-        int failedStudents = gradedStudents - passedStudents;
-        double passRate = gradedStudents > 0 ? Math.Round((double)passedStudents * 100.0 / gradedStudents, 1) : 0;
-        double failRate = gradedStudents > 0 ? Math.Round((double)failedStudents * 100.0 / gradedStudents, 1) : 0;
-        decimal avgFinal = gradedStudents > 0 ? Math.Round(studentRows.Where(r => r.FinalScore.HasValue).Average(r => r.FinalScore!.Value), 2) : 0m;
-        decimal maxScore = gradedStudents > 0 ? studentRows.Where(r => r.FinalScore.HasValue).Max(r => r.FinalScore!.Value) : 0m;
-        decimal minScore = gradedStudents > 0 ? studentRows.Where(r => r.FinalScore.HasValue).Min(r => r.FinalScore!.Value) : 0m;
+        var pagedRows = gradeSheet.PagedStudentRows ?? new project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.StudentGradeRowViewModel>();
+        var studentRows = pagedRows.Items ?? new();
+        int totalStudents = gradeSheet.TotalStudents;
+        int gradedStudents = gradeSheet.GradedStudents;
+        int passedStudents = gradeSheet.PassedStudents;
+        int failedStudents = gradeSheet.FailedStudents;
+        double passRate = gradeSheet.PassRate;
+        double failRate = gradeSheet.FailRate;
+        decimal avgFinal = gradeSheet.AverageScore;
+        decimal maxScore = gradeSheet.MaxScore;
+        decimal minScore = gradeSheet.MinScore;
 
-        int countXuatSac = studentRows.Count(r => r.FinalScore >= 9.0m);
-        int countGioi = studentRows.Count(r => r.FinalScore >= 8.0m && r.FinalScore < 9.0m);
-        int countKha = studentRows.Count(r => r.FinalScore >= 6.5m && r.FinalScore < 8.0m);
-        int countTrungBinh = studentRows.Count(r => r.FinalScore >= 5.0m && r.FinalScore < 6.5m);
-        int countTruot = studentRows.Count(r => r.FinalScore.HasValue && r.FinalScore < 5.0m);
+        int countXuatSac = gradeSheet.CountXuatSac;
+        int countGioi = gradeSheet.CountGioi;
+        int countKha = gradeSheet.CountKha;
+        int countTrungBinh = gradeSheet.CountTrungBinh;
+        int countTruot = gradeSheet.CountTruot;
 
         <!-- Thống kê tổng quan dạng Cards -->
         <div class="row g-3 mb-4">
@@ -266,7 +267,7 @@
                             }
                             else
                             {
-                                int idx = 1;
+                                int idx = ((Math.Max(1, pagedRows.PageIndex) - 1) * Math.Max(1, pagedRows.PageSize)) + 1;
                                 foreach (var row in studentRows)
                                 {
                                     <tr>
@@ -305,6 +306,7 @@
                     </table>
                 </div>
             </div>
+            @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(pagedRows, "sinh viên"))
         </div>
     }
 }
@@ -328,11 +330,18 @@ else
         </div>
     </div>
 
+    var pagedItems = Model?.PagedItems ?? new project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.TranscriptViewModel>();
+    var gpaRows = pagedItems.Items ?? new();
+
     <!-- Filters -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-body py-3">
             <form method="get" asp-action="Index" class="row g-3 align-items-end">
-                <div class="col-md-5">
+                @if (!string.IsNullOrEmpty(Context.Request.Query["pageSize"]))
+                {
+                    <input type="hidden" name="pageSize" value="@Context.Request.Query["pageSize"]" />
+                }
+                <div class="col-md-3">
                     <label class="form-label fw-semibold">Lọc theo Ngành đào tạo</label>
                     <select name="majorId" class="form-select">
                         <option value="">-- Tất cả ngành học --</option>
@@ -344,7 +353,7 @@ else
                         }
                     </select>
                 </div>
-                <div class="col-md-5">
+                <div class="col-md-3">
                     <label class="form-label fw-semibold">Lọc theo Lớp hành chính</label>
                     <select name="classId" class="form-select">
                         <option value="">-- Tất cả các lớp --</option>
@@ -355,6 +364,10 @@ else
                             </option>
                         }
                     </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Tìm kiếm sinh viên</label>
+                    <input type="text" name="search" class="form-control" placeholder="MSSV hoặc họ tên..." value="@ViewBag.CurrentSearch" />
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-primary w-100 rounded-3">
@@ -370,14 +383,14 @@ else
         <div class="col-md-4">
             <div class="card border-0 shadow-sm rounded-3 p-3">
                 <small class="text-muted fw-semibold">Tổng số Sinh viên trong danh sách</small>
-                <h3 class="fw-bold text-primary mt-1 mb-0">@(Model?.Count ?? 0)</h3>
+                <h3 class="fw-bold text-primary mt-1 mb-0">@pagedItems.TotalCount</h3>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card border-0 shadow-sm rounded-3 p-3">
                 <small class="text-muted fw-semibold">Điểm GPA Trung bình</small>
                 <h3 class="fw-bold text-success mt-1 mb-0">
-                    @(Model != null && Model.Any() ? Model.Average(m => m.CumulativeGpa).ToString("0.00") : "0.00")
+                    @((Model?.AverageCumulativeGpa ?? 0m).ToString("0.00"))
                 </h3>
             </div>
         </div>
@@ -385,7 +398,7 @@ else
             <div class="card border-0 shadow-sm rounded-3 p-3">
                 <small class="text-muted fw-semibold">Sinh viên Xuất sắc & Giỏi</small>
                 <h3 class="fw-bold text-info mt-1 mb-0">
-                    @(Model?.Count(m => m.AcademicStanding == "Xuất sắc" || m.AcademicStanding == "Giỏi") ?? 0)
+                    @(Model?.HighStandingCount ?? 0)
                 </h3>
             </div>
         </div>
@@ -393,8 +406,9 @@ else
 
     <!-- Report Table -->
     <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-white py-3">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h6 class="fw-bold mb-0"><i class="fa-solid fa-graduation-cap me-2 text-primary"></i>Danh sách Chi tiết Điểm & Xếp loại</h6>
+            <span class="badge bg-light text-dark border">@pagedItems.TotalCount sinh viên</span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -414,7 +428,7 @@ else
                         </tr>
                     </thead>
                     <tbody>
-                        @if (Model == null || !Model.Any())
+                        @if (!gpaRows.Any())
                         {
                             <tr>
                                 <td colspan="10" class="text-center py-4 text-muted">Không tìm thấy sinh viên nào theo tiêu chí đã chọn.</td>
@@ -422,8 +436,8 @@ else
                         }
                         else
                         {
-                            int idx = 1;
-                            foreach (var s in Model)
+                            int idx = ((Math.Max(1, pagedItems.PageIndex) - 1) * Math.Max(1, pagedItems.PageSize)) + 1;
+                            foreach (var s in gpaRows)
                             {
                                 <tr>
                                     <td class="text-muted">@(idx++)</td>
@@ -468,5 +482,6 @@ else
                 </table>
             </div>
         </div>
+        @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(pagedItems, "sinh viên"))
     </div>
 }

@@ -36,6 +36,19 @@ namespace project_PRN232.Controllers
             return Ok(list);
         }
 
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetConfigsPaged(
+            [FromQuery] int? majorId,
+            [FromQuery] int? semesterNumber,
+            [FromQuery] string? version,
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var paged = await _curriculumService.GetConfigsPagedAsync(majorId, semesterNumber, version, search, page, pageSize);
+            return Ok(ApiResponse<PagedResult<CurriculumConfigDto>>.Ok(paged));
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetConfigById(int id)
         {

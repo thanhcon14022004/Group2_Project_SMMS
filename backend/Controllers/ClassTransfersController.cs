@@ -65,6 +65,25 @@ namespace project_PRN232.Controllers
             return Ok(list);
         }
 
+        [HttpGet("requests/paged")]
+        [Authorize(Roles = "Admin,Student")]
+        public async Task<IActionResult> GetRequestsPaged(
+            [FromQuery] int? semesterId,
+            [FromQuery] string? status,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            int? studentUserId = null;
+            if (User.IsInRole("Student"))
+            {
+                var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(idStr, out var uid)) studentUserId = uid;
+            }
+
+            var paged = await _transferService.GetTransferRequestsPagedAsync(semesterId, status, studentUserId, page, pageSize);
+            return Ok(ApiResponse<PagedResult<ClassTransferRequestDto>>.Ok(paged));
+        }
+
         [HttpPost("process")]
         [HttpPost("{id}/process")]
         [HttpPost("requests/{id}/process")]

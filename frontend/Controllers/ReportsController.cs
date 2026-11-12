@@ -11,13 +11,17 @@ namespace project_PRN232.Frontend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int? sectionId, int? majorId, int? classId)
+        public async Task<IActionResult> Index(int? sectionId, int? majorId, int? classId, string? search, int page = 1, int pageSize = 20)
         {
             var authCheck = CheckAuth("Lecturer");
             if (authCheck != null) return authCheck;
 
+            if (page < 1) page = 1;
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
             var role = CurrentUser?.Role ?? "Admin";
             ViewBag.UserRole = role;
+            ViewBag.CurrentSearch = search ?? "";
 
             if (role == "Lecturer")
             {
@@ -32,27 +36,29 @@ namespace project_PRN232.Frontend.Controllers
 
                 ViewBag.SelectedSectionId = sectionId;
 
-                GradeSheetViewModel? gradeSheet = null;
+                SectionGradeReportPagedViewModel? gradeReport = null;
                 if (sectionId.HasValue && sectionId.Value > 0)
                 {
-                    gradeSheet = await ApiClient.GetAsync<GradeSheetViewModel>($"grades/section/{sectionId.Value}");
+                    gradeReport = await ApiClient.GetAsync<SectionGradeReportPagedViewModel>($"grades/section/{sectionId.Value}/paged?page={page}&pageSize={pageSize}");
                 }
 
-                ViewBag.GradeSheet = gradeSheet;
-                return View(new List<TranscriptViewModel>());
+                ViewBag.GradeReport = gradeReport;
+                return View(new GpaReportPagedViewModel());
             }
 
             // Quản trị viên (Admin): Báo cáo kết quả học tập & GPA toàn trường
-            string endpoint = "reports/gpa";
-            if (majorId.HasValue || classId.HasValue)
+            var q = new List<string>
             {
-                var q = new List<string>();
-                if (majorId.HasValue) q.Add($"majorId={majorId}");
-                if (classId.HasValue) q.Add($"administrativeClassId={classId}");
-                endpoint += "?" + string.Join("&", q);
-            }
+                $"page={page}",
+                $"pageSize={pageSize}"
+            };
+            if (majorId.HasValue) q.Add($"majorId={majorId.Value}");
+            if (classId.HasValue) q.Add($"administrativeClassId={classId.Value}");
+            if (!string.IsNullOrWhiteSpace(search)) q.Add($"search={Uri.EscapeDataString(search.Trim())}");
 
-            var gpaTask = ApiClient.GetAsync<List<TranscriptViewModel>>(endpoint);
+            string endpoint = "reports/gpa/paged?" + string.Join("&", q);
+
+            var gpaTask = ApiClient.GetAsync<GpaReportPagedViewModel>(endpoint);
             var majorsTask = ApiClient.GetAsync<List<MajorViewModel>>("majors");
             var classesTask = ApiClient.GetAsync<List<ClassViewModel>>("classes");
 
@@ -60,9 +66,9 @@ namespace project_PRN232.Frontend.Controllers
 
             ViewBag.Majors = (await majorsTask) ?? new List<MajorViewModel>();
             ViewBag.Classes = (await classesTask) ?? new List<ClassViewModel>();
-            var gpaList = (await gpaTask) ?? new List<TranscriptViewModel>();
+            var gpaReport = (await gpaTask) ?? new GpaReportPagedViewModel();
 
-            return View(gpaList);
+            return View(gpaReport);
         }
 
         [HttpGet]

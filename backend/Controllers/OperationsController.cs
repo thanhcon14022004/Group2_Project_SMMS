@@ -23,6 +23,17 @@ namespace project_PRN232.Controllers
             var logs = await _auditLogService.GetLogsAsync(limit, action);
             return Ok(logs);
         }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetLogsPaged(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? action = null,
+            [FromQuery] string? search = null)
+        {
+            var paged = await _auditLogService.GetLogsPagedAsync(page, pageSize, action, search);
+            return Ok(ApiResponse<PagedResult<Models.Entities.AuditLog>>.Ok(paged));
+        }
     }
 
     [ApiController]

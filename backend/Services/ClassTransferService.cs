@@ -11,6 +11,7 @@ namespace project_PRN232.Services
         Task<ClassTransferRequest> RequestTransferAsync(int studentId, RequestClassTransferDto request);
         Task<bool> ProcessTransferRequestAsync(ProcessClassTransferRequestDto request, string performedBy);
         Task<List<ClassTransferRequest>> GetTransferRequestsAsync(int? semesterId = null, string? status = null);
+        Task<PagedResult<ClassTransferRequestDto>> GetTransferRequestsPagedAsync(int? semesterId = null, string? status = null, int? studentUserId = null, int page = 1, int pageSize = 20);
     }
 
     public class ClassTransferService : IClassTransferService
@@ -275,6 +276,44 @@ namespace project_PRN232.Services
             if (!string.IsNullOrWhiteSpace(status)) query = query.Where(r => r.Status == status);
 
             return await query.OrderByDescending(r => r.RequestedAt).ToListAsync();
+        }
+
+        public async Task<PagedResult<ClassTransferRequestDto>> GetTransferRequestsPagedAsync(
+            int? semesterId = null,
+            string? status = null,
+            int? studentUserId = null,
+            int page = 1,
+            int pageSize = 20)
+        {
+            var query = _db.ClassTransferRequests
+                .Include(r => r.Student)
+                    .ThenInclude(s => s!.User)
+                .Include(r => r.CurrentClass)
+                .Include(r => r.TargetClass)
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (semesterId.HasValue && semesterId.Value > 0) query = query.Where(r => r.SemesterId == semesterId.Value);
+            if (!string.IsNullOrWhiteSpace(status)) query = query.Where(r => r.Status == status.Trim());
+            if (studentUserId.HasValue) query = query.Where(r => r.Student != null && r.Student.UserId == studentUserId.Value);
+
+            var projected = query
+                .OrderByDescending(r => r.RequestedAt)
+                .Select(r => new ClassTransferRequestDto
+                {
+                    Id = r.Id,
+                    StudentId = r.StudentId,
+                    StudentCode = r.Student != null ? r.Student.StudentCode : "",
+                    StudentName = r.Student != null && r.Student.User != null ? r.Student.User.FullName : "",
+                    CurrentClassName = r.CurrentClass != null ? (r.CurrentClass.Code + " - " + r.CurrentClass.Name) : "",
+                    TargetClassName = r.TargetClass != null ? (r.TargetClass.Code + " - " + r.TargetClass.Name) : "",
+                    Reason = r.Reason,
+                    Status = r.Status,
+                    RequestedAt = r.RequestedAt,
+                    Note = r.Note
+                });
+
+            return await PaginationHelper.PaginateAsync(projected, page, pageSize);
         }
     }
 }

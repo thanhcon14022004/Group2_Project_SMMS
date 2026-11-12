@@ -635,6 +635,99 @@ namespace project_PRN232.Frontend.Models
         public bool HasNextPage => PageIndex < TotalPages;
     }
 
+    public class PaginationViewModel
+    {
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 20;
+        public int TotalCount { get; set; }
+        public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 0;
+        public bool HasPreviousPage => PageIndex > 1;
+        public bool HasNextPage => PageIndex < TotalPages;
+        public string ItemLabel { get; set; } = "bản ghi";
+        public string PageParamName { get; set; } = "page";
+        public string PageSizeParamName { get; set; } = "pageSize";
+        public int[] PageSizeOptions { get; set; } = new[] { 10, 20, 50, 100 };
+
+        public static PaginationViewModel From<T>(PagedResult<T> paged, string itemLabel = "bản ghi", string pageParamName = "page", string pageSizeParamName = "pageSize")
+        {
+            return new PaginationViewModel
+            {
+                PageIndex = paged.PageIndex,
+                PageSize = paged.PageSize,
+                TotalCount = paged.TotalCount,
+                ItemLabel = itemLabel,
+                PageParamName = pageParamName,
+                PageSizeParamName = pageSizeParamName
+            };
+        }
+    }
+
+    public class GpaReportPagedViewModel
+    {
+        public PagedResult<TranscriptViewModel> PagedItems { get; set; } = new();
+        public decimal AverageCumulativeGpa { get; set; }
+        public int HighStandingCount { get; set; }
+    }
+
+    public class StudentTranscriptPagedViewModel
+    {
+        public int StudentId { get; set; }
+        public string StudentCode { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string MajorName { get; set; } = string.Empty;
+        public string? SpecializationName { get; set; }
+        public int CurrentSemester { get; set; }
+        public decimal CumulativeGpa { get; set; }
+        public int TotalPassedCredits { get; set; }
+        public int TotalEnrolledCredits { get; set; }
+        public string AcademicStanding { get; set; } = string.Empty;
+        public List<string> AvailableSemesters { get; set; } = new();
+        public PagedResult<TranscriptSubjectRecordViewModel> PagedSubjects { get; set; } = new();
+    }
+
+    public class SectionGradeReportPagedViewModel
+    {
+        public int CourseSectionId { get; set; }
+        public string CourseSectionCode { get; set; } = string.Empty;
+        public string SubjectCode { get; set; } = string.Empty;
+        public string SubjectName { get; set; } = string.Empty;
+        public int Credits { get; set; }
+        public string? LecturerName { get; set; }
+        public string? SemesterCode { get; set; }
+        public bool IsGradeLocked { get; set; }
+        public bool CanEdit { get; set; }
+        public int TotalStudents { get; set; }
+        public int GradedStudents { get; set; }
+        public int PassedStudents { get; set; }
+        public int FailedStudents { get; set; }
+        public double PassRate { get; set; }
+        public double FailRate { get; set; }
+        public decimal AverageScore { get; set; }
+        public decimal MaxScore { get; set; }
+        public decimal MinScore { get; set; }
+        public int CountXuatSac { get; set; }
+        public int CountGioi { get; set; }
+        public int CountKha { get; set; }
+        public int CountTrungBinh { get; set; }
+        public int CountTruot { get; set; }
+        public List<SubjectGradeComponentViewModel> Components { get; set; } = new();
+        public PagedResult<StudentGradeRowViewModel> PagedStudentRows { get; set; } = new();
+    }
+
+    public class AllocationStatusPagedViewModel
+    {
+        public int SemesterId { get; set; }
+        public string SemesterCode { get; set; } = string.Empty;
+        public int TotalStudentsProcessed { get; set; }
+        public int TotalEligibleStudents { get; set; }
+        public int TotalEnrolledSections { get; set; }
+        public int AutoCreatedStudentsCount { get; set; }
+        public int BlockedPrerequisiteCount { get; set; }
+        public int CapacityOverflowCount { get; set; }
+        public int UnallocatedCount { get; set; }
+        public PagedResult<ClassAllocationSummaryViewModel> PagedClassSummaries { get; set; } = new();
+    }
+
     public class UserItemViewModel
     {
         public int Id { get; set; }

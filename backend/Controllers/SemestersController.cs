@@ -24,23 +24,65 @@ namespace project_PRN232.Controllers
         [EnableQuery(PageSize = 100)]
         public IQueryable<SemesterDto> GetSemesters()
         {
-            return _db.Semesters
-                .AsNoTracking()
-                .OrderByDescending(s => s.StartDate)
-                .Select(s => new SemesterDto
-                {
-                    Id = s.Id,
-                    Code = s.Code,
-                    Name = s.Name,
-                    StartDate = s.StartDate,
-                    EndDate = s.EndDate,
-                    TransferClassDeadline = s.TransferClassDeadline,
-                    GradeEntryDeadline = s.GradeEntryDeadline,
-                    Status = s.Status,
-                    IsClosedWithExceptions = s.IsClosedWithExceptions,
-                    AdministrativeClassesCount = _db.AdministrativeClasses.Count(c => c.IsActive),
-                    CourseSectionsCount = _db.CourseSections.Count(cs => cs.SemesterId == s.Id)
-                });
+            return ProjectToSemesterDto(_db.Semesters.AsNoTracking().OrderByDescending(s => s.StartDate));
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetSemestersPaged(
+            [FromQuery] string? search,
+            [FromQuery] string? status,
+            [FromQuery] int? year,
+            [FromQuery] string? orderby,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var query = _db.Semesters.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var q = search.Trim().ToLower();
+                query = query.Where(s => s.Code.ToLower().Contains(q) || s.Name.ToLower().Contains(q));
+            }
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(s => s.Status == status.Trim());
+            }
+            if (year.HasValue && year.Value > 0)
+            {
+                var yStr = year.Value.ToString();
+                var shortY = yStr.Length >= 2 ? yStr.Substring(yStr.Length - 2) : yStr;
+                query = query.Where(s => s.StartDate.Year == year.Value || s.EndDate.Year == year.Value || s.Code.Contains(shortY) || s.Name.Contains(yStr));
+            }
+
+            query = orderby switch
+            {
+                "Code asc" => query.OrderBy(s => s.Code),
+                "Code desc" => query.OrderByDescending(s => s.Code),
+                "StartDate asc" => query.OrderBy(s => s.StartDate),
+                _ => query.OrderByDescending(s => s.StartDate)
+            };
+
+            var paged = await PaginationHelper.PaginateAsync(ProjectToSemesterDto(query), page, pageSize);
+            return Ok(ApiResponse<PagedResult<SemesterDto>>.Ok(paged));
+        }
+
+        private IQueryable<SemesterDto> ProjectToSemesterDto(IQueryable<Semester> query)
+        {
+            var activeClassesCount = _db.AdministrativeClasses.Count(c => c.IsActive);
+            return query.Select(s => new SemesterDto
+            {
+                Id = s.Id,
+                Code = s.Code,
+                Name = s.Name,
+                StartDate = s.StartDate,
+                EndDate = s.EndDate,
+                TransferClassDeadline = s.TransferClassDeadline,
+                GradeEntryDeadline = s.GradeEntryDeadline,
+                Status = s.Status,
+                IsClosedWithExceptions = s.IsClosedWithExceptions,
+                AdministrativeClassesCount = activeClassesCount,
+                CourseSectionsCount = _db.CourseSections.Count(cs => cs.SemesterId == s.Id)
+            });
         }
 
         [HttpGet("active")]
