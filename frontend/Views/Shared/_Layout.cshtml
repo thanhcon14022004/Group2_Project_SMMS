@@ -102,19 +102,10 @@ else
                     <a asp-controller="Grades" asp-action="Index" class="nav-item-btn @(currentCtrl == "Grades" && currentAct == "Index" ? "active" : "")">
                         <i class="fa-solid fa-pen-to-square"></i> <span>Nhập & Khóa điểm</span>
                     </a>
-                    <a asp-controller="Reports" asp-action="Index" class="nav-item-btn @(currentCtrl == "Reports" ? "active" : "")">
-                        <i class="fa-solid fa-chart-column"></i> <span>Báo cáo & Thống kê</span>
-                    </a>
 
                     <div class="nav-section-title">HỆ THỐNG</div>
                     <a asp-controller="Operations" asp-action="Users" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "Users" ? "active" : "")">
                         <i class="fa-solid fa-users"></i> <span>Tài khoản người dùng</span>
-                    </a>
-                    <a asp-controller="Operations" asp-action="AuditLogs" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "AuditLogs" ? "active" : "")">
-                        <i class="fa-solid fa-clipboard-list"></i> <span>Nhật ký hệ thống (Audit)</span>
-                    </a>
-                    <a asp-controller="Operations" asp-action="Backups" class="nav-item-btn @(currentCtrl == "Operations" && currentAct == "Backups" ? "active" : "")">
-                        <i class="fa-solid fa-database"></i> <span>Sao lưu & Phục hồi CSDL</span>
                     </a>
                 }
                 else if (role == "Lecturer")
@@ -125,9 +116,6 @@ else
                     </a>
                     <a asp-controller="Grades" asp-action="Index" class="nav-item-btn @(currentCtrl == "Grades" ? "active" : "")">
                         <i class="fa-solid fa-pen-to-square"></i> <span>Nhập điểm lớp học</span>
-                    </a>
-                    <a asp-controller="Reports" asp-action="Index" class="nav-item-btn @(currentCtrl == "Reports" ? "active" : "")">
-                        <i class="fa-solid fa-chart-column"></i> <span>Báo cáo điểm lớp</span>
                     </a>
                 }
                 else if (role == "Student")

@@ -1,4 +1,4 @@
-﻿@model project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.CourseSectionViewModel>
+@model project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.CourseSectionViewModel>
 @inject IHttpContextAccessor HttpContextAccessor
 @{
     var role = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "";
@@ -98,6 +98,10 @@
     foreach (var s in studentSections)
     {
         var rec = transcript.SubjectRecords.FirstOrDefault(r => r.CourseSectionId == s.Id || r.SubjectCode == s.SubjectCode);
+        var isLockedSec = (rec?.IsLocked ?? false) || s.IsGradeLocked || s.Status == "Closed" || s.Status == "Completed";
+        var finalScoreSec = rec?.FinalScore ?? (isLockedSec ? 0.0m : (decimal?)null);
+        var isPassedSec = rec?.IsPassed ?? false;
+
         if (!enrichedSubjectsDict.ContainsKey(s.SubjectCode))
         {
             enrichedSubjectsDict[s.SubjectCode] = new {
@@ -107,18 +111,18 @@
                 lecturerName = string.IsNullOrWhiteSpace(s.LecturerName) ? "Bộ môn đào tạo" : s.LecturerName,
                 semesterCode = s.SemesterCode,
                 credits = s.Credits > 0 ? s.Credits : (rec != null ? rec.Credits : 3),
-                finalScore = rec?.FinalScore,
-                isPassed = rec?.IsPassed ?? false,
-                isLocked = rec?.IsLocked ?? false,
+                finalScore = finalScoreSec,
+                isPassed = isPassedSec,
+                isLocked = isLockedSec,
                 components = (rec?.Components ?? new List<project_PRN232.Frontend.Models.TranscriptComponentScoreViewModel>()).Select(c => new {
                     componentId = c.ComponentId,
                     componentName = c.ComponentName,
                     weight = c.Weight,
-                    score = c.Score,
+                    score = isLockedSec && !c.Score.HasValue ? 0.0m : c.Score,
                     isAdminOnly = c.IsAdminOnly,
                     updatedBy = c.UpdatedBy,
                     gradedByRole = c.GradedByRole,
-                    notes = c.Notes
+                    notes = c.Notes ?? (isLockedSec && !c.Score.HasValue ? "Chốt 0 điểm khi khóa kỳ" : null)
                 }).ToList()
             };
         }
@@ -576,7 +580,10 @@
                             @foreach (var s in studentSections)
                             {
                                 var rec = transcript.SubjectRecords.FirstOrDefault(r => r.CourseSectionId == s.Id || r.SubjectCode == s.SubjectCode);
+                                var isLocked = (rec != null && rec.IsLocked) || s.IsGradeLocked || s.Status == "Closed" || s.Status == "Completed";
                                 var hasFinal = rec?.FinalScore.HasValue == true;
+                                var finalScoreVal = rec?.FinalScore ?? (isLocked ? 0.0m : (decimal?)null);
+                                var isPassedVal = rec?.IsPassed ?? false;
                                 <tr style="cursor: pointer;" onclick="openSubjectGradeModal('@s.SubjectCode')">
                                     <td class="ps-3">
                                         <div class="d-flex align-items-center gap-2 mb-1">
@@ -597,10 +604,16 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        @if (hasFinal)
+                                        @if (isLocked)
                                         {
-                                            <span class="badge @(rec!.IsPassed ? "bg-success" : "bg-danger") fs-6 px-3 py-1 shadow-sm font-monospace">
-                                                @rec.FinalScore!.Value.ToString("0.0")
+                                            <span class="badge @(isPassedVal ? "bg-success" : "bg-danger") fs-6 px-3 py-1 shadow-sm font-monospace">
+                                                @((finalScoreVal ?? 0.0m).ToString("0.0"))
+                                            </span>
+                                        }
+                                        else if (hasFinal)
+                                        {
+                                            <span class="badge @(isPassedVal ? "bg-success" : "bg-danger") fs-6 px-3 py-1 shadow-sm font-monospace">
+                                                @rec!.FinalScore!.Value.ToString("0.0")
                                             </span>
                                         }
                                         else
@@ -611,13 +624,28 @@
                                         }
                                     </td>
                                     <td class="text-center">
-                                        @if (!hasFinal)
+                                        @if (isLocked)
+                                        {
+                                            if (isPassedVal)
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success px-3 py-1 fw-bold">
+                                                    <i class="fa-solid fa-circle-check me-1"></i>ĐẠT
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger px-3 py-1 fw-bold">
+                                                    <i class="fa-solid fa-circle-xmark me-1"></i>HỎNG
+                                                </span>
+                                            }
+                                        }
+                                        else if (!hasFinal)
                                         {
                                             <span class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1">
                                                 <i class="fa-solid fa-spinner fa-spin me-1"></i>ĐANG HỌC
                                             </span>
                                         }
-                                        else if (rec!.IsPassed)
+                                        else if (isPassedVal)
                                         {
                                             <span class="badge bg-success-subtle text-success border border-success px-3 py-1 fw-bold">
                                                 <i class="fa-solid fa-circle-check me-1"></i>ĐẠT
@@ -1199,10 +1227,15 @@ else
                     totalCalculated += contrib;
                     scoreText = `<span class="fw-bold font-monospace text-primary fs-6">${score.toFixed(1)}</span> <span class="text-muted small">/ 10</span>`;
                     contribText = `<span class="font-monospace text-success fw-semibold">+${contrib.toFixed(2)}</span>`;
-                    statusBadge = `<span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-check me-1"></i>Đã nhập</span>`;
+                    statusBadge = score === 0 ? `<span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Điểm 0</span>` : `<span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-check me-1"></i>Đã nhập</span>`;
 
                     const updater = c.updatedBy || (isAdminOnly ? 'admin' : (data.lecturerName || 'Giáo viên'));
                     updaterBadge = `<span class="badge bg-light text-dark border font-monospace"><i class="fa-solid fa-user-pen text-primary me-1"></i>${updater}</span>`;
+                } else if (data.isLocked) {
+                    scoreText = `<span class="badge bg-danger-subtle text-danger border border-danger font-monospace px-2 py-1">0.0</span>`;
+                    contribText = `<span class="text-muted font-monospace">+0.00</span>`;
+                    statusBadge = `<span class="badge bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-circle-xmark me-1"></i>Chốt thiếu (0.0)</span>`;
+                    updaterBadge = `<span class="badge bg-light text-secondary border font-monospace"><i class="fa-solid fa-lock me-1"></i>Hệ thống</span>`;
                 } else {
                     scoreText = `<span class="text-muted fst-italic">--</span>`;
                     contribText = `<span class="text-muted">--</span>`;
@@ -1236,6 +1269,10 @@ else
         const finalScoreElem = document.getElementById('modalFinalScoreDisplay');
         const contribElem = document.getElementById('modalFinalScoreContribution');
         const statusElem = document.getElementById('modalStatusBadge');
+
+        if (data.isLocked && (data.finalScore === null || data.finalScore === undefined)) {
+            data.finalScore = 0.0;
+        }
 
         if (data.finalScore !== null && data.finalScore !== undefined) {
             const finalVal = Number(data.finalScore);

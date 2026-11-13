@@ -153,12 +153,62 @@ namespace project_PRN232.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> LockSemester(int id)
         {
-            var sem = await _db.Semesters.FindAsync(id);
+            var sem = await _db.Semesters
+                .Include(s => s.CourseSections)
+                    .ThenInclude(cs => cs.Subject)
+                        .ThenInclude(sub => sub!.GradeComponents)
+                .Include(s => s.CourseSections)
+                    .ThenInclude(cs => cs.Enrollments)
+                .Include(s => s.CourseSections)
+                    .ThenInclude(cs => cs.StudentGrades)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
             if (sem == null) return NotFound(new { message = "Không tìm thấy học kỳ." });
 
+            var username = User.Identity?.Name ?? "Admin";
             sem.Status = "Closed";
+
+            foreach (var cs in sem.CourseSections)
+            {
+                cs.IsGradeLocked = true;
+                cs.GradeLockedAt = DateTime.UtcNow;
+                cs.GradeLockedBy = username;
+                cs.Status = "Completed";
+
+                var components = cs.Subject?.GradeComponents.ToList() ?? new List<SubjectGradeComponent>();
+                foreach (var en in cs.Enrollments)
+                {
+                    en.Status = "Completed";
+
+                    foreach (var c in components)
+                    {
+                        var grade = cs.StudentGrades.FirstOrDefault(g => g.StudentId == en.StudentId && g.SubjectGradeComponentId == c.Id);
+                        if (grade == null)
+                        {
+                            cs.StudentGrades.Add(new StudentGrade
+                            {
+                                CourseSectionId = cs.Id,
+                                StudentId = en.StudentId,
+                                SubjectGradeComponentId = c.Id,
+                                Score = 0.0m,
+                                Notes = "Chốt 0 điểm khi khóa học kỳ",
+                                UpdatedAt = DateTime.UtcNow,
+                                UpdatedBy = username
+                            });
+                        }
+                        else if (!grade.Score.HasValue)
+                        {
+                            grade.Score = 0.0m;
+                            grade.Notes = string.IsNullOrWhiteSpace(grade.Notes) ? "Chốt 0 điểm khi khóa học kỳ" : grade.Notes;
+                            grade.UpdatedAt = DateTime.UtcNow;
+                            grade.UpdatedBy = username;
+                        }
+                    }
+                }
+            }
+
             await _db.SaveChangesAsync();
-            return Ok(new { message = $"Đã khóa học kỳ '{sem.Code}' thành công.", status = sem.Status });
+            return Ok(new { message = $"Đã khóa học kỳ '{sem.Code}' và chốt toàn bộ điểm thành công.", status = sem.Status });
         }
 
         [HttpPost("{id}/unlock")]

@@ -112,6 +112,12 @@ namespace project_PRN232.Services
         {
             var semester = await _db.Semesters
                 .Include(s => s.CourseSections)
+                    .ThenInclude(cs => cs.Subject)
+                        .ThenInclude(sub => sub!.GradeComponents)
+                .Include(s => s.CourseSections)
+                    .ThenInclude(cs => cs.Enrollments)
+                .Include(s => s.CourseSections)
+                    .ThenInclude(cs => cs.StudentGrades)
                 .FirstOrDefaultAsync(s => s.Id == request.SemesterId);
 
             if (semester == null) throw new InvalidOperationException("Học kỳ không tồn tại.");
@@ -133,13 +139,44 @@ namespace project_PRN232.Services
                 throw new InvalidOperationException("Kết thúc học kỳ theo trường hợp ngoại lệ bắt buộc phải có lý do cụ thể.");
             }
 
-            // Tự động khóa toàn bộ các lớp học phần trong kỳ
+            // Tự động khóa toàn bộ các lớp học phần trong kỳ và chốt các đầu điểm chưa nhập
             foreach (var sec in semester.CourseSections)
             {
                 sec.IsGradeLocked = true;
                 sec.GradeLockedAt ??= DateTime.UtcNow;
                 sec.GradeLockedBy ??= performedBy;
                 sec.Status = "Completed";
+
+                var components = sec.Subject?.GradeComponents.ToList() ?? new List<SubjectGradeComponent>();
+                foreach (var en in sec.Enrollments)
+                {
+                    en.Status = "Completed";
+
+                    foreach (var c in components)
+                    {
+                        var grade = sec.StudentGrades.FirstOrDefault(g => g.StudentId == en.StudentId && g.SubjectGradeComponentId == c.Id);
+                        if (grade == null)
+                        {
+                            sec.StudentGrades.Add(new StudentGrade
+                            {
+                                CourseSectionId = sec.Id,
+                                StudentId = en.StudentId,
+                                SubjectGradeComponentId = c.Id,
+                                Score = 0.0m,
+                                Notes = "Chốt 0 điểm khi kết thúc học kỳ",
+                                UpdatedAt = DateTime.UtcNow,
+                                UpdatedBy = performedBy
+                            });
+                        }
+                        else if (!grade.Score.HasValue)
+                        {
+                            grade.Score = 0.0m;
+                            grade.Notes = string.IsNullOrWhiteSpace(grade.Notes) ? "Chốt 0 điểm khi kết thúc học kỳ" : grade.Notes;
+                            grade.UpdatedAt = DateTime.UtcNow;
+                            grade.UpdatedBy = performedBy;
+                        }
+                    }
+                }
             }
 
             semester.Status = "Ended";

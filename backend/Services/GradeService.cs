@@ -111,12 +111,29 @@ namespace project_PRN232.Services
                     }
                 }
 
+                // Kiểm tra xem môn / học kỳ đã bị khóa chưa
+                bool isLockedOrClosed = section.IsGradeLocked || section.Semester?.Status == "Closed" || section.Semester?.Status == "Ended";
+
                 // Kiểm tra xem sinh viên đã có đủ tất cả các đầu điểm thành phần chưa
                 bool isCompleted = components.Count > 0 && components.All(c => compScores.TryGetValue(c.Id, out var sc) && sc.HasValue);
+                bool hasZeroOrMissing = components.Count == 0 || components.Any(c => !compScores.TryGetValue(c.Id, out var sc) || !sc.HasValue || sc.Value == 0.0m);
 
-                // Tính điểm tổng kết
-                decimal? finalScore = ComputeFinalScore(compScores, components);
-                bool isPassed = isCompleted && finalScore.HasValue && finalScore.Value >= 5.0m;
+                decimal? finalScore = null;
+                bool isPassed = false;
+
+                if (isLockedOrClosed)
+                {
+                    // Khi khóa kỳ: Tự động chốt các điểm chưa nhập = 0.0m. Nếu có bất kỳ đầu điểm nào = 0 (hoặc thiếu) -> Not Pass
+                    var lockedScores = components.ToDictionary(c => c.Id, c => compScores.TryGetValue(c.Id, out var sc) && sc.HasValue ? sc : 0.0m);
+                    finalScore = ComputeFinalScore(lockedScores, components) ?? 0.0m;
+                    isPassed = !hasZeroOrMissing && finalScore.Value >= 5.0m;
+                    isCompleted = true;
+                }
+                else
+                {
+                    finalScore = ComputeFinalScore(compScores, components);
+                    isPassed = isCompleted && !hasZeroOrMissing && finalScore.HasValue && finalScore.Value >= 5.0m;
+                }
 
                 studentRows.Add(new StudentGradeRowDto
                 {
@@ -274,6 +291,7 @@ namespace project_PRN232.Services
         public async Task<decimal?> CalculateFinalScoreAsync(int courseSectionId, int studentId)
         {
             var section = await _db.CourseSections
+                .Include(cs => cs.Semester)
                 .Include(cs => cs.Subject)
                     .ThenInclude(s => s!.GradeComponents)
                 .Include(cs => cs.StudentGrades)
@@ -284,11 +302,13 @@ namespace project_PRN232.Services
             var components = section.Subject.GradeComponents.ToList();
             if (components.Count == 0) return null;
 
+            var isLockedOrClosed = section.IsGradeLocked || section.Semester?.Status == "Closed" || section.Semester?.Status == "Ended";
+
             var compScores = new Dictionary<int, decimal?>();
             foreach (var c in components)
             {
                 var g = section.StudentGrades.FirstOrDefault(x => x.StudentId == studentId && x.SubjectGradeComponentId == c.Id);
-                compScores[c.Id] = g?.Score;
+                compScores[c.Id] = isLockedOrClosed ? (g?.Score ?? 0.0m) : g?.Score;
             }
 
             var compDtos = components.Select(c => new SubjectGradeComponentDto
@@ -342,21 +362,45 @@ namespace project_PRN232.Services
                 var cs = en.CourseSection;
                 if (cs?.Subject == null) continue;
 
+                var isLockedOrClosed = cs.IsGradeLocked || cs.Semester?.Status == "Closed" || cs.Semester?.Status == "Ended";
+
                 var compDtos = new List<ComponentScoreDto>();
                 var compScoreMap = new Dictionary<int, decimal?>();
 
                 var components = cs.Subject.GradeComponents.OrderBy(c => c.OrderIndex).ToList();
+                bool hasZeroOrMissing = components.Count == 0;
+
                 foreach (var c in components)
                 {
                     var gradeRecord = student.Grades.FirstOrDefault(g => g.CourseSectionId == cs.Id && g.SubjectGradeComponentId == c.Id);
-                    compScoreMap[c.Id] = gradeRecord?.Score;
+                    decimal? compScore = gradeRecord?.Score;
+
+                    // Nếu học kỳ hoặc môn đã khóa/kết thúc, đầu điểm chưa nhập tự tính theo quy ước là 0 điểm
+                    if (isLockedOrClosed && !compScore.HasValue)
+                    {
+                        compScore = 0.0m;
+                    }
+
+                    compScoreMap[c.Id] = compScore;
+
+                    if (!compScore.HasValue || compScore.Value == 0.0m)
+                    {
+                        hasZeroOrMissing = true;
+                    }
 
                     var isFromAdmin = c.IsAdminOnly;
                     var roleLabel = isFromAdmin ? "Admin (Khảo thí)" : "Giáo viên";
                     var updatedBy = gradeRecord?.UpdatedBy;
-                    if (string.IsNullOrWhiteSpace(updatedBy) && gradeRecord?.Score != null)
+                    if (string.IsNullOrWhiteSpace(updatedBy))
                     {
-                        updatedBy = isFromAdmin ? "admin" : (!string.IsNullOrWhiteSpace(cs.Lecturer?.User?.FullName) ? cs.Lecturer.User.FullName : "Giáo viên");
+                        if (isLockedOrClosed && gradeRecord?.Score == null)
+                        {
+                            updatedBy = "Hệ thống (Chốt)";
+                        }
+                        else if (compScore.HasValue)
+                        {
+                            updatedBy = isFromAdmin ? "admin" : (!string.IsNullOrWhiteSpace(cs.Lecturer?.User?.FullName) ? cs.Lecturer.User.FullName : "Giáo viên");
+                        }
                     }
 
                     compDtos.Add(new ComponentScoreDto
@@ -364,11 +408,11 @@ namespace project_PRN232.Services
                         ComponentId = c.Id,
                         ComponentName = c.Name,
                         Weight = c.Weight,
-                        Score = gradeRecord?.Score,
+                        Score = compScore,
                         IsAdminOnly = isFromAdmin,
                         UpdatedBy = updatedBy,
                         GradedByRole = roleLabel,
-                        Notes = gradeRecord?.Notes
+                        Notes = gradeRecord?.Notes ?? (isLockedOrClosed && gradeRecord?.Score == null ? "Chốt 0 điểm khi khóa kỳ" : null)
                     });
                 }
 
@@ -379,8 +423,30 @@ namespace project_PRN232.Services
                     Scale = c.Scale
                 }).ToList();
 
-                decimal? finalScore = ComputeFinalScore(compScoreMap, compList);
-                bool isPassed = finalScore.HasValue && finalScore.Value >= 5.0m;
+                decimal? finalScore = null;
+                bool isPassed = false;
+
+                if (isLockedOrClosed)
+                {
+                    // Khi khóa kỳ: TẤT CẢ đầu điểm phải chốt, cho dù chưa nhập thì tự tính quy ước ban đầu (chưa nhập = 0)
+                    // Nếu không có đầu điểm hoặc có 1 đầu điểm 0 thì là NOT PASS
+                    finalScore = ComputeFinalScore(compScoreMap, compList) ?? 0.0m;
+                    isPassed = !hasZeroOrMissing && finalScore.Value >= 5.0m;
+                }
+                else
+                {
+                    bool allEntered = components.Count > 0 && components.All(c => compScoreMap.TryGetValue(c.Id, out var sc) && sc.HasValue);
+                    if (allEntered)
+                    {
+                        finalScore = ComputeFinalScore(compScoreMap, compList);
+                        isPassed = !hasZeroOrMissing && finalScore.HasValue && finalScore.Value >= 5.0m;
+                    }
+                    else
+                    {
+                        finalScore = null;
+                        isPassed = false;
+                    }
+                }
 
                 transcript.SubjectRecords.Add(new StudentSubjectTranscriptDto
                 {
@@ -392,7 +458,7 @@ namespace project_PRN232.Services
                     Components = compDtos,
                     FinalScore = finalScore,
                     IsPassed = isPassed,
-                    IsLocked = cs.IsGradeLocked
+                    IsLocked = isLockedOrClosed
                 });
 
                 // Quy tắc tính GPA:
