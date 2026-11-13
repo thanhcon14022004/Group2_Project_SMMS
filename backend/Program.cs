@@ -13,15 +13,11 @@ using project_PRN232.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Hỗ trợ cấu hình riêng cho từng máy developer (không bị đẩy lên git)
-builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
-
 // 1. Database Context
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("MyCNN")
         ?? builder.Configuration.GetConnectionString("Mycnn")
-        ?? builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Không tìm thấy chuỗi kết nối 'MyCNN' trong appsettings.json.");
 
     options.UseSqlServer(connectionString, sqlOptions =>
