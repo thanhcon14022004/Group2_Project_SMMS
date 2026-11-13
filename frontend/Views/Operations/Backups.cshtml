@@ -1,0 +1,135 @@
+@model List<project_PRN232.Frontend.Models.BackupItemViewModel>
+@{
+    ViewData["Title"] = "Sao lưu & Phục hồi Dữ liệu (Backup & Restore)";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="fw-bold mb-0">Sao lưu & Phục hồi Cơ sở Dữ liệu</h5>
+        <small class="text-muted">Quản lý các bản sao lưu định kỳ, phòng ngừa rủi ro dữ liệu hệ thống</small>
+    </div>
+    <button type="button" class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#createBackupModal">
+        <i class="fa-solid fa-cloud-arrow-up me-1"></i> Tạo Bản Sao lưu Mới
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-header bg-white py-3">
+        <h6 class="fw-bold mb-0"><i class="fa-solid fa-database me-2 text-primary"></i>Danh sách Bản Sao lưu Hệ thống</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 60px;">STT</th>
+                        <th>Tên tệp sao lưu (.bak)</th>
+                        <th>Dung lượng</th>
+                        <th>Thời điểm sao lưu</th>
+                        <th>Người tạo</th>
+                        <th>Ghi chú</th>
+                        <th class="text-end" style="width: 140px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model == null || !Model.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Chưa có bản sao lưu nào được ghi nhận.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        int idx = 1;
+                        foreach (var b in Model)
+                        {
+                            <tr>
+                                <td class="text-muted">@(idx++)</td>
+                                <td class="fw-bold"><i class="fa-solid fa-file-shield me-2 text-primary"></i>@b.BackupFileName</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        @((b.FileSize / 1024.0 / 1024.0).ToString("0.00")) MB
+                                    </span>
+                                </td>
+                                <td>@b.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                <td><strong>@b.CreatedBy</strong></td>
+                                <td><small class="text-muted">@(b.Notes ?? "-")</small></td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-outline-danger btn-sm rounded-3" onclick="openRestoreModal(@b.Id, '@b.BackupFileName')">
+                                        <i class="fa-solid fa-rotate-left me-1"></i> Phục hồi
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Create Backup -->
+<div class="modal fade" id="createBackupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-shield text-primary me-2"></i>Tạo Bản Sao lưu Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CreateBackup" method="post">
+                <div class="modal-body">
+                    <p class="text-muted small">Quá trình sao lưu sẽ tạo tệp `.bak` chứa toàn bộ dữ liệu hiện tại của hệ thống SMMS và lưu trữ an toàn trong máy chủ SQL Server.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ghi chú sao lưu</label>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="VD: Sao lưu trước khi kết thúc học kỳ Fall 2024..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-3">Bắt đầu Sao lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Restore Backup -->
+<div class="modal fade" id="restoreBackupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Cảnh báo Phục hồi Dữ liệu</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="RestoreBackup" method="post">
+                <input type="hidden" name="backupId" id="restoreBackupId" />
+                <div class="modal-body">
+                    <div class="alert alert-danger mb-3">
+                        <strong>Cực kỳ quan trọng:</strong> Hành động này sẽ khôi phục cơ sở dữ liệu về trạng thái của bản sao lưu được chọn. Mọi dữ liệu phát sinh sau thời điểm sao lưu sẽ bị ghi đè hoàn toàn!
+                    </div>
+                    <p class="mb-2">Tệp sao lưu: <strong id="restoreBackupName" class="text-danger"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-danger">Nhập chữ <code>CONFIRM_RESTORE</code> để xác nhận:</label>
+                        <input type="text" name="confirmationText" class="form-control" placeholder="CONFIRM_RESTORE" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger rounded-3">Xác nhận Phục hồi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function openRestoreModal(id, fileName) {
+        document.getElementById('restoreBackupId').value = id;
+        document.getElementById('restoreBackupName').innerText = fileName;
+        var modal = new bootstrap.Modal(document.getElementById('restoreBackupModal'));
+        modal.show();
+    }
+</script>
+}
+
