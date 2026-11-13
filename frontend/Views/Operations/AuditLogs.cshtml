@@ -1,0 +1,84 @@
+@model List<project_PRN232.Frontend.Models.AuditLogItemViewModel>
+@{
+    ViewData["Title"] = "Nhật ký Hệ thống (Audit Logs)";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="fw-bold mb-0">Nhật ký Hoạt động Hệ thống (Audit Logs)</h5>
+        <small class="text-muted">Theo dõi lịch sử các thao tác quan trọng: cấu hình môn học, sửa điểm, duyệt chuyển lớp, đóng học kỳ</small>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-body py-3">
+        <form method="get" asp-action="AuditLogs" class="row g-3 align-items-end">
+            <div class="col-md-9">
+                <label class="form-label fw-semibold">Lọc theo Loại Hành động (Action)</label>
+                <input type="text" name="action" class="form-control" placeholder="VD: CREATE, UPDATE_GRADE, LOCK_GRADE, CLOSE_SEMESTER..." value="@Context.Request.Query["action"]" />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100 rounded-3">
+                    <i class="fa-solid fa-filter me-1"></i> Lọc Nhật ký
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 60px;">ID</th>
+                        <th>Hành động</th>
+                        <th>Đối tượng tác động</th>
+                        <th>Mã đối tượng</th>
+                        <th>Người thực hiện</th>
+                        <th>Thời điểm</th>
+                        <th>Chi tiết</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model == null || !Model.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Không có bản ghi nhật ký nào.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var log in Model)
+                        {
+                            <tr>
+                                <td class="text-muted">@log.Id</td>
+                                <td>
+                                    @if (log.Action.Contains("DELETE") || log.Action.Contains("LOCK") || log.Action.Contains("CLOSE"))
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger">@log.Action</span>
+                                    }
+                                    else if (log.Action.Contains("UPDATE") || log.Action.Contains("TRANSFER"))
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning border border-warning">@log.Action</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success">@log.Action</span>
+                                    }
+                                </td>
+                                <td class="fw-semibold">@log.EntityName</td>
+                                <td><span class="badge bg-light text-dark border">@(log.EntityId ?? "-")</span></td>
+                                <td><strong>@log.PerformedBy</strong></td>
+                                <td class="text-muted small">@log.PerformedAt.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                <td><small class="text-muted text-break">@log.Details</small></td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
