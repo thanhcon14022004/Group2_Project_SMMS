@@ -17,6 +17,7 @@ namespace project_PRN232.Frontend.Controllers
             [FromQuery] int? subjectId,
             [FromQuery] bool? isLocked,
             [FromQuery] string? orderby,
+            [FromQuery] int weekOffset = 0,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
@@ -26,6 +27,22 @@ namespace project_PRN232.Frontend.Controllers
             if (CurrentUser?.Role == "Admin")
             {
                 return RedirectToAction("Index", "Semesters");
+            }
+
+            if (CurrentUser?.Role == "Student")
+            {
+                pageSize = 100;
+            }
+
+            if (!semesterId.HasValue && !Request.Query.ContainsKey("semesterId") && CurrentUser?.Role == "Student")
+            {
+                var allSems = await ApiClient.GetAsync<List<SemesterViewModel>>("semesters") ?? new List<SemesterViewModel>();
+                var activeSem = allSems.FirstOrDefault(s => string.Equals(s.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                                ?? allSems.OrderByDescending(s => s.Id).FirstOrDefault();
+                if (activeSem != null)
+                {
+                    semesterId = activeSem.Id;
+                }
             }
 
             var filters = new List<string>();
@@ -71,19 +88,26 @@ namespace project_PRN232.Frontend.Controllers
             var sectionsTask = ApiClient.GetAsync<PagedResult<CourseSectionViewModel>>($"course-sections/paged?{string.Join("&", pagedQuery)}");
             var semestersTask = ApiClient.GetAsync<List<SemesterViewModel>>("semesters");
             var subjectsTask = ApiClient.GetAsync<List<SubjectViewModel>>("subjects");
-            var lecturersTask = ApiClient.GetAsync<List<LecturerViewModel>>("lecturers");
+            var lecturersTask = CurrentUser?.Role == "Admin"
+                ? ApiClient.GetAsync<List<LecturerViewModel>>("lecturers")
+                : Task.FromResult<List<LecturerViewModel>?>(new List<LecturerViewModel>());
+            var transcriptTask = CurrentUser?.Role == "Student"
+                ? ApiClient.GetAsync<TranscriptViewModel>("grades/transcript")
+                : Task.FromResult<TranscriptViewModel?>(new TranscriptViewModel());
 
-            await Task.WhenAll(sectionsTask, semestersTask, subjectsTask, lecturersTask);
+            await Task.WhenAll(sectionsTask, semestersTask, subjectsTask, lecturersTask, transcriptTask);
 
             ViewBag.Semesters = (await semestersTask) ?? new List<SemesterViewModel>();
             ViewBag.Subjects = (await subjectsTask) ?? new List<SubjectViewModel>();
             ViewBag.Lecturers = (await lecturersTask) ?? new List<LecturerViewModel>();
+            ViewBag.Transcript = (await transcriptTask) ?? new TranscriptViewModel();
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentSemesterId = semesterId;
             ViewBag.CurrentSubjectId = subjectId;
             ViewBag.CurrentIsLocked = isLocked;
             ViewBag.CurrentOrderBy = orderby;
             ViewBag.CurrentODataQuery = odataPreviewParams.Any() ? string.Join("&", odataPreviewParams) : "";
+            ViewBag.WeekOffset = weekOffset;
 
             var sections = (await sectionsTask) ?? new PagedResult<CourseSectionViewModel> { PageIndex = page, PageSize = pageSize };
 

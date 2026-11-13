@@ -314,6 +314,10 @@ namespace project_PRN232.Services
                 .Include(s => s.CourseSectionEnrollments)
                     .ThenInclude(e => e.CourseSection)
                         .ThenInclude(cs => cs!.Semester)
+                .Include(s => s.CourseSectionEnrollments)
+                    .ThenInclude(e => e.CourseSection)
+                        .ThenInclude(cs => cs!.Lecturer)
+                            .ThenInclude(l => l!.User)
                 .Include(s => s.Grades)
                 .FirstOrDefaultAsync(s => s.Id == studentId);
 
@@ -346,11 +350,25 @@ namespace project_PRN232.Services
                 {
                     var gradeRecord = student.Grades.FirstOrDefault(g => g.CourseSectionId == cs.Id && g.SubjectGradeComponentId == c.Id);
                     compScoreMap[c.Id] = gradeRecord?.Score;
+
+                    var isFromAdmin = c.IsAdminOnly;
+                    var roleLabel = isFromAdmin ? "Admin (Khảo thí)" : "Giáo viên";
+                    var updatedBy = gradeRecord?.UpdatedBy;
+                    if (string.IsNullOrWhiteSpace(updatedBy) && gradeRecord?.Score != null)
+                    {
+                        updatedBy = isFromAdmin ? "admin" : (!string.IsNullOrWhiteSpace(cs.Lecturer?.User?.FullName) ? cs.Lecturer.User.FullName : "Giáo viên");
+                    }
+
                     compDtos.Add(new ComponentScoreDto
                     {
+                        ComponentId = c.Id,
                         ComponentName = c.Name,
                         Weight = c.Weight,
-                        Score = gradeRecord?.Score
+                        Score = gradeRecord?.Score,
+                        IsAdminOnly = isFromAdmin,
+                        UpdatedBy = updatedBy,
+                        GradedByRole = roleLabel,
+                        Notes = gradeRecord?.Notes
                     });
                 }
 

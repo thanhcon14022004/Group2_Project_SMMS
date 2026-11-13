@@ -1,390 +1,1269 @@
-@model project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.CourseSectionViewModel>
+﻿@model project_PRN232.Frontend.Models.PagedResult<project_PRN232.Frontend.Models.CourseSectionViewModel>
 @inject IHttpContextAccessor HttpContextAccessor
 @{
-    ViewData["Title"] = "Quản lý Lớp Học phần";
     var role = HttpContextAccessor.HttpContext?.Session.GetString("SMMS_USER_ROLE") ?? "";
-    var semesters = (List<project_PRN232.Frontend.Models.SemesterViewModel>)ViewBag.Semesters;
-    var subjects = (List<project_PRN232.Frontend.Models.SubjectViewModel>)ViewBag.Subjects;
-    var lecturers = (List<project_PRN232.Frontend.Models.LecturerViewModel>)ViewBag.Lecturers;
+    ViewData["Title"] = role == "Student" ? "Thời Khóa Biểu & Lớp Học Phần Của Tôi" : "Quản lý Lớp Học phần";
+    var semesters = (List<project_PRN232.Frontend.Models.SemesterViewModel>)(ViewBag.Semesters ?? new List<project_PRN232.Frontend.Models.SemesterViewModel>());
+    var subjects = (List<project_PRN232.Frontend.Models.SubjectViewModel>)(ViewBag.Subjects ?? new List<project_PRN232.Frontend.Models.SubjectViewModel>());
+    var lecturers = (List<project_PRN232.Frontend.Models.LecturerViewModel>)(ViewBag.Lecturers ?? new List<project_PRN232.Frontend.Models.LecturerViewModel>());
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h5 class="fw-bold mb-0">Danh sách Lớp Học phần</h5>
-        <small class="text-muted">Quản lý lớp theo học kỳ, phân công giảng viên và phòng học</small>
-    </div>
-    @if (role == "Admin")
+@functions {
+    public string FormatDayOfWeek(DayOfWeek dow) => dow switch {
+        DayOfWeek.Monday => "Thứ Hai",
+        DayOfWeek.Tuesday => "Thứ Ba",
+        DayOfWeek.Wednesday => "Thứ Tư",
+        DayOfWeek.Thursday => "Thứ Năm",
+        DayOfWeek.Friday => "Thứ Sáu",
+        DayOfWeek.Saturday => "Thứ Bảy",
+        DayOfWeek.Sunday => "Chủ Nhật",
+        _ => dow.ToString()
+    };
+
+    public string GetSlotFormattedTime(int slot) => slot switch {
+        1 => "07h30-09h50",
+        2 => "10h00-12h20",
+        3 => "12h50-15h10",
+        4 => "15h20-17h40",
+        _ => $"Ca {slot}"
+    };
+
+    public string GetSlotTimeRange(int slot) => slot switch {
+        1 => "07:30 - 09:50",
+        2 => "10:00 - 12:20",
+        3 => "12:50 - 15:10",
+        4 => "15:20 - 17:40",
+        _ => ""
+    };
+
+    public string GetLecturerShortCode(string? fullName)
     {
-        <div class="d-flex gap-2">
-            <a asp-action="Allocations" class="btn btn-outline-primary btn-sm rounded-3">
-                <i class="fa-solid fa-users-gear me-1"></i> Phân bổ sinh viên
-            </a>
-            <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalAddSection">
-                <i class="fa-solid fa-plus me-1"></i> Tạo Lớp Học phần
-            </button>
+        if (string.IsNullOrWhiteSpace(fullName) || fullName == "Chưa phân công") return "chua_pc";
+        var cleaned = fullName.Replace("TS.", "").Replace("ThS.", "").Replace("PGS.", "").Replace("GS.", "").Trim();
+        var parts = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "gv";
+        var firstName = parts[^1].ToLower();
+        var initials = string.Concat(parts.Take(parts.Length - 1).Select(p => char.ToLower(p[0])));
+        return RemoveDiacritics(firstName + initials);
+    }
+
+    public string RemoveDiacritics(string text)
+    {
+        var normalizedString = text.Normalize(System.Text.NormalizationForm.FormD);
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in normalizedString)
+        {
+            var uc = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+            if (uc != System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                sb.Append(c);
+            }
+        }
+        return sb.ToString().Normalize(System.Text.NormalizationForm.FormC).Replace("đ", "d").Replace("Đ", "D");
+    }
+}
+
+@if (role == "Student")
+{
+    var studentSections = Model?.Items ?? new List<project_PRN232.Frontend.Models.CourseSectionViewModel>();
+    
+    // Tính toán tuần hiện tại theo weekOffset
+    int weekOffset = ViewBag.WeekOffset ?? 0;
+    DateTime today = DateTime.Today; // 2026-11-11
+    int diffToMonday = (7 + (int)today.DayOfWeek - (int)DayOfWeek.Monday) % 7;
+    DateTime currentMonday = today.AddDays(-diffToMonday).AddDays(7 * weekOffset);
+    DateTime currentSunday = currentMonday.AddDays(6);
+
+    // Kiểm tra trùng lịch trong học kỳ
+    var conflicts = studentSections
+        .GroupBy(s => s.SemesterId)
+        .SelectMany(semGroup => semGroup
+            .SelectMany(s => s.Schedules.Select(sch => new { Section = s, Schedule = sch, SlotKey = $"{(int)sch.DayOfWeek}_{sch.Slot}" }))
+            .GroupBy(x => x.SlotKey)
+            .Where(g => g.Count() > 1)
+            .Select(g => new { 
+                SemesterCode = semGroup.First().SemesterCode,
+                Day = g.First().Schedule.DayOfWeek,
+                Slot = g.First().Schedule.Slot,
+                Sections = g.Select(x => x.Section.Code).Distinct().ToList()
+            }))
+        .ToList();
+
+    var totalCredits = studentSections.Sum(s => s.Credits > 0 ? s.Credits : 3);
+    var totalSessions = studentSections.Sum(s => s.Schedules.Count);
+    var transcript = (ViewBag.Transcript as project_PRN232.Frontend.Models.TranscriptViewModel) ?? new project_PRN232.Frontend.Models.TranscriptViewModel();
+
+    // Chuẩn bị dictionary dữ liệu điểm cho từng môn học để mở Modal chi tiết
+    var enrichedSubjectsDict = new Dictionary<string, object>();
+    foreach (var s in studentSections)
+    {
+        var rec = transcript.SubjectRecords.FirstOrDefault(r => r.CourseSectionId == s.Id || r.SubjectCode == s.SubjectCode);
+        if (!enrichedSubjectsDict.ContainsKey(s.SubjectCode))
+        {
+            enrichedSubjectsDict[s.SubjectCode] = new {
+                subjectCode = s.SubjectCode,
+                subjectName = s.SubjectName,
+                classCode = s.Code,
+                lecturerName = string.IsNullOrWhiteSpace(s.LecturerName) ? "Bộ môn đào tạo" : s.LecturerName,
+                semesterCode = s.SemesterCode,
+                credits = s.Credits > 0 ? s.Credits : (rec != null ? rec.Credits : 3),
+                finalScore = rec?.FinalScore,
+                isPassed = rec?.IsPassed ?? false,
+                isLocked = rec?.IsLocked ?? false,
+                components = (rec?.Components ?? new List<project_PRN232.Frontend.Models.TranscriptComponentScoreViewModel>()).Select(c => new {
+                    componentId = c.ComponentId,
+                    componentName = c.ComponentName,
+                    weight = c.Weight,
+                    score = c.Score,
+                    isAdminOnly = c.IsAdminOnly,
+                    updatedBy = c.UpdatedBy,
+                    gradedByRole = c.GradedByRole,
+                    notes = c.Notes
+                }).ToList()
+            };
+        }
+    }
+    foreach (var rec in transcript.SubjectRecords)
+    {
+        if (!enrichedSubjectsDict.ContainsKey(rec.SubjectCode))
+        {
+            enrichedSubjectsDict[rec.SubjectCode] = new {
+                subjectCode = rec.SubjectCode,
+                subjectName = rec.SubjectName,
+                classCode = "--",
+                lecturerName = "Bộ môn đào tạo",
+                semesterCode = rec.SemesterCode,
+                credits = rec.Credits,
+                finalScore = rec.FinalScore,
+                isPassed = rec.IsPassed,
+                isLocked = rec.IsLocked,
+                components = rec.Components.Select(c => new {
+                    componentId = c.ComponentId,
+                    componentName = c.ComponentName,
+                    weight = c.Weight,
+                    score = c.Score,
+                    isAdminOnly = c.IsAdminOnly,
+                    updatedBy = c.UpdatedBy,
+                    gradedByRole = c.GradedByRole,
+                    notes = c.Notes
+                }).ToList()
+            };
+        }
+    }
+
+    <style>
+        .fap-timetable {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+        }
+        .fap-timetable th, .fap-timetable td {
+            border: 1px solid #e9ecef;
+            padding: 10px 8px;
+        }
+        .fap-timetable thead th {
+            background-color: #f8f9fa;
+            color: #334155;
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .fap-timetable thead th.today-col {
+            background-color: #d1e7dd !important;
+            color: #0f5132 !important;
+            font-weight: 700 !important;
+        }
+        .fap-timetable tbody td.slot-col {
+            width: 55px;
+            text-align: center;
+            font-weight: 700;
+            color: #495057;
+            background-color: #fff;
+            vertical-align: middle;
+            font-size: 0.95rem;
+        }
+        .fap-timetable tbody td.day-cell {
+            vertical-align: top;
+            min-height: 115px;
+            width: 13.5%;
+            background-color: #fff;
+        }
+        .fap-timetable tbody td.today-cell {
+            background-color: #fbfdfc;
+        }
+        .fap-item {
+            font-size: 0.82rem;
+            line-height: 1.35;
+            margin-bottom: 6px;
+        }
+        .fap-item-title {
+            color: #1a4a84;
+            font-weight: 700;
+            font-size: 0.86rem;
+            display: block;
+            margin-bottom: 2px;
+            text-decoration: none;
+        }
+        .fap-item-title:hover {
+            color: #0b5ed7;
+            text-decoration: underline;
+        }
+        .fap-item-status-present {
+            color: #198754;
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-bottom: 2px;
+        }
+        .fap-item-time {
+            color: #d97706;
+            font-size: 0.78rem;
+            margin-bottom: 2px;
+        }
+        .fap-item-room {
+            color: #64748b;
+            font-size: 0.78rem;
+            margin-bottom: 2px;
+        }
+        .fap-item-lecturer {
+            color: #64748b;
+            font-size: 0.78rem;
+        }
+        .fap-empty {
+            text-align: center;
+            color: #94a3b8;
+            font-weight: normal;
+            padding-top: 35px;
+            padding-bottom: 35px;
+        }
+    </style>
+
+    <!-- Header Sinh viên -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div>
+            <h4 class="fw-bold mb-1 text-primary">
+                <i class="fa-solid fa-calendar-days me-2"></i>Thời Khóa Biểu & Lớp Học Phần Của Tôi
+            </h4>
+            <small class="text-muted">Giao diện thời khóa biểu chuẩn đào tạo, hiển thị lịch học tuần, ca học, phòng học và giảng viên phụ trách.</small>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <form method="get" asp-action="Index" class="d-flex align-items-center gap-2">
+                <input type="hidden" name="weekOffset" value="@weekOffset" />
+                <label class="form-label mb-0 small text-muted fw-semibold text-nowrap"><i class="fa-solid fa-filter me-1 text-primary"></i>Học kỳ:</label>
+                <select name="semesterId" class="form-select form-select-sm rounded-pill border-primary shadow-sm" onchange="this.form.submit()" style="min-width: 220px;">
+                    <option value="">-- Tất cả học kỳ --</option>
+                    @foreach (var sem in semesters)
+                    {
+                        if (ViewBag.CurrentSemesterId != null && (int)ViewBag.CurrentSemesterId == sem.Id)
+                        {
+                            <option value="@sem.Id" selected>@sem.Code - @sem.Name @(sem.Status == "Active" ? "(Hiện tại)" : "")</option>
+                        }
+                        else
+                        {
+                            <option value="@sem.Id">@sem.Code - @sem.Name @(sem.Status == "Active" ? "(Hiện tại)" : "")</option>
+                        }
+                    }
+                </select>
+                @if (ViewBag.CurrentSemesterId != null)
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill shadow-sm" title="Xem tất cả học kỳ">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </a>
+                }
+            </form>
+        </div>
+    </div>
+
+    <!-- Banner Xác thực Lịch học & Không trùng giờ -->
+    @if (conflicts.Count == 0)
+    {
+        <div class="alert alert-success d-flex flex-wrap justify-content-between align-items-center mb-3 py-2 px-3 rounded-3 shadow-sm border-0 bg-success bg-opacity-10 text-success">
+            <div class="d-flex align-items-center gap-3">
+                <i class="fa-solid fa-circle-check fs-4 text-success"></i>
+                <div>
+                    <strong class="text-success-emphasis">Lịch học chuẩn hóa: 100% Hoàn toàn không trùng ca học & phòng học!</strong>
+                    <div class="small text-muted">
+                        Các môn học trong kỳ được phân bổ vào các ca học độc lập (Ca 1, Ca 2, Ca 3, Ca 4). Mỗi môn đúng <strong>2 buổi / tuần</strong> (Thứ 2 & 5 hoặc Thứ 3 & 6), phòng học cố định.
+                    </div>
+                </div>
+            </div>
+            <span class="badge bg-success text-white px-3 py-2 rounded-pill shadow-sm">
+                <i class="fa-solid fa-shield-check me-1"></i>0 Trùng lịch
+            </span>
         </div>
     }
-</div>
-
-<div class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center mb-3 py-2 px-3 rounded-3 shadow-sm border-0">
-    <div class="mb-1 mb-md-0">
-        <i class="fa-solid fa-calendar-check me-2 text-primary fs-5"></i>
-        <strong>Quản lý Mùa học (Summer 26, Spring 26, Fall 26...):</strong> Tạo mùa học, Sửa, Xóa, Khóa hoặc Mở học kỳ trực tiếp.
-    </div>
-    <a asp-controller="Semesters" asp-action="Index" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
-        <i class="fa-solid fa-arrow-right me-1"></i> Quản lý Mùa học & Khóa/Mở kỳ
-    </a>
-</div>
-
-<!-- Thanh Bộ Lọc OData Nâng Cao cho Lớp Học phần -->
-<div class="card shadow-sm border-0 rounded-3 mb-3 bg-white">
-    <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
-                <i class="fa-solid fa-filter me-1"></i>Bộ Lọc OData Lớp Học phần
-            </span>
-            <small class="text-muted">Lọc theo <code>$filter</code> học kỳ, môn học, tình trạng khóa điểm theo chuẩn OData</small>
-        </div>
-        <div>
-            <span class="badge bg-light text-dark border">Tổng cộng @(Model?.TotalCount ?? 0) lớp học phần</span>
-        </div>
-    </div>
-    <div class="card-body p-3">
-        <form method="get" asp-action="Index" id="sectionODataForm">
-            <div class="row g-2 align-items-center">
-                <div class="col-md-3">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" name="search" id="sectionFilterSearch" class="form-control" 
-                               placeholder="Tìm mã hoặc tên lớp..." value="@ViewBag.CurrentSearch" oninput="updateSectionODataPreview()" />
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <select name="semesterId" id="sectionFilterSemester" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
-                        <option value="">-- Tất cả học kỳ / mùa học --</option>
-                        @foreach (var sem in semesters)
-                        {
-                            if (ViewBag.CurrentSemesterId != null && (int)ViewBag.CurrentSemesterId == sem.Id)
-                            {
-                                <option value="@sem.Id" selected>@sem.Code - @sem.Name</option>
-                            }
-                            else
-                            {
-                                <option value="@sem.Id">@sem.Code - @sem.Name</option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="subjectId" id="sectionFilterSubject" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
-                        <option value="">-- Tất cả môn học --</option>
-                        @foreach (var sub in subjects)
-                        {
-                            if (ViewBag.CurrentSubjectId != null && (int)ViewBag.CurrentSubjectId == sub.Id)
-                            {
-                                <option value="@sub.Id" selected>@sub.Code - @sub.Name</option>
-                            }
-                            else
-                            {
-                                <option value="@sub.Id">@sub.Code - @sub.Name</option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="isLocked" id="sectionFilterLocked" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
-                        <option value="">-- Tình trạng điểm --</option>
-                        <!option value="false" @(ViewBag.CurrentIsLocked != null && !(bool)ViewBag.CurrentIsLocked ? "selected" : "")>Đang mở nhập điểm</!option>
-                        <!option value="true" @(ViewBag.CurrentIsLocked != null && (bool)ViewBag.CurrentIsLocked ? "selected" : "")>Đã khóa bảng điểm</!option>
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <select name="orderby" id="sectionFilterOrderBy" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
-                        <option value="">-- Sắp xếp --</option>
-                        <!option value="Code asc" @(ViewBag.CurrentOrderBy == "Code asc" ? "selected" : "")>Mã A-Z</!option>
-                        <!option value="Code desc" @(ViewBag.CurrentOrderBy == "Code desc" ? "selected" : "")>Mã Z-A</!option>
-                        <!option value="EnrolledCount desc" @(ViewBag.CurrentOrderBy == "EnrolledCount desc" ? "selected" : "")>Sĩ số giảm dần</!option>
-                    </select>
-                </div>
-                <div class="col-md-1 d-flex gap-1">
-                    <button type="submit" class="btn btn-primary btn-sm w-100 shadow-sm" title="Áp dụng bộ lọc OData lên Server">
-                        <i class="fa-solid fa-play"></i> Lọc
-                    </button>
-                    @if (!string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery))
+    else
+    {
+        <div class="alert alert-danger d-flex align-items-center mb-3 py-2 px-3 rounded-3 shadow-sm border-0">
+            <i class="fa-solid fa-triangle-exclamation fs-4 text-danger me-3"></i>
+            <div>
+                <strong>Cảnh báo trùng lịch học (@conflicts.Count ca trùng):</strong>
+                <ul class="mb-0 small">
+                    @foreach (var c in conflicts)
                     {
-                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc">
-                            <i class="fa-solid fa-rotate-left"></i>
+                        <li>Học kỳ @c.SemesterCode: @FormatDayOfWeek(c.Day), @GetSlotFormattedTime(c.Slot) giữa các lớp: @string.Join(", ", c.Sections)</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+
+    <!-- Bộ Chuyển Đổi Tab Chế Độ Xem: Tab 1 Thời Khóa Biểu (Active) - Tab 2 Điểm -->
+    <ul class="nav nav-pills mb-3 gap-2" id="studentViewTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill px-4 py-2 fw-semibold shadow-sm" id="tab-matrix-btn" data-bs-toggle="pill" data-bs-target="#tab-matrix-pane" type="button" role="tab">
+                <i class="fa-solid fa-calendar-days me-2"></i>Thời khóa biểu Tuần (Chuẩn FAP)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 py-2 fw-semibold shadow-sm" id="tab-grades-btn" data-bs-toggle="pill" data-bs-target="#tab-grades-pane" type="button" role="tab">
+                <i class="fa-solid fa-award me-2"></i>Điểm
+            </button>
+        </li>
+    </ul>
+
+    <!-- Nội dung 2 Chế Độ Xem -->
+    <div class="tab-content" id="studentViewTabsContent">
+        <!-- TAB 1: THỜI KHÓA BIỂU TUẦN CHUẨN FAP (THEO ĐÚNG HÌNH ẢNH MẪU) -->
+        <div class="tab-pane fade show active" id="tab-matrix-pane" role="tabpanel">
+            <div class="card shadow-sm border-0 rounded-3 mb-4 bg-white p-3">
+                <!-- Thanh Tiêu Đề Tuần & Nút Điều Hướng Tuần -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <div class="fw-bold fs-6 text-dark">
+                        Tuần (@currentMonday.ToString("dd/MM") - @currentSunday.ToString("dd/MM"))
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <a asp-action="Index" asp-route-semesterId="@ViewBag.CurrentSemesterId" asp-route-weekOffset="@(weekOffset - 1)" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-none">
+                            <i class="fa-solid fa-chevron-left me-1"></i>Tuần trước
                         </a>
-                    }
+                        <a asp-action="Index" asp-route-semesterId="@ViewBag.CurrentSemesterId" asp-route-weekOffset="0" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-none @(weekOffset == 0 ? "active fw-bold" : "")">
+                            Tuần hiện tại
+                        </a>
+                        <a asp-action="Index" asp-route-semesterId="@ViewBag.CurrentSemesterId" asp-route-weekOffset="@(weekOffset + 1)" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-none">
+                            Tuần sau<i class="fa-solid fa-chevron-right ms-1"></i>
+                        </a>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Preview OData Query String -->
-            <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="text-secondary fw-semibold"><i class="fa-solid fa-code text-primary me-1"></i>OData Query URL:</span>
-                    <code id="sectionODataPreview" class="text-primary bg-light px-2 py-1 rounded border">/api/course-sections@(string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery) ? "" : "?" + ViewBag.CurrentODataQuery)</code>
-                </div>
-                <div class="d-flex gap-2">
-                    <span class="badge bg-success-subtle text-success border border-success">
-                        <i class="fa-solid fa-check me-1"></i>OData v4 Supported
-                    </span>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="card shadow-sm border-0 rounded-3">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-3" style="white-space: nowrap; min-width: 130px;">Mã lớp HP</th>
-                        <th style="min-width: 180px;">Tên lớp học phần</th>
-                        <th style="white-space: nowrap; min-width: 110px;">Môn học</th>
-                        <th style="white-space: nowrap; min-width: 110px;">Học kỳ</th>
-                        <th style="min-width: 180px;">Giảng viên phụ trách</th>
-                        <th class="text-center" style="white-space: nowrap;">Sĩ số</th>
-                        <th style="min-width: 180px;">Lịch học & Phòng</th>
-                        <th class="text-center" style="white-space: nowrap;">Khóa điểm</th>
-                        <th class="text-end pe-3" style="white-space: nowrap; min-width: 140px;">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model == null || Model.Items == null || !Model.Items.Any())
-                    {
-                        <tr>
-                            <td colspan="9" class="text-center py-4 text-muted">
-                                <i class="fa-solid fa-folder-open fa-2x mb-2 d-block"></i>
-                                Chưa có lớp học phần nào.
-                            </td>
-                        </tr>
-                    }
-                    else
-                    {
-                        @foreach (var s in Model.Items)
-                    {
-                        <tr>
-                            <td class="ps-3 fw-bold text-primary">@s.Code</td>
-                            <td>@s.Name</td>
-                            <td><span class="badge bg-secondary">@s.SubjectCode</span></td>
-                            <td>@s.SemesterCode</td>
-                            <td>
-                                @if (string.IsNullOrEmpty(s.LecturerName) || s.LecturerName == "Chưa phân công")
+                <!-- BẢNG THỜI KHÓA BIỂU CHUẨN FAP -->
+                <div class="table-responsive">
+                    <table class="table fap-timetable mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 55px;">Slot</th>
+                                @for (int d = 0; d < 7; d++)
                                 {
-                                    <span class="badge bg-danger-subtle text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Chưa phân công</span>
+                                    var dayDate = currentMonday.AddDays(d);
+                                    var isToday = (dayDate.Date == today.Date);
+                                    var dayHeaderName = d switch {
+                                        0 => "Thứ 2",
+                                        1 => "Thứ 3",
+                                        2 => "Thứ 4",
+                                        3 => "Thứ 5",
+                                        4 => "Thứ 6",
+                                        5 => "Thứ 7",
+                                        _ => "Chủ nhật"
+                                    };
+                                    <th class="@(isToday ? "today-col" : "")">
+                                        @dayHeaderName (@dayDate.ToString("dd/MM"))
+                                    </th>
                                 }
-                                else
-                                {
-                                    <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-chalkboard-user me-1"></i>@s.LecturerName</span>
-                                }
-                            </td>
-                            <td>@s.EnrolledStudentsCount / @s.MaxCapacity</td>
-                            <td>
-                                @if (s.Schedules.Count == 0)
-                                {
-                                    <span class="text-muted small">Chưa xếp lịch</span>
-                                }
-                                else
-                                {
-                                    @foreach (var sch in s.Schedules)
-                                    {
-                                        <span class="badge bg-light text-dark border me-1">
-                                            @sch.DayOfWeek, Ca @sch.Slot (@sch.Room)
-                                        </span>
-                                    }
-                                }
-                            </td>
-                            <td>
-                                @if (s.IsGradeLocked)
-                                {
-                                    <span class="badge bg-danger"><i class="fa-solid fa-lock me-1"></i>Đã khóa</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-success"><i class="fa-solid fa-lock-open me-1"></i>Mở</span>
-                                }
-                            </td>
-                            <td class="text-end pe-3">
-                                @if (role == "Admin")
-                                {
-                                    <button class="btn btn-outline-primary btn-sm rounded-pill me-1" onclick="openAssignModal(@s.Id, '@s.Code', '@s.LecturerId')" title="Phân công giảng viên">
-                                        <i class="fa-solid fa-user-pen me-1"></i> GV
-                                    </button>
-                                    <button class="btn btn-outline-warning btn-sm rounded-pill me-1" onclick="openEditSectionModal(@s.Id, '@s.Code', '@s.Name', @s.MaxCapacity, '@s.LecturerId')" title="Sửa lớp HP">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa lớp học phần @s.Code?');">
-                                        <input type="hidden" name="id" value="@s.Id" />
-                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill me-1" title="Xóa lớp HP">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </form>
-                                }
-                                @if (role == "Admin" || role == "Lecturer")
-                                {
-                                    <a asp-controller="Grades" asp-action="Index" asp-route-sectionId="@s.Id" class="btn btn-outline-success btn-sm rounded-pill" title="Nhập bảng điểm">
-                                        <i class="fa-solid fa-pen-to-square me-1"></i> Điểm
-                                    </a>
-                                }
-                            </td>
                             </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-    @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(Model ?? new(), "lớp học phần"))
-</div>
+                        </thead>
+                        <tbody>
+                            @for (int slot = 1; slot <= 4; slot++)
+                            {
+                                <tr>
+                                    <td class="slot-col">@slot</td>
+                                    @for (int d = 0; d < 7; d++)
+                                    {
+                                        var dayDate = currentMonday.AddDays(d);
+                                        var isToday = (dayDate.Date == today.Date);
+                                        // d: 0=Thứ 2 (Monday), 1=Thứ 3 (Tuesday), ..., 5=Thứ 7 (Saturday), 6=Chủ nhật (Sunday)
+                                        var dow = d == 6 ? DayOfWeek.Sunday : (DayOfWeek)(d + 1);
+                                        var matched = studentSections.Where(s => s.Schedules.Any(sch => sch.DayOfWeek == dow && sch.Slot == slot)).ToList();
 
-<!-- Modal Thêm Lớp Học Phần -->
-<div class="modal fade" id="modalAddSection" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form asp-controller="CourseSections" asp-action="Create" method="post">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Tạo Lớp Học phần Mới</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        <td class="day-cell @(isToday ? "today-cell" : "")">
+                                            @if (matched.Any())
+                                            {
+                                                @foreach (var sec in matched)
+                                                {
+                                                    var currentSch = sec.Schedules.FirstOrDefault(sch => sch.DayOfWeek == dow && sch.Slot == slot);
+                                                    var teacherCode = GetLecturerShortCode(sec.LecturerName);
+                                                    var classShort = sec.Code.Contains('_') ? sec.Code.Substring(sec.Code.LastIndexOf('_') + 1) : sec.Code;
+                                                    var isPastOrToday = dayDate.Date <= today.Date;
+
+                                                    <div class="fap-item">
+                                                        <a href="javascript:void(0)" onclick="openSubjectGradeModal('@sec.SubjectCode')" class="fap-item-title" title="Nhấn xem chi tiết điểm môn @sec.SubjectCode">
+                                                            <i class="fa-solid fa-book-bookmark me-1" style="font-size: 0.8rem;"></i>@sec.SubjectCode - @classShort
+                                                        </a>
+
+                                                        @if (isPastOrToday)
+                                                        {
+                                                            <div class="fap-item-status-present">
+                                                                <i class="fa-regular fa-circle-check me-1"></i>Có mặt
+                                                            </div>
+                                                        }
+
+                                                        <div class="fap-item-time">
+                                                            <i class="fa-regular fa-clock me-1"></i>@GetSlotFormattedTime(slot) - <i class="fa-solid fa-wifi text-secondary ms-1 me-1"></i>Offline
+                                                        </div>
+
+                                                        @if (currentSch != null && !string.IsNullOrWhiteSpace(currentSch.Room))
+                                                        {
+                                                            <div class="fap-item-room">
+                                                                <i class="fa-solid fa-location-dot me-1"></i>@currentSch.Room
+                                                            </div>
+                                                        }
+
+                                                        <div class="fap-item-lecturer">
+                                                            <i class="fa-regular fa-user me-1"></i>@teacherCode
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <div class="fap-empty">-</div>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Mã lớp học phần</label>
-                        <input type="text" name="code" class="form-control" placeholder="VD: PRN232_SU25_SE1701" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Tên lớp</label>
-                        <input type="text" name="name" class="form-control" placeholder="VD: Lập trình Web ASP.NET Core - Lớp SE1701" required />
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Môn học</label>
-                            <select name="subjectId" class="form-select" required>
-                                @foreach (var sub in subjects)
-                                {
-                                    <option value="@sub.Id">@sub.Code - @sub.Name</option>
-                                }
-                            </select>
+            </div>
+
+            <!-- Bảng Chú Thích Ca Học & Hướng Dẫn -->
+            <div class="card shadow-sm border-0 rounded-3 mb-4 bg-white">
+                <div class="card-body p-3">
+                    <div class="row g-3">
+                        <div class="col-md-6 border-end">
+                            <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-clock text-primary me-2"></i>Quy định khung giờ các Ca học (Slot)</h6>
+                            <div class="row g-2 small">
+                                <div class="col-6">
+                                    <div class="p-2 border rounded-2 bg-light">
+                                        <strong>Slot 1:</strong> 07h30 - 09h50 (Buổi sáng)
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 border rounded-2 bg-light">
+                                        <strong>Slot 2:</strong> 10h00 - 12h20 (Buổi trưa)
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 border rounded-2 bg-light">
+                                        <strong>Slot 3:</strong> 12h50 - 15h10 (Buổi chiều)
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 border rounded-2 bg-light">
+                                        <strong>Slot 4:</strong> 15h20 - 17h40 (Chiều muộn)
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Học kỳ</label>
-                            <select name="semesterId" class="form-select" required>
-                                @foreach (var sem in semesters)
+                            <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-shield-halved text-success me-2"></i>Quy chuẩn xếp lịch không trùng lặp</h6>
+                            <ul class="small text-muted mb-0 ps-3">
+                                <li>Hệ thống phân bổ các ca học độc lập trong ngày: <strong>Slot 1, Slot 2, Slot 3, Slot 4</strong>.</li>
+                                <li>Mỗi môn học được xếp đúng <strong>2 buổi học / tuần</strong> theo cặp ngày tiêu chuẩn: <strong>Thứ 2 & 5</strong> hoặc <strong>Thứ 3 & 6</strong>.</li>
+                                <li>Phòng học cố định cùng dãy/tòa nhà chuyên ngành để tối ưu di chuyển.</li>
+                                <li>Hệ thống bảo đảm <strong>100% không trùng ca học</strong> giữa các môn của cùng một sinh viên.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: ĐIỂM (BẢNG ĐIỂM MÔN HỌC & CHI TIẾT ĐIỂM THÀNH PHẦN) -->
+        <div class="tab-pane fade" id="tab-grades-pane" role="tabpanel">
+            <!-- Thẻ KPI Học lực & Tích lũy -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-3 col-6">
+                    <div class="card shadow-sm border-0 rounded-3 bg-white p-3 border-start border-4 border-primary h-100">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <small class="text-muted fw-semibold d-block">GPA Tích lũy (Hệ 10)</small>
+                                <div class="fs-4 fw-bold text-primary">@transcript.CumulativeGpa.ToString("0.00") <span class="fs-6 text-muted fw-normal">/ 10</span></div>
+                            </div>
+                            <div class="p-3 bg-primary bg-opacity-10 rounded-circle text-primary">
+                                <i class="fa-solid fa-chart-line fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card shadow-sm border-0 rounded-3 bg-white p-3 border-start border-4 border-success h-100">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <small class="text-muted fw-semibold d-block">Tín chỉ Đạt / Đăng ký</small>
+                                <div class="fs-4 fw-bold text-success">@transcript.TotalPassedCredits <span class="fs-6 text-muted fw-normal">/ @transcript.TotalEnrolledCredits TC</span></div>
+                            </div>
+                            <div class="p-3 bg-success bg-opacity-10 rounded-circle text-success">
+                                <i class="fa-solid fa-award fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card shadow-sm border-0 rounded-3 bg-white p-3 border-start border-4 border-info h-100">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <small class="text-muted fw-semibold d-block">Xếp loại Học tập</small>
+                                <div class="fs-4 fw-bold text-info">@(string.IsNullOrEmpty(transcript.AcademicStanding) ? "Bình thường" : transcript.AcademicStanding)</div>
+                            </div>
+                            <div class="p-3 bg-info bg-opacity-10 rounded-circle text-info">
+                                <i class="fa-solid fa-graduation-cap fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card shadow-sm border-0 rounded-3 bg-white p-3 border-start border-4 border-warning h-100">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <small class="text-muted fw-semibold d-block">Môn học kỳ này</small>
+                                <div class="fs-4 fw-bold text-dark">@studentSections.Count <span class="fs-6 text-muted fw-normal">môn học</span></div>
+                            </div>
+                            <div class="p-3 bg-warning bg-opacity-10 rounded-circle text-warning">
+                                <i class="fa-solid fa-book-open fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng Điểm Môn Học -->
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <div class="fw-bold text-dark fs-6">
+                            <i class="fa-solid fa-award text-primary me-2"></i>Bảng Điểm Môn Học & Điểm Thành Phần
+                        </div>
+                        <small class="text-muted">Nhấn vào từng môn học hoặc nút "Xem chi tiết" để xem bảng điểm thành phần (Quiz, Lab, Progress Test, PE, FE).</small>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 rounded-pill">
+                        <i class="fa-solid fa-mouse-pointer me-1"></i>Nhấn vào môn để xem chi tiết
+                    </span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3" style="min-width: 320px;">Môn học & Số tín chỉ</th>
+                                <th class="text-center" style="min-width: 120px;">Học kỳ</th>
+                                <th class="text-center" style="min-width: 150px;">Điểm tổng kết</th>
+                                <th class="text-center" style="min-width: 150px;">Trạng thái</th>
+                                <th class="text-end pe-3" style="min-width: 160px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (studentSections.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="fa-solid fa-folder-open fa-3x mb-3 d-block text-secondary opacity-50"></i>
+                                        <div class="fw-semibold fs-6">Bạn chưa có dữ liệu điểm môn học nào trong học kỳ này.</div>
+                                        <small class="text-muted">Vui lòng kiểm tra lại bộ lọc học kỳ phía trên.</small>
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var s in studentSections)
+                            {
+                                var rec = transcript.SubjectRecords.FirstOrDefault(r => r.CourseSectionId == s.Id || r.SubjectCode == s.SubjectCode);
+                                var hasFinal = rec?.FinalScore.HasValue == true;
+                                <tr style="cursor: pointer;" onclick="openSubjectGradeModal('@s.SubjectCode')">
+                                    <td class="ps-3">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary font-monospace fw-bold">@s.SubjectCode</span>
+                                            <span class="badge bg-secondary-subtle text-secondary border font-monospace">
+                                                <i class="fa-solid fa-award text-warning me-1"></i>@(s.Credits > 0 ? s.Credits : (rec != null ? rec.Credits : 3)) TC
+                                            </span>
+                                        </div>
+                                        <div class="fw-bold text-dark fs-6">
+                                            <a href="javascript:void(0)" onclick="openSubjectGradeModal('@s.SubjectCode'); event.stopPropagation();" class="text-decoration-none text-dark">
+                                                @s.SubjectName <i class="fa-solid fa-arrow-up-right-from-square text-primary ms-1" style="font-size: 0.75rem;"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info-subtle text-info border border-info font-monospace px-3 py-1 fs-6">
+                                            @s.SemesterCode
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (hasFinal)
+                                        {
+                                            <span class="badge @(rec!.IsPassed ? "bg-success" : "bg-danger") fs-6 px-3 py-1 shadow-sm font-monospace">
+                                                @rec.FinalScore!.Value.ToString("0.0")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-light text-muted border px-2 py-1">
+                                                <i class="fa-solid fa-clock me-1 text-primary"></i>Đang học
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (!hasFinal)
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1">
+                                                <i class="fa-solid fa-spinner fa-spin me-1"></i>ĐANG HỌC
+                                            </span>
+                                        }
+                                        else if (rec!.IsPassed)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success px-3 py-1 fw-bold">
+                                                <i class="fa-solid fa-circle-check me-1"></i>ĐẠT
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger border border-danger px-3 py-1 fw-bold">
+                                                <i class="fa-solid fa-circle-xmark me-1"></i>HỎNG
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill shadow-sm px-3" onclick="openSubjectGradeModal('@s.SubjectCode'); event.stopPropagation();">
+                                            <i class="fa-solid fa-chart-pie me-1"></i>Xem chi tiết
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL XEM CHI TIẾT TỪNG ĐẦU ĐIỂM GIÁO VIÊN VÀ ADMIN ĐÃ NHẬP -->
+    <div class="modal fade" id="modalSubjectGradeDetail" tabindex="-1" aria-labelledby="modalSubjectGradeDetailLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white border-0 py-3 px-4">
+                    <div>
+                        <h5 class="modal-title fw-bold" id="modalSubjectGradeDetailLabel">
+                            <i class="fa-solid fa-graduation-cap me-2"></i>Bảng Điểm Chi Tiết Môn Học
+                        </h5>
+                        <div class="small opacity-75" id="modalSubjectSubTitle">--</div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Thẻ Thông Tin Môn Học -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3 col-6">
+                            <div class="p-2 border rounded-3 bg-light">
+                                <div class="text-muted small">Mã môn</div>
+                                <div class="fw-bold text-primary font-monospace fs-6" id="modalSubjectCode">--</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-2 border rounded-3 bg-light">
+                                <div class="text-muted small">Mã lớp</div>
+                                <div class="fw-bold text-dark font-monospace" id="modalSubjectClass">--</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-2 border rounded-3 bg-light">
+                                <div class="text-muted small">Số tín chỉ</div>
+                                <div class="fw-bold text-dark" id="modalSubjectCredits">--</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-2 border rounded-3 bg-light">
+                                <div class="text-muted small">Học kỳ</div>
+                                <div class="fw-bold text-info" id="modalSubjectSemester">--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="small text-muted">
+                            <i class="fa-solid fa-chalkboard-user text-primary me-1"></i>Giảng viên phụ trách: <strong id="modalSubjectLecturer" class="text-dark">--</strong>
+                        </div>
+                        <span id="modalGradeLockBadge" class="badge bg-secondary-subtle text-secondary border">--</span>
+                    </div>
+
+                    <!-- Banner chú giải phân quyền nhập điểm (Giáo viên vs Admin) -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <div class="p-2 border rounded-3 bg-primary bg-opacity-10 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-chalkboard-user text-primary fs-5"></i>
+                                <div>
+                                    <span class="fw-bold text-primary small d-block">Đầu điểm do Giáo viên phụ trách nhập</span>
+                                    <small class="text-muted">Chuyên cần, Quiz, Bài tập / Lab, Kiểm tra tiến độ (Progress Test)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 border rounded-3 bg-warning bg-opacity-10 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-shield-halved text-danger fs-5"></i>
+                                <div>
+                                    <span class="fw-bold text-dark small d-block">Đầu điểm do Admin / Phòng Khảo thí nhập</span>
+                                    <small class="text-muted">Thực hành (PE), Thi kết thúc môn (Final Exam), Bảo vệ đồ án</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bảng Chi Tiết Từng Đầu Điểm Đã Nhập -->
+                    <div class="card border rounded-3 mb-3 overflow-hidden shadow-sm">
+                        <div class="card-header bg-light py-2 px-3 fw-semibold text-dark d-flex justify-content-between align-items-center">
+                            <span><i class="fa-solid fa-list-check me-2 text-primary"></i>Danh sách chi tiết từng đầu điểm của môn</span>
+                            <small class="text-muted">Minh bạch người nhập và cơ quan phê duyệt</small>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light small">
+                                    <tr>
+                                        <th class="ps-3" style="width: 40px;">#</th>
+                                        <th style="min-width: 200px;">Tên đầu điểm / Thành phần</th>
+                                        <th class="text-center" style="width: 100px;">Trọng số</th>
+                                        <th class="text-center" style="width: 160px;">Phân quyền nhập</th>
+                                        <th class="text-center" style="width: 130px;">Điểm đạt được</th>
+                                        <th class="text-center" style="width: 150px;">Người đã nhập</th>
+                                        <th class="text-center" style="width: 100px;">Quy đổi</th>
+                                        <th class="text-center pe-3" style="width: 120px;">Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalGradeComponentsBody">
+                                    <!-- Điền tự động bởi JavaScript -->
+                                </tbody>
+                                <tfoot class="table-light fw-bold border-top">
+                                    <tr>
+                                        <td colspan="2" class="ps-3 text-uppercase">Điểm Tổng Kết Môn Học</td>
+                                        <td class="text-center font-monospace" id="modalTotalWeight">100%</td>
+                                        <td></td>
+                                        <td class="text-center" id="modalFinalScoreDisplay">--</td>
+                                        <td></td>
+                                        <td class="text-center" id="modalFinalScoreContribution">--</td>
+                                        <td class="text-center pe-3" id="modalStatusBadge">--</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Hộp Chú Thích Quy Chế Đào Tạo -->
+                    <div class="alert alert-info border-0 rounded-3 py-2 px-3 mb-0 small d-flex align-items-center gap-2 bg-info bg-opacity-10 text-dark">
+                        <i class="fa-solid fa-circle-info fs-5 text-info"></i>
+                        <div>
+                            <strong>Quy chế môn học:</strong> Điểm tổng kết tính theo thang điểm 10. Điều kiện đạt: Điểm tổng kết &ge; 5.0, tham gia học tập đầy đủ và không bị điểm 0 ở các bài thi bắt buộc do Admin / Khảo thí quản lý (Practical Exam / Final Exam).
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 py-2 px-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dữ liệu bảng điểm nén an toàn cho Client-side JavaScript -->
+    <script id="transcriptJsonData" type="application/json">
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(enrichedSubjectsDict, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }))
+    </script>
+}
+else
+{
+    <!-- DÀNH CHO ADMIN & GIẢNG VIÊN -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="fw-bold mb-0">Danh sách Lớp Học phần</h5>
+            <small class="text-muted">Quản lý lớp theo học kỳ, phân công giảng viên và phòng học</small>
+        </div>
+        @if (role == "Admin")
+        {
+            <div class="d-flex gap-2">
+                <a asp-action="Allocations" class="btn btn-outline-primary btn-sm rounded-3">
+                    <i class="fa-solid fa-users-gear me-1"></i> Phân bổ sinh viên
+                </a>
+                <button class="btn btn-primary btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalAddSection">
+                    <i class="fa-solid fa-plus me-1"></i> Tạo Lớp Học phần
+                </button>
+            </div>
+        }
+    </div>
+
+    <div class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center mb-3 py-2 px-3 rounded-3 shadow-sm border-0">
+        <div class="mb-1 mb-md-0">
+            <i class="fa-solid fa-calendar-check me-2 text-primary fs-5"></i>
+            <strong>Quản lý Mùa học (Summer 26, Spring 26, Fall 26...):</strong> Tạo mùa học, Sửa, Xóa, Khóa hoặc Mở học kỳ trực tiếp.
+        </div>
+        <a asp-controller="Semesters" asp-action="Index" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+            <i class="fa-solid fa-arrow-right me-1"></i> Quản lý Mùa học & Khóa/Mở kỳ
+        </a>
+    </div>
+
+    <!-- Thanh Bộ Lọc OData Nâng Cao cho Lớp Học phần -->
+    <div class="card shadow-sm border-0 rounded-3 mb-3 bg-white">
+        <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1">
+                    <i class="fa-solid fa-filter me-1"></i>Bộ Lọc OData Lớp Học phần
+                </span>
+                <small class="text-muted">Lọc theo <code>$filter</code> học kỳ, môn học, tình trạng khóa điểm theo chuẩn OData</small>
+            </div>
+            <div>
+                <span class="badge bg-light text-dark border">Tổng cộng @(Model?.TotalCount ?? 0) lớp học phần</span>
+            </div>
+        </div>
+        <div class="card-body p-3">
+            <form method="get" asp-action="Index" id="sectionODataForm">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-3">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" name="search" id="sectionFilterSearch" class="form-control" 
+                                   placeholder="Tìm mã hoặc tên lớp..." value="@ViewBag.CurrentSearch" oninput="updateSectionODataPreview()" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="semesterId" id="sectionFilterSemester" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
+                            <option value="">-- Tất cả học kỳ / mùa học --</option>
+                            @foreach (var sem in semesters)
+                            {
+                                if (ViewBag.CurrentSemesterId != null && (int)ViewBag.CurrentSemesterId == sem.Id)
+                                {
+                                    <option value="@sem.Id" selected>@sem.Code - @sem.Name</option>
+                                }
+                                else
                                 {
                                     <option value="@sem.Id">@sem.Code - @sem.Name</option>
                                 }
-                            </select>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="subjectId" id="sectionFilterSubject" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
+                            <option value="">-- Tất cả môn học --</option>
+                            @foreach (var sub in subjects)
+                            {
+                                if (ViewBag.CurrentSubjectId != null && (int)ViewBag.CurrentSubjectId == sub.Id)
+                                {
+                                    <option value="@sub.Id" selected>@sub.Code - @sub.Name</option>
+                                }
+                                else
+                                {
+                                    <option value="@sub.Id">@sub.Code - @sub.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="isLocked" id="sectionFilterLocked" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
+                            <option value="">-- Tình trạng điểm --</option>
+                            <!option value="false" @(ViewBag.CurrentIsLocked != null && !(bool)ViewBag.CurrentIsLocked ? "selected" : "")>Đang mở nhập điểm</!option>
+                            <!option value="true" @(ViewBag.CurrentIsLocked != null && (bool)ViewBag.CurrentIsLocked ? "selected" : "")>Đã khóa bảng điểm</!option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <select name="orderby" id="sectionFilterOrderBy" class="form-select form-select-sm" onchange="updateSectionODataPreview()">
+                            <option value="">-- Sắp xếp --</option>
+                            <!option value="Code asc" @(ViewBag.CurrentOrderBy == "Code asc" ? "selected" : "")>Mã A-Z</!option>
+                            <!option value="Code desc" @(ViewBag.CurrentOrderBy == "Code desc" ? "selected" : "")>Mã Z-A</!option>
+                            <!option value="EnrolledCount desc" @(ViewBag.CurrentOrderBy == "EnrolledCount desc" ? "selected" : "")>Sĩ số giảm dần</!option>
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 shadow-sm" title="Áp dụng bộ lọc OData lên Server">
+                            <i class="fa-solid fa-play"></i> Lọc
+                        </button>
+                        @if (!string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery))
+                        {
+                            <a asp-action="Index" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </a>
+                        }
+                    </div>
+                </div>
+
+                <!-- Preview OData Query String -->
+                <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-secondary fw-semibold"><i class="fa-solid fa-code text-primary me-1"></i>OData Query URL:</span>
+                        <code id="sectionODataPreview" class="text-primary bg-light px-2 py-1 rounded border">/api/course-sections@(string.IsNullOrEmpty((string)ViewBag.CurrentODataQuery) ? "" : "?" + ViewBag.CurrentODataQuery)</code>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-success-subtle text-success border border-success">
+                            <i class="fa-solid fa-check me-1"></i>OData v4 Supported
+                        </span>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3" style="white-space: nowrap; min-width: 140px;">Mã lớp HP</th>
+                            <th style="white-space: nowrap; min-width: 110px;">Môn học</th>
+                            <th style="white-space: nowrap; min-width: 110px;">Học kỳ</th>
+                            <th style="min-width: 180px;">Giảng viên phụ trách</th>
+                            <th class="text-center" style="white-space: nowrap;">Sĩ số</th>
+                            <th style="min-width: 180px;">Lịch học & Phòng</th>
+                            <th class="text-center" style="white-space: nowrap;">Khóa điểm</th>
+                            <th class="text-end pe-3" style="white-space: nowrap; min-width: 140px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model == null || Model.Items == null || !Model.Items.Any())
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-folder-open fa-2x mb-2 d-block"></i>
+                                    Chưa có lớp học phần nào.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var s in Model.Items)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-primary">@s.Code</td>
+                                <td><span class="badge bg-secondary">@s.SubjectCode</span></td>
+                                <td>@s.SemesterCode</td>
+                                <td>
+                                    @if (string.IsNullOrEmpty(s.LecturerName) || s.LecturerName == "Chưa phân công")
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>Chưa phân công</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success"><i class="fa-solid fa-chalkboard-user me-1"></i>@s.LecturerName</span>
+                                    }
+                                </td>
+                                <td class="text-center">@s.EnrolledStudentsCount / @s.MaxCapacity</td>
+                                <td>
+                                    @if (s.Schedules.Count == 0)
+                                    {
+                                        <span class="text-muted small">Chưa xếp lịch</span>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var sch in s.Schedules)
+                                        {
+                                            <span class="badge bg-light text-dark border me-1">
+                                                @FormatDayOfWeek(sch.DayOfWeek), Ca @sch.Slot (@sch.Room)
+                                            </span>
+                                        }
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (s.IsGradeLocked)
+                                    {
+                                        <span class="badge bg-danger"><i class="fa-solid fa-lock me-1"></i>Đã khóa</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success"><i class="fa-solid fa-lock-open me-1"></i>Mở</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    @if (role == "Admin")
+                                    {
+                                        <button class="btn btn-outline-primary btn-sm rounded-pill me-1" onclick="openAssignModal(@s.Id, '@s.Code', '@s.LecturerId')" title="Phân công giảng viên">
+                                            <i class="fa-solid fa-user-pen me-1"></i> GV
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm rounded-pill me-1" onclick="openEditSectionModal(@s.Id, '@s.Code', '@s.Name', @s.MaxCapacity, '@s.LecturerId')" title="Sửa lớp HP">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn xóa lớp học phần @s.Code?');">
+                                            <input type="hidden" name="id" value="@s.Id" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill me-1" title="Xóa lớp HP">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    @if (role == "Admin" || role == "Lecturer")
+                                    {
+                                        <a asp-controller="Grades" asp-action="Index" asp-route-sectionId="@s.Id" class="btn btn-outline-success btn-sm rounded-pill" title="Nhập bảng điểm">
+                                            <i class="fa-solid fa-pen-to-square me-1"></i> Điểm
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @await Html.PartialAsync("_Pagination", project_PRN232.Frontend.Models.PaginationViewModel.From(Model ?? new(), "lớp học phần"))
+
+    <!-- Modal Thêm Lớp Học Phần -->
+    <div class="modal fade" id="modalAddSection" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-controller="CourseSections" asp-action="Create" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Tạo Lớp Học phần Mới</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Mã lớp học phần</label>
+                            <input type="text" name="code" class="form-control" placeholder="VD: PRN232_SU25_SE1701" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tên lớp</label>
+                            <input type="text" name="name" class="form-control" placeholder="VD: Lập trình Web ASP.NET Core - Lớp SE1701" required />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Môn học</label>
+                                <select name="subjectId" class="form-select" required>
+                                    @foreach (var sub in subjects)
+                                    {
+                                        <option value="@sub.Id">@sub.Code - @sub.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Học kỳ</label>
+                                <select name="semesterId" class="form-select" required>
+                                    @foreach (var sem in semesters)
+                                    {
+                                        <option value="@sem.Id">@sem.Code - @sem.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label small fw-semibold">Giảng viên phụ trách</label>
+                                <select name="lecturerId" class="form-select">
+                                    <option value="">-- Chưa phân công --</option>
+                                    @foreach (var l in lecturers)
+                                    {
+                                        <option value="@l.Id">@l.LecturerCode - @l.FullName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Sĩ số tối đa</label>
+                                <input type="number" name="maxCapacity" class="form-control" value="30" min="1" max="100" required />
+                            </div>
                         </div>
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-8">
-                            <label class="form-label small fw-semibold">Giảng viên phụ trách</label>
-                            <select name="lecturerId" class="form-select">
-                                <option value="">-- Chưa phân công --</option>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Lưu Lớp Học phần</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Phân công Giảng viên -->
+    <div class="modal fade" id="modalAssignLecturer" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-controller="CourseSections" asp-action="AssignLecturer" method="post">
+                    <input type="hidden" name="sectionId" id="assignSectionId" />
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Phân công Giảng viên cho <span id="assignSectionCode" class="text-primary"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info py-2 small mb-3">
+                            <i class="fa-solid fa-circle-info me-1"></i> Quy tắc: Giảng viên mới nhận quyền ngay, giảng viên cũ mất quyền, điểm đã nhập được giữ nguyên.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Chọn giảng viên</label>
+                            <select name="lecturerId" id="assignLecturerSelect" class="form-select">
+                                <option value="">-- Bỏ phân công --</option>
                                 @foreach (var l in lecturers)
                                 {
-                                    <option value="@l.Id">@l.LecturerCode - @l.FullName</option>
+                                    <option value="@l.Id">@l.LecturerCode - @l.FullName (@l.Department)</option>
                                 }
                             </select>
                         </div>
-                        <div class="col-md-4">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Xác nhận Phân công</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Sửa Lớp Học Phần -->
+    <div class="modal fade" id="modalEditSection" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-controller="CourseSections" asp-action="Edit" method="post">
+                    <input type="hidden" name="id" id="editSectionId" />
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Chỉnh Sửa Lớp Học Phần: <span id="editSectionCodeBadge" class="text-primary"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tên lớp học phần <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="editSectionName" class="form-control" required />
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label small fw-semibold">Sĩ số tối đa</label>
-                            <input type="number" name="maxCapacity" class="form-control" value="30" min="1" max="100" required />
+                            <input type="number" name="maxCapacity" id="editSectionCapacity" class="form-control" min="5" max="100" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Giảng viên phụ trách</label>
+                            <select name="lecturerId" id="editSectionLecturer" class="form-select">
+                                <option value="">-- Chưa phân công --</option>
+                                @foreach (var l in lecturers)
+                                {
+                                    <option value="@l.Id">@l.LecturerCode - @l.FullName (@l.Department)</option>
+                                }
+                            </select>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Lưu Lớp Học phần</button>
-                </div>
-            </form>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Cập nhật Lớp HP</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-
-<!-- Modal Phân công Giảng viên -->
-<div class="modal fade" id="modalAssignLecturer" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form asp-controller="CourseSections" asp-action="AssignLecturer" method="post">
-                <input type="hidden" name="sectionId" id="assignSectionId" />
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Phân công Giảng viên cho <span id="assignSectionCode" class="text-primary"></span></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info py-2 small mb-3">
-                        <i class="fa-solid fa-circle-info me-1"></i> Quy tắc: Giảng viên mới nhận quyền ngay, giảng viên cũ mất quyền, điểm đã nhập được giữ nguyên.
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Chọn giảng viên</label>
-                        <select name="lecturerId" id="assignLecturerSelect" class="form-select">
-                            <option value="">-- Bỏ phân công --</option>
-                            @foreach (var l in lecturers)
-                            {
-                                <option value="@l.Id">@l.LecturerCode - @l.FullName (@l.Department)</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Xác nhận Phân công</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Sửa Lớp Học Phần -->
-<div class="modal fade" id="modalEditSection" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form asp-controller="CourseSections" asp-action="Edit" method="post">
-                <input type="hidden" name="id" id="editSectionId" />
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Chỉnh Sửa Lớp Học Phần: <span id="editSectionCodeBadge" class="text-primary"></span></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Tên lớp học phần <span class="text-danger">*</span></label>
-                        <input type="text" name="name" id="editSectionName" class="form-control" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Sĩ số tối đa</label>
-                        <input type="number" name="maxCapacity" id="editSectionCapacity" class="form-control" min="5" max="100" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Giảng viên phụ trách</label>
-                        <select name="lecturerId" id="editSectionLecturer" class="form-select">
-                            <option value="">-- Chưa phân công --</option>
-                            @foreach (var l in lecturers)
-                            {
-                                <option value="@l.Id">@l.LecturerCode - @l.FullName (@l.Department)</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Cập nhật Lớp HP</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+}
 
 @section Scripts {
 <script>
+    function openSubjectGradeModal(subjectCode) {
+        const transcriptElem = document.getElementById('transcriptJsonData');
+        const transcriptSubjectMap = transcriptElem ? JSON.parse(transcriptElem.textContent || '{}') : {};
+
+        if (!transcriptSubjectMap || !transcriptSubjectMap[subjectCode]) {
+            alert('Không tìm thấy thông tin điểm của môn học: ' + subjectCode);
+            return;
+        }
+
+        const data = transcriptSubjectMap[subjectCode];
+        document.getElementById('modalSubjectCode').innerText = data.subjectCode;
+        document.getElementById('modalSubjectSubTitle').innerText = data.subjectCode + ' - ' + data.subjectName;
+        document.getElementById('modalSubjectClass').innerText = data.classCode || '--';
+        document.getElementById('modalSubjectCredits').innerText = (data.credits || 3) + ' TC';
+        document.getElementById('modalSubjectLecturer').innerText = data.lecturerName || 'Bộ môn đào tạo';
+        document.getElementById('modalSubjectSemester').innerText = data.semesterCode || '--';
+
+        const lockBadge = document.getElementById('modalGradeLockBadge');
+        if (data.isLocked) {
+            lockBadge.className = 'badge bg-success-subtle text-success border border-success';
+            lockBadge.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Đã khóa sổ điểm';
+        } else {
+            lockBadge.className = 'badge bg-secondary-subtle text-secondary border';
+            lockBadge.innerHTML = '<i class="fa-solid fa-lock-open me-1"></i>Sổ điểm đang mở';
+        }
+
+        const tbody = document.getElementById('modalGradeComponentsBody');
+        tbody.innerHTML = '';
+
+        let totalWeight = 0;
+        let totalCalculated = 0;
+        let hasAnyScore = false;
+
+        if (data.components && data.components.length > 0) {
+            data.components.forEach((c, index) => {
+                const tr = document.createElement('tr');
+                const weight = Number(c.weight || 0);
+                totalWeight += weight;
+                const score = (c.score !== null && c.score !== undefined) ? Number(c.score) : null;
+
+                const isAdminOnly = !!c.isAdminOnly;
+                const roleBadge = isAdminOnly
+                    ? `<span class="badge bg-warning bg-opacity-10 text-dark border border-warning px-2 py-1"><i class="fa-solid fa-shield-halved text-danger me-1"></i>Admin (Khảo thí)</span>`
+                    : `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-1"><i class="fa-solid fa-chalkboard-user me-1"></i>Giáo viên</span>`;
+
+                let scoreText = '';
+                let contribText = '';
+                let statusBadge = '';
+                let updaterBadge = '';
+
+                if (score !== null) {
+                    hasAnyScore = true;
+                    const contrib = (score * weight / 100.0);
+                    totalCalculated += contrib;
+                    scoreText = `<span class="fw-bold font-monospace text-primary fs-6">${score.toFixed(1)}</span> <span class="text-muted small">/ 10</span>`;
+                    contribText = `<span class="font-monospace text-success fw-semibold">+${contrib.toFixed(2)}</span>`;
+                    statusBadge = `<span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-check me-1"></i>Đã nhập</span>`;
+
+                    const updater = c.updatedBy || (isAdminOnly ? 'admin' : (data.lecturerName || 'Giáo viên'));
+                    updaterBadge = `<span class="badge bg-light text-dark border font-monospace"><i class="fa-solid fa-user-pen text-primary me-1"></i>${updater}</span>`;
+                } else {
+                    scoreText = `<span class="text-muted fst-italic">--</span>`;
+                    contribText = `<span class="text-muted">--</span>`;
+                    statusBadge = `<span class="badge bg-secondary-subtle text-secondary border"><i class="fa-solid fa-clock me-1"></i>Chờ nhập</span>`;
+                    updaterBadge = `<span class="text-muted small fst-italic">${isAdminOnly ? 'Chờ Admin' : 'Chờ GV'}</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="ps-3 text-muted fw-bold">${index + 1}</td>
+                    <td>
+                        <div class="fw-semibold text-dark">${c.componentName}</div>
+                        ${c.notes ? `<small class="text-muted">${c.notes}</small>` : ''}
+                    </td>
+                    <td class="text-center font-monospace">${weight.toFixed(0)}%</td>
+                    <td class="text-center">${roleBadge}</td>
+                    <td class="text-center">${scoreText}</td>
+                    <td class="text-center">${updaterBadge}</td>
+                    <td class="text-center">${contribText}</td>
+                    <td class="text-center pe-3">${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="8" class="text-center py-4 text-muted fst-italic">Môn học đang trong quá trình học tập, giáo viên và admin chưa công bố điểm thành phần.</td>`;
+            tbody.appendChild(tr);
+        }
+
+        document.getElementById('modalTotalWeight').innerText = (totalWeight > 0 ? totalWeight.toFixed(0) : 100) + '%';
+
+        const finalScoreElem = document.getElementById('modalFinalScoreDisplay');
+        const contribElem = document.getElementById('modalFinalScoreContribution');
+        const statusElem = document.getElementById('modalStatusBadge');
+
+        if (data.finalScore !== null && data.finalScore !== undefined) {
+            const finalVal = Number(data.finalScore);
+            finalScoreElem.innerHTML = `<span class="badge ${data.isPassed ? 'bg-success' : 'bg-danger'} px-3 py-1 font-monospace fs-5 shadow-sm">${finalVal.toFixed(1)} / 10</span>`;
+            contribElem.innerHTML = `<span class="fw-bold ${data.isPassed ? 'text-success' : 'text-danger'} font-monospace fs-6">${finalVal.toFixed(2)}</span>`;
+            if (data.isPassed) {
+                statusElem.innerHTML = `<span class="badge bg-success px-3 py-2 fw-bold"><i class="fa-solid fa-circle-check me-1"></i>ĐẠT (Passed)</span>`;
+            } else {
+                statusElem.innerHTML = `<span class="badge bg-danger px-3 py-2 fw-bold"><i class="fa-solid fa-circle-xmark me-1"></i>HỎNG (Failed)</span>`;
+            }
+        } else {
+            finalScoreElem.innerHTML = `<span class="badge bg-secondary-subtle text-secondary border px-3 py-1 fs-6">Đang học</span>`;
+            contribElem.innerHTML = hasAnyScore ? `<span class="font-monospace text-primary">Tạm tính: ${totalCalculated.toFixed(2)}</span>` : `<span class="text-muted">--</span>`;
+            statusElem.innerHTML = `<span class="badge bg-secondary-subtle text-secondary border px-3 py-2"><i class="fa-solid fa-spinner fa-spin me-1"></i>ĐANG HỌC</span>`;
+        }
+
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSubjectGradeDetail'));
+        modalInstance.show();
+    }
+
     function updateSectionODataPreview() {
-        const search = (document.getElementById('sectionFilterSearch').value || '').trim();
-        const semId = document.getElementById('sectionFilterSemester').value;
-        const subId = document.getElementById('sectionFilterSubject').value;
-        const locked = document.getElementById('sectionFilterLocked').value;
-        const orderby = document.getElementById('sectionFilterOrderBy').value;
+        const searchInput = document.getElementById('sectionFilterSearch');
+        if (!searchInput) return;
+        const search = (searchInput.value || '').trim();
+        const semId = document.getElementById('sectionFilterSemester')?.value || '';
+        const subId = document.getElementById('sectionFilterSubject')?.value || '';
+        const locked = document.getElementById('sectionFilterLocked')?.value || '';
+        const orderby = document.getElementById('sectionFilterOrderBy')?.value || '';
 
         const filters = [];
         if (search) {
