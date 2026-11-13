@@ -16,9 +16,8 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Database Context
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("MyCNN")
-        ?? builder.Configuration.GetConnectionString("Mycnn")
-        ?? throw new InvalidOperationException("Không tìm thấy chuỗi kết nối 'MyCNN' trong appsettings.json.");
+    var connectionString = builder.Configuration.GetConnectionString("Mycnn")
+        ?? throw new InvalidOperationException("Không tìm thấy chuỗi kết nối 'Mycnn' trong appsettings.json.");
 
     options.UseSqlServer(connectionString, sqlOptions =>
     {
