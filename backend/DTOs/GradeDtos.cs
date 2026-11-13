@@ -73,9 +73,14 @@ namespace project_PRN232.DTOs
 
     public class ComponentScoreDto
     {
+        public int ComponentId { get; set; }
         public string ComponentName { get; set; } = string.Empty;
         public decimal Weight { get; set; }
         public decimal? Score { get; set; }
+        public bool IsAdminOnly { get; set; }
+        public string? UpdatedBy { get; set; }
+        public string GradedByRole { get; set; } = "Giáo viên";
+        public string? Notes { get; set; }
     }
 }
 

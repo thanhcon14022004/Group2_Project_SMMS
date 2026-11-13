@@ -1,12 +1,152 @@
 using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using project_PRN232.Models.Entities;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace project_PRN232.Data
 {
     public static class DbInitializer
     {
         public static void Initialize(AppDbContext context)
+        {
+            // Luôn đảm bảo bảng LecturerSubjects tồn tại cho tính năng phân bổ giáo viên
+            EnsureLecturerSubjectsTableExists(context);
+
+            // Nếu đã có dữ liệu môn học và người dùng, không cần nạp lại
+            if (context.Users.Any() && context.Subjects.Any())
+            {
+                return;
+            }
+
+            // 1. Tự động nạp bộ dữ liệu đầy đủ từ SMMS_Database.sql nếu database trống
+            if (TrySeedFromSqlScript(context))
+            {
+                return;
+            }
+
+            // 2. Dự phòng: nạp dữ liệu mẫu C# nếu không đọc được file SQL
+            SeedDefaultData(context);
+        }
+
+        private static void EnsureLecturerSubjectsTableExists(AppDbContext context)
+        {
+            try
+            {
+                var sql = @"
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'LecturerSubjects')
+BEGIN
+    CREATE TABLE [LecturerSubjects] (
+        [Id] int NOT NULL IDENTITY,
+        [LecturerId] int NOT NULL,
+        [SubjectId] int NOT NULL,
+        [MajorId] int NULL,
+        [SpecializationId] int NULL,
+        [RegisteredAt] datetime2 NOT NULL DEFAULT (GETUTCDATE()),
+        [Notes] nvarchar(max) NULL,
+        CONSTRAINT [PK_LecturerSubjects] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_LecturerSubjects_Lecturers_LecturerId] FOREIGN KEY ([LecturerId]) REFERENCES [Lecturers] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_LecturerSubjects_Subjects_SubjectId] FOREIGN KEY ([SubjectId]) REFERENCES [Subjects] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_LecturerSubjects_Majors_MajorId] FOREIGN KEY ([MajorId]) REFERENCES [Majors] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_LecturerSubjects_Specializations_SpecializationId] FOREIGN KEY ([SpecializationId]) REFERENCES [Specializations] ([Id]) ON DELETE NO ACTION
+    );
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_LecturerSubjects_LecturerId_SubjectId] ON [LecturerSubjects] ([LecturerId], [SubjectId]);
+END
+
+IF NOT EXISTS (SELECT 1 FROM LecturerSubjects)
+BEGIN
+    INSERT INTO LecturerSubjects (LecturerId, SubjectId, MajorId, SpecializationId, RegisteredAt)
+    SELECT l.Id, s.Id, s.MajorId, s.SpecializationId, GETUTCDATE()
+    FROM Lecturers l
+    CROSS JOIN Subjects s
+    WHERE (l.Department = 'Software Engineering' AND s.Code IN ('PRF192', 'PRO192', 'PRN211', 'PRN232', 'SWP391', 'SWR302', 'SWT301', 'DBI202'))
+       OR (l.Department = 'Information Assurance' AND s.Code IN ('NWC203c', 'IAO201', 'CSN301', 'ISF301', 'DIF301', 'CRY301'))
+       OR (l.Department = 'Artificial Intelligence' AND s.Code IN ('AIL302m', 'AIP391', 'DAP301', 'MLP301', 'NLP301', 'CVP301'))
+       OR (l.Department = 'Data Science' AND s.Code IN ('MAS291', 'DBI202', 'DBD301', 'BAP301', 'BDA301', 'DSE301'))
+       OR (l.Department = 'Business Administration' AND s.Code IN ('MKT101', 'MGT103', 'ECO111', 'OBE102', 'ENP102', 'BMA202'))
+       OR (l.Department = 'Digital Art & Design' AND s.Code IN ('UIX201', 'GRA201', 'DRA101', 'TYP101', 'ANM201', 'VFX201'))
+       OR (l.Department = 'Japanese Language' AND s.Code IN ('JPD113', 'JPD123', 'JPD213', 'JPD223', 'JPD313', 'JPD323'))
+       OR (l.Department = 'English Language' AND s.Code IN ('TRS101', 'TRS201', 'TRS301', 'TRS401', 'TRS501', 'TRS601'))
+       OR (l.Department = 'Korean Language' AND s.Code IN ('KOR111', 'KOR121', 'KOR211', 'KOR221', 'KOR311', 'KOR321'));
+END";
+                context.Database.ExecuteSqlRaw(sql);
+            }
+            catch { }
+        }
+
+        private static bool TrySeedFromSqlScript(AppDbContext context)
+        {
+            try
+            {
+                string[] searchPaths = new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "Data", "SMMS_Database.sql"),
+                    Path.Combine(AppContext.BaseDirectory, "SMMS_Database.sql"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "Data", "SMMS_Database.sql"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "SMMS_Database.sql"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "..", "SMMS_Database.sql"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "backend", "Data", "SMMS_Database.sql")
+                };
+
+                string? sqlFilePath = searchPaths.FirstOrDefault(File.Exists);
+                if (string.IsNullOrEmpty(sqlFilePath))
+                {
+                    return false;
+                }
+
+                string fullSql = File.ReadAllText(sqlFilePath);
+                if (string.IsNullOrWhiteSpace(fullSql))
+                {
+                    return false;
+                }
+
+                // Tách theo lệnh GO của T-SQL (case-insensitive, độc lập trên 1 dòng)
+                var batches = Regex.Split(
+                    fullSql, 
+                    @"^\s*GO\s*(?:--.*)?$", 
+                    RegexOptions.Multiline | RegexOptions.IgnoreCase);
+
+                using var conn = context.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open)
+                {
+                    conn.Open();
+                }
+
+                foreach (var rawBatch in batches)
+                {
+                    var batch = rawBatch.Trim();
+                    if (string.IsNullOrWhiteSpace(batch)) continue;
+
+                    // Bỏ qua lệnh CREATE DATABASE hoặc USE vì kết nối đã trỏ đúng CSDL
+                    if (Regex.IsMatch(batch, @"^\s*CREATE\s+DATABASE", RegexOptions.IgnoreCase) ||
+                        Regex.IsMatch(batch, @"^\s*USE\s+\[", RegexOptions.IgnoreCase) ||
+                        Regex.IsMatch(batch, @"^\s*USE\s+[a-zA-Z0-9_]+", RegexOptions.IgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        using var cmd = conn.CreateCommand();
+                        cmd.CommandText = batch;
+                        cmd.CommandTimeout = 180;
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch
+                    {
+                        // Tiếp tục nếu một số batch DDL bảng đã tồn tại
+                    }
+                }
+
+                return context.Users.Any();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void SeedDefaultData(AppDbContext context)
         {
             if (context.Users.Any())
             {

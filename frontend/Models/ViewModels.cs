@@ -120,7 +120,7 @@ namespace project_PRN232.Frontend.Models
         public string SemesterName { get; set; } = string.Empty;
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
-        public int Credits { get; set; }
+        public int Credits { get; set; } = 3;
         public string ScheduleSummary { get; set; } = string.Empty;
         public int StudentCount { get; set; }
         public int MaxCapacity { get; set; }
@@ -350,7 +350,7 @@ namespace project_PRN232.Frontend.Models
         public int SubjectId { get; set; }
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
-        public int Credits { get; set; }
+        public int Credits { get; set; } = 3;
         public int? LecturerId { get; set; }
         public string LecturerName { get; set; } = string.Empty;
         public string LecturerCode { get; set; } = string.Empty;
@@ -410,6 +410,7 @@ namespace project_PRN232.Frontend.Models
         public int SubjectId { get; set; }
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
+        public int Credits { get; set; } = 3;
         public int SemesterId { get; set; }
         public string SemesterCode { get; set; } = string.Empty;
         public int? LecturerId { get; set; }
@@ -487,7 +488,7 @@ namespace project_PRN232.Frontend.Models
         public string CourseSectionName { get; set; } = string.Empty;
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
-        public int Credits { get; set; }
+        public int Credits { get; set; } = 3;
         public string? LecturerName { get; set; }
         public int? AdministrativeClassId { get; set; }
         public string? AdministrativeClassCode { get; set; }
@@ -527,9 +528,14 @@ namespace project_PRN232.Frontend.Models
 
     public class TranscriptComponentScoreViewModel
     {
+        public int ComponentId { get; set; }
         public string ComponentName { get; set; } = string.Empty;
         public decimal Weight { get; set; }
         public decimal? Score { get; set; }
+        public bool IsAdminOnly { get; set; }
+        public string? UpdatedBy { get; set; }
+        public string GradedByRole { get; set; } = "Giảng viên";
+        public string? Notes { get; set; }
     }
 
     public class TranscriptSubjectRecordViewModel
@@ -538,7 +544,7 @@ namespace project_PRN232.Frontend.Models
         public string SemesterCode { get; set; } = string.Empty;
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
-        public int Credits { get; set; }
+        public int Credits { get; set; } = 3;
         public List<TranscriptComponentScoreViewModel> Components { get; set; } = new();
         public decimal? FinalScore { get; set; }
         public bool IsPassed { get; set; }
@@ -600,7 +606,7 @@ namespace project_PRN232.Frontend.Models
         public int SubjectId { get; set; }
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
-        public int Credits { get; set; }
+        public int Credits { get; set; } = 3;
         public int? AdministrativeClassId { get; set; }
         public string? AdministrativeClassCode { get; set; }
         public int? LecturerId { get; set; }
@@ -757,7 +763,7 @@ namespace project_PRN232.Frontend.Models
         public int SubjectId { get; set; }
         public string SubjectCode { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
-        public int Credits { get; set; }
+        public int Credits { get; set; } = 3;
         public int? MajorId { get; set; }
         public string? MajorCode { get; set; }
         public string? MajorName { get; set; }

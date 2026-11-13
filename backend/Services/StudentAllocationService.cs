@@ -142,13 +142,27 @@ namespace project_PRN232.Services
                                 CreatedAt = DateTime.UtcNow
                             };
 
-                            var day1 = (DayOfWeek)(1 + ((slotOffset * 2) % 5));
-                            var day2 = (DayOfWeek)(2 + ((slotOffset * 2) % 4));
-                            var slot = (slotOffset % 4) + 1;
-                            slotOffset++;
+                            // Phân bổ lịch học chuẩn FPT: 4 môn = 4 ca khác nhau (Ca 1, Ca 2, Ca 3, Ca 4), mỗi môn 2 buổi/tuần
+                            var standardSlots = new[]
+                            {
+                                (DayOfWeek.Monday, DayOfWeek.Thursday, 1, 1),   // Môn 1: T2 & T5, Ca 1, Phòng 301
+                                (DayOfWeek.Monday, DayOfWeek.Thursday, 2, 2),   // Môn 2: T2 & T5, Ca 2, Phòng 302
+                                (DayOfWeek.Tuesday, DayOfWeek.Friday, 3, 3),    // Môn 3: T3 & T6, Ca 3, Phòng 303
+                                (DayOfWeek.Tuesday, DayOfWeek.Friday, 4, 4),    // Môn 4: T3 & T6, Ca 4, Phòng 304
+                                (DayOfWeek.Wednesday, DayOfWeek.Saturday, 1, 5),// Môn 5: T4 & T7, Ca 1, Phòng 305
+                                (DayOfWeek.Wednesday, DayOfWeek.Saturday, 2, 6) // Môn 6: T4 & T7, Ca 2, Phòng 306
+                            };
 
-                            sec.Schedules.Add(new CourseSectionSchedule { DayOfWeek = day1, Slot = slot, Room = $"BE-{300 + slot}" });
-                            sec.Schedules.Add(new CourseSectionSchedule { DayOfWeek = day2, Slot = slot, Room = $"BE-{300 + slot}" });
+                            var slotPlan = standardSlots[(slotOffset - 1) % standardSlots.Length];
+                            var roomPrefix = adminClass.Code.StartsWith("SE") ? "BE" :
+                                             adminClass.Code.StartsWith("IA") ? "AL" :
+                                             adminClass.Code.StartsWith("AI") ? "ALPHA" :
+                                             adminClass.Code.StartsWith("BA") ? "DELTA" : "LAB";
+                            var room = $"{roomPrefix}-{300 + slotPlan.Item4}";
+
+                            sec.Schedules.Add(new CourseSectionSchedule { DayOfWeek = slotPlan.Item1, Slot = slotPlan.Item3, Room = room });
+                            sec.Schedules.Add(new CourseSectionSchedule { DayOfWeek = slotPlan.Item2, Slot = slotPlan.Item3, Room = room });
+                            slotOffset++;
 
                             newSectionsToInsert.Add(sec);
                             classSecs.Add(sec);
