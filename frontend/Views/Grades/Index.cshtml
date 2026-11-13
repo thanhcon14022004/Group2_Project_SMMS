@@ -415,7 +415,7 @@ else
                                 </tr>
                             </thead>
                             <tbody>
-                                @{ int rowIdx = 0; }
+                                @{ int rowIdx = 0; int inputIndex = 0; }
                                 @foreach (var s in Model.StudentRows)
                                 {
                                     <tr>
@@ -430,7 +430,6 @@ else
                                             </span>
                                         </td>
                                         
-                                        @{ int compIdx = 0; }
                                         @foreach (var comp in Model.Components)
                                         {
                                             decimal? scoreVal = null;
@@ -454,7 +453,6 @@ else
                                                     canEditComponent = !comp.IsAdminOnly;
                                                 }
                                             }
-                                            int flatIndex = rowIdx * Model.Components.Count + compIdx;
 
                                             string placeholderText = "0.0";
                                             string tooltipText = $"Nhập điểm từ 0.0 đến {comp.Scale.ToString("0")}";
@@ -479,14 +477,16 @@ else
                                             <td class="text-center p-1 @cellClass">
                                                 @if (canEditComponent)
                                                 {
-                                                    <input type="hidden" name="grades[@flatIndex].StudentId" value="@s.StudentId" />
-                                                    <input type="hidden" name="grades[@flatIndex].ComponentId" value="@comp.Id" />
+                                                    <input type="hidden" name="grades.Index" value="@inputIndex" />
+                                                    <input type="hidden" name="grades[@inputIndex].StudentId" value="@s.StudentId" />
+                                                    <input type="hidden" name="grades[@inputIndex].ComponentId" value="@comp.Id" />
                                                     <input type="number" step="0.1" min="0" max="@comp.Scale.ToString("0")" 
-                                                           name="grades[@flatIndex].Score" 
+                                                           name="grades[@inputIndex].Score" 
                                                            value="@(scoreVal.HasValue ? scoreVal.Value.ToString("0.0") : "")"
                                                            class="form-control form-control-sm text-center fw-semibold text-primary grade-input"
                                                            placeholder="@placeholderText"
                                                            title="@tooltipText" />
+                                                    inputIndex++;
                                                 }
                                                 else
                                                 {
@@ -498,7 +498,6 @@ else
                                                            readonly disabled />
                                                 }
                                             </td>
-                                            compIdx++;
                                         }
 
                                         <td class="text-center fw-bold fs-6 @(s.FinalScore.HasValue ? (s.IsPassed ? "text-success" : "text-danger") : "text-muted")">

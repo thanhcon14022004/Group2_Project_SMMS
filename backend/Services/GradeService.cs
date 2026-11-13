@@ -235,17 +235,21 @@ namespace project_PRN232.Services
 
                 if (gradeRecord == null)
                 {
-                    gradeRecord = new StudentGrade
+                    if (item.Score.HasValue)
                     {
-                        CourseSectionId = request.CourseSectionId,
-                        StudentId = item.StudentId,
-                        SubjectGradeComponentId = item.SubjectGradeComponentId,
-                        Score = item.Score,
-                        Notes = item.Notes,
-                        UpdatedAt = DateTime.UtcNow,
-                        UpdatedBy = performedBy
-                    };
-                    _db.StudentGrades.Add(gradeRecord);
+                        gradeRecord = new StudentGrade
+                        {
+                            CourseSectionId = request.CourseSectionId,
+                            StudentId = item.StudentId,
+                            SubjectGradeComponentId = item.SubjectGradeComponentId,
+                            Score = item.Score,
+                            Notes = item.Notes,
+                            UpdatedAt = DateTime.UtcNow,
+                            UpdatedBy = performedBy
+                        };
+                        _db.StudentGrades.Add(gradeRecord);
+                        updatedCount++;
+                    }
                 }
                 else
                 {
@@ -253,9 +257,8 @@ namespace project_PRN232.Services
                     gradeRecord.Notes = item.Notes;
                     gradeRecord.UpdatedAt = DateTime.UtcNow;
                     gradeRecord.UpdatedBy = performedBy;
+                    updatedCount++;
                 }
-
-                updatedCount++;
             }
 
             await _db.SaveChangesAsync();
