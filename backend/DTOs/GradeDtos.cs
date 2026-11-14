@@ -82,5 +82,20 @@ namespace project_PRN232.DTOs
         public string GradedByRole { get; set; } = "Giáo viên";
         public string? Notes { get; set; }
     }
+
+    public class StudentGradeItemDto
+    {
+        public int Id { get; set; }
+        public int StudentId { get; set; }
+        public string StudentCode { get; set; } = string.Empty;
+        public string StudentName { get; set; } = string.Empty;
+        public int CourseSectionId { get; set; }
+        public string SectionCode { get; set; } = string.Empty;
+        public string SubjectCode { get; set; } = string.Empty;
+        public string SubjectName { get; set; } = string.Empty;
+        public string ComponentName { get; set; } = string.Empty;
+        public decimal Weight { get; set; }
+        public decimal? Score { get; set; }
+    }
 }
 

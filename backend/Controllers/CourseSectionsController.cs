@@ -13,7 +13,6 @@ namespace project_PRN232.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Route("api/course-sections")]
-    [Authorize]
     public class CourseSectionsController : ControllerBase
     {
         private readonly AppDbContext _db;
@@ -28,6 +27,7 @@ namespace project_PRN232.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [EnableQuery(PageSize = 100)]
         public async Task<IActionResult> GetSections([FromQuery] int? semesterId, [FromQuery] int? subjectId)
         {

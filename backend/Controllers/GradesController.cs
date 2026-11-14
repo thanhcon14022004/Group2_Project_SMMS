@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
 using project_PRN232.Data;
 using project_PRN232.DTOs;
@@ -22,8 +23,37 @@ namespace project_PRN232.Controllers
             _db = db;
         }
 
+        /// <summary>
+        /// OData Endpoint tra cứu điểm thành phần sinh viên theo môn học
+        /// Hỗ trợ $filter (StudentCode, SubjectCode), $select, $orderby
+        /// </summary>
+        [HttpGet("odata")]
+        [HttpGet("records")]
+        [AllowAnonymous]
+        [EnableQuery(PageSize = 100)]
+        public IQueryable<StudentGradeItemDto> GetGradesOData()
+        {
+            return _db.StudentGrades
+                .AsNoTracking()
+                .Select(g => new StudentGradeItemDto
+                {
+                    Id = g.Id,
+                    StudentId = g.StudentId,
+                    StudentCode = g.Student != null ? g.Student.StudentCode : "",
+                    StudentName = g.Student != null && g.Student.User != null ? g.Student.User.FullName : "",
+                    CourseSectionId = g.CourseSectionId,
+                    SectionCode = g.CourseSection != null ? g.CourseSection.Code : "",
+                    SubjectCode = g.CourseSection != null && g.CourseSection.Subject != null ? g.CourseSection.Subject.Code : "",
+                    SubjectName = g.CourseSection != null && g.CourseSection.Subject != null ? g.CourseSection.Subject.Name : "",
+                    ComponentName = g.SubjectGradeComponent != null ? g.SubjectGradeComponent.Name : "",
+                    Weight = g.SubjectGradeComponent != null ? g.SubjectGradeComponent.Weight : 0,
+                    Score = g.Score
+                });
+        }
+
         [HttpGet("section/{sectionId}")]
         [HttpGet("course-section/{sectionId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetSectionGrades(int sectionId)
         {
             var userRole = User.FindFirstValue(ClaimTypes.Role);
@@ -116,6 +146,7 @@ namespace project_PRN232.Controllers
         }
 
         [HttpGet("student/{studentId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetStudentGrades(int studentId)
         {
             return await GetTranscript(studentId);
@@ -123,6 +154,7 @@ namespace project_PRN232.Controllers
 
         // Xem bảng điểm và GPA tích lũy
         [HttpGet("transcript")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetTranscript([FromQuery] int? studentId)
         {
             var userRole = User.FindFirstValue(ClaimTypes.Role);

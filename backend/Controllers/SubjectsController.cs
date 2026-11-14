@@ -10,7 +10,6 @@ namespace project_PRN232.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class SubjectsController : ControllerBase
     {
         private readonly AppDbContext _db;

@@ -357,12 +357,7 @@ namespace project_PRN232.Controllers
                 ? string.Join(", ", createdSections.Select(s => s.SubjectCode)) 
                 : "Không tìm thấy môn học phù hợp";
 
-            return Ok(new
-            {
-                message = $"Đã đồng bộ thành công {createdSections.Count} môn học theo CTĐT cho lớp {c.Code} (Kỳ {c.CurrentSemester}): {subjectsListStr}.",
-                sectionsCount = createdSections.Count,
-                sections = createdSections
-            });
+            return Content("đã tạo thành công");
         }
 
         private async Task<List<CourseSectionDto>> AutoCreateCourseSectionsForClassAsync(AdministrativeClass adminClass, ICurriculumService curriculumService)

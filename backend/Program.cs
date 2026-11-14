@@ -163,6 +163,7 @@ static IEdmModel GetEdmModel()
     builder.EntitySet<AdministrativeClassDto>("AdministrativeClasses");
     builder.EntitySet<CourseSectionDto>("CourseSections");
     builder.EntitySet<SemesterDto>("Semesters");
+    builder.EntitySet<StudentGradeItemDto>("StudentGrades");
     return builder.GetEdmModel();
 }
 
